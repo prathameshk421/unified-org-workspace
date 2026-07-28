@@ -21,6 +21,8 @@ pnpm dev
 
 See [docs/setup.md](./docs/setup.md) for full local setup instructions.
 
+For GCP production deployment, see [docs/deployment.md](./docs/deployment.md).
+
 ## Requirements
 
 - [Assignment spec](./docs/requirements/assignment-spec.md)

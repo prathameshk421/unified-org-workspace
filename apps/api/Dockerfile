@@ -9,6 +9,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
+COPY packages/db/package.json ./packages/db/
 RUN pnpm install --frozen-lockfile --filter @unified/api...
 
 FROM deps AS builder
@@ -24,6 +25,5 @@ USER expressjs
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
-EXPOSE 4000
-ENV API_PORT=4000
+EXPOSE 8080
 CMD ["node", "dist/index.js"]

@@ -1,0 +1,46 @@
+name: Seed Demo Data
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: seed-demo
+  cancel-in-progress: false
+
+jobs:
+  seed-demo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Update seed job image
+        run: |
+          gcloud run jobs update unified-org-seed \
+            --region="${{ vars.GCP_REGION }}" \
+            --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/unified-org/db-migrate:latest"
+
+      - name: Run demo seed job
+        run: |
+          gcloud run jobs execute unified-org-seed \
+            --region="${{ vars.GCP_REGION }}" \
+            --wait
+
+      - name: Seed summary
+        run: |
+          echo "Demo seed complete."
+          echo "Organizations: Acme Corp (acme), Globex Inc (globex)"
+          echo "Users (password: password123):"
+          echo "  - alice@acme.com   (ORG_ADMIN on Acme)"
+          echo "  - bob@acme.com     (SUPPORT_AGENT on Acme)"
+          echo "  - carol@globex.com (ORG_ADMIN on Globex)"
+          echo "  - dave@example.com (REVIEWER on Acme + Globex)"

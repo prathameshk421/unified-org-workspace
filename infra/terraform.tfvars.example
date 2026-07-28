@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars before `terraform apply`.
+# Do not commit terraform.tfvars.
+
+project_id  = "unified-org-workspace"
+region      = "us-central1"
+github_repo = "prathameshk421/unified-org-workspace"
+
+# Default: use Cloud Run *.run.app URLs (no custom domain needed for the assignment).
+enable_custom_domain = false
+
+# Only required when enable_custom_domain = true:
+# domain = "yourdomain.com"
+
+# Optional cost controls
+# db_tier         = "db-f1-micro"
+# redis_memory_gb = 1

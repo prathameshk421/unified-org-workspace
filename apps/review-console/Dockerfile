@@ -15,6 +15,10 @@ RUN pnpm install --frozen-lockfile --filter @unified/review-console...
 FROM deps AS builder
 WORKDIR /app
 COPY . .
+ARG NEXT_PUBLIC_REVIEW_CONSOLE_URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_REVIEW_CONSOLE_URL=$NEXT_PUBLIC_REVIEW_CONSOLE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm turbo build --filter=@unified/review-console
 
@@ -22,12 +26,11 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 USER nextjs
 COPY --from=builder /app/apps/review-console/public ./apps/review-console/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/review-console/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/review-console/.next/static ./apps/review-console/.next/static
-EXPOSE 3001
-ENV PORT=3001
-ENV HOSTNAME=0.0.0.0
+EXPOSE 8080
 CMD ["node", "apps/review-console/server.js"]

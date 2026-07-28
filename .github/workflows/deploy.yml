@@ -1,0 +1,136 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/unified-org
+  API_URL: ${{ vars.API_URL }}
+  SUPPORT_HUB_URL: ${{ vars.SUPPORT_HUB_URL }}
+  REVIEW_CONSOLE_URL: ${{ vars.REVIEW_CONSOLE_URL }}
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/api:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/api:latest
+
+      - name: Build and push Support Hub image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/support-hub/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
+            NEXT_PUBLIC_API_URL=${{ env.API_URL }}
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/support-hub:latest
+
+      - name: Build and push Review Console image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/review-console/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
+            NEXT_PUBLIC_API_URL=${{ env.API_URL }}
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/review-console:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/review-console:latest
+
+      - name: Build and push DB migrate image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/db/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/db-migrate:latest
+
+      - name: Update migrate job image
+        run: |
+          gcloud run jobs update unified-org-migrate \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ github.sha }}"
+
+      - name: Run database migrations
+        run: |
+          gcloud run jobs execute unified-org-migrate \
+            --region="${{ env.GCP_REGION }}" \
+            --wait
+
+      - name: Deploy API
+        run: |
+          gcloud run services update unified-org-api \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/api:${{ github.sha }}"
+
+      - name: Deploy Support Hub
+        run: |
+          gcloud run services update unified-org-support-hub \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ github.sha }}"
+
+      - name: Deploy Review Console
+        run: |
+          gcloud run services update unified-org-review-console \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/review-console:${{ github.sha }}"
+
+      - name: Smoke test API health
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error "${{ env.API_URL }}/health"; then
+              echo ""
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed; retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1
