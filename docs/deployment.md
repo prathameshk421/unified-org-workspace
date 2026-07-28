@@ -82,7 +82,7 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 | Secret | Used by | Description |
 |---|---|---|
 | `JWT_SECRET` | API | Session/JWT signing |
-| `DATABASE_URL` | Migrate/seed jobs | Postgres owner (`postgres`) via Cloud SQL socket |
+| `DATABASE_URL` | Migrate/seed jobs | Postgres owner (`postgres`) via Cloud SQL private IP |
 | `DATABASE_APP_URL` | API runtime | Restricted `unified_app` role (append-only audit) |
 | `REDIS_URL` | API | Memorystore connection string |
 

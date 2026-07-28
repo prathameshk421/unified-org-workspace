@@ -18,6 +18,8 @@ env:
   API_URL: ${{ vars.API_URL }}
   SUPPORT_HUB_URL: ${{ vars.SUPPORT_HUB_URL }}
   REVIEW_CONSOLE_URL: ${{ vars.REVIEW_CONSOLE_URL }}
+  # workflow_run: checkout/tag the CI commit, not the Deploy workflow file SHA
+  IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   deploy:
@@ -29,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_SHA }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -52,7 +56,7 @@ jobs:
           file: apps/api/Dockerfile
           push: true
           tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/api:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/api:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/api:latest
 
       - name: Build and push Support Hub image
@@ -65,7 +69,7 @@ jobs:
             NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
           tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/support-hub:latest
 
       - name: Build and push Review Console image
@@ -78,7 +82,7 @@ jobs:
             NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
           tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/review-console:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/review-console:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/review-console:latest
 
       - name: Build and push DB migrate image
@@ -88,14 +92,14 @@ jobs:
           file: packages/db/Dockerfile
           push: true
           tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/db-migrate:latest
 
       - name: Update migrate job image
         run: |
           gcloud run jobs update unified-org-migrate \
             --region="${{ env.GCP_REGION }}" \
-            --image="${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ github.sha }}"
+            --image="${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ env.IMAGE_SHA }}"
 
       - name: Run database migrations
         run: |
@@ -107,19 +111,19 @@ jobs:
         run: |
           gcloud run services update unified-org-api \
             --region="${{ env.GCP_REGION }}" \
-            --image="${{ env.ARTIFACT_REGISTRY }}/api:${{ github.sha }}"
+            --image="${{ env.ARTIFACT_REGISTRY }}/api:${{ env.IMAGE_SHA }}"
 
       - name: Deploy Support Hub
         run: |
           gcloud run services update unified-org-support-hub \
             --region="${{ env.GCP_REGION }}" \
-            --image="${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ github.sha }}"
+            --image="${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ env.IMAGE_SHA }}"
 
       - name: Deploy Review Console
         run: |
           gcloud run services update unified-org-review-console \
             --region="${{ env.GCP_REGION }}" \
-            --image="${{ env.ARTIFACT_REGISTRY }}/review-console:${{ github.sha }}"
+            --image="${{ env.ARTIFACT_REGISTRY }}/review-console:${{ env.IMAGE_SHA }}"
 
       - name: Smoke test API health
         run: |
