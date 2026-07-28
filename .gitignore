@@ -12,6 +12,8 @@ build/
 dist/
 out/
 .next/
+.turbo/
+*.tsbuildinfo
 
 # Environment Variables & Secrets
 .env
@@ -39,6 +41,8 @@ data/
 # OS & Editor Files
 .DS_Store
 Thumbs.db
+.cursor/
+.cursorrules
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

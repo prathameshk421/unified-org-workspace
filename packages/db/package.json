@@ -1,0 +1,27 @@
+{
+  "name": "@unified/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
+    "test": "echo \"No tests yet\"",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "@unified/config": "workspace:*",
+    "eslint": "^9.28.0",
+    "prisma": "^6.9.0",
+    "typescript": "^5.8.3"
+  }
+}

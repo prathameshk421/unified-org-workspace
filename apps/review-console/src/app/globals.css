@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@unified/config/tailwind/theme.css";
+@import "@unified/ui/styles.css";
+
+@source "../../packages/ui/src/**/*.{ts,tsx}";

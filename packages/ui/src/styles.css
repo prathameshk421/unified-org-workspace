@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "@unified/config/tailwind/theme.css";
+
+@source "../src/**/*.{ts,tsx}";
