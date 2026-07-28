@@ -7,4 +7,136 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Models are added in feat/database-schema
+enum OrgRole {
+  ORG_ADMIN
+  SUPPORT_AGENT
+  REVIEWER
+  CROSS_ORG_GUEST
+}
+
+enum OrgConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REVOKED
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  memberships    OrgMembership[]
+  auditLogs      AuditLog[]
+  connectionsAsA OrgConnection[] @relation("OrgConnectionOrgA")
+  connectionsAsB OrgConnection[] @relation("OrgConnectionOrgB")
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  name             String
+  isPlatformAdmin  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  memberships            OrgMembership[]
+  auditLogs              AuditLog[]
+  sessions               Session[]
+  requestedConnections   OrgConnection[] @relation("OrgConnectionRequestedBy")
+  respondedConnections   OrgConnection[] @relation("OrgConnectionRespondedBy")
+
+  @@map("users")
+}
+
+model OrgMembership {
+  id         String    @id @default(cuid())
+  userId     String
+  orgId      String
+  role       OrgRole
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+  @@index([userId])
+  @@map("org_memberships")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([orgId, createdAt])
+  @@map("audit_logs")
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  sessionId String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
+model OrgConnection {
+  id            String              @id @default(cuid())
+  orgAId        String
+  orgBId        String
+  status        OrgConnectionStatus @default(PENDING)
+  requestedById String
+  respondedById String?
+  createdAt     DateTime            @default(now())
+
+  orgA        Organization @relation("OrgConnectionOrgA", fields: [orgAId], references: [id], onDelete: Cascade)
+  orgB        Organization @relation("OrgConnectionOrgB", fields: [orgBId], references: [id], onDelete: Cascade)
+  requestedBy User         @relation("OrgConnectionRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  respondedBy User?        @relation("OrgConnectionRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@unique([orgAId, orgBId])
+  @@index([status])
+  @@map("org_connections")
+}

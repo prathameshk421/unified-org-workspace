@@ -28,13 +28,21 @@
 
    Postgres runs on `localhost:5432`, Redis on `localhost:6379`.
 
-4. **Generate Prisma client** (optional for scaffold; required before DB work)
+4. **Run database migrations**
 
    ```bash
-   pnpm --filter @unified/db db:generate
+   pnpm --filter @unified/db db:migrate
    ```
 
-5. **Run all apps**
+5. **Seed sample data**
+
+   ```bash
+   pnpm --filter @unified/db db:seed
+   ```
+
+   Demo users all use password `password123`. See [requirements/database-schema.md](./requirements/database-schema.md) for seed details.
+
+6. **Run all apps**
 
    ```bash
    pnpm dev
