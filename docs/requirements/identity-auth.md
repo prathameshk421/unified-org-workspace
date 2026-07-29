@@ -21,11 +21,17 @@ Cookie-based JWT authentication for the unified org workspace API.
 | `unified_access` | 15 min | JWT access token (httpOnly) |
 | `unified_refresh` | 7 days | Opaque refresh token (httpOnly, SHA-256 hashed in DB) |
 
-**Flags:** `httpOnly`, `sameSite=strict`, `secure` in production (or `COOKIE_SECURE=true`).
+**Flags:** `httpOnly`, dynamic `sameSite` (see matrix below), `secure` in production (or `COOKIE_SECURE=true`).
 
-**Local dev:** omit `COOKIE_DOMAIN` — cookies are host-only on `localhost:4000`. Dashboard ports (`3000`/`3001`) cannot share cookies locally; use Postman/curl against the API.
+| Env | `COOKIE_DOMAIN` | SameSite |
+|-----|-----------------|----------|
+| Local | omit | `strict` |
+| `*.run.app` (secure, no domain) | omit | `none` |
+| Custom parent domain | `.yourparent.com` | `strict` |
 
-**Production:** set `COOKIE_DOMAIN=.yourparent.com` so `hub.` and `console.` subdomains share session cookies.
+**Local / client-only sync:** omit `COOKIE_DOMAIN` — cookies are host-only on the **API** origin (`localhost:4000`). Dashboards on `:3000` / `:3001` do not host session cookies; they call the API with `credentials: "include"`, so the browser sends the API cookies and both dashboards share one session. (Older wording that “ports cannot share cookies” referred to dashboard-to-dashboard cookie jars, not this API-origin model.)
+
+**Production custom domain:** set `COOKIE_DOMAIN=.yourparent.com` so `hub.` / `console.` / `api.` are same-site with `SameSite=Strict` (also enables future SSR/middleware cookie reads on dashboard hosts).
 
 ## BOLA foundation
 

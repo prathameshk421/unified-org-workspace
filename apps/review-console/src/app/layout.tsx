@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import { AppProviders } from "../components/app-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Review & Audit Console",
-  description: "Unified Org Workspace — Review & Audit Console placeholder",
+  description: "Unified Org Workspace — Review & Audit Console",
 };
 
 export default function RootLayout({
@@ -16,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

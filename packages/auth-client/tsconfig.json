@@ -1,9 +1,12 @@
 {
-  "extends": "@unified/config/typescript/node",
+  "extends": "@unified/config/typescript/nextjs",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "lib": ["ES2022", "DOM"]
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "noEmit": false,
+    "declaration": true
   },
   "include": ["src"]
 }

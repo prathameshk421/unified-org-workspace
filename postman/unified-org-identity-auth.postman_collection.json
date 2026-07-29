@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Unified Org — Identity Auth",
-    "description": "Branch 3 auth endpoints. Set baseUrl=http://localhost:4000. Run with: npx newman run postman/unified-org-identity-auth.postman_collection.json --env-var baseUrl=http://localhost:4000",
+    "description": "Identity auth + session-sync API checks. Set baseUrl=http://localhost:4000. Run with: pnpm test:auth",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -88,18 +88,80 @@
     },
     {
       "name": "9. Refresh tokens",
-      "request": { "method": "POST", "url": "{{baseUrl}}/auth/refresh" },
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/auth/refresh"
+      },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('refresh 200', () => pm.response.to.have.status(200));"] } }]
     },
     {
       "name": "10. Logout",
-      "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" },
-      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('logout 200', () => pm.response.to.have.status(200));"] } }]
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('logout 200', () => pm.response.to.have.status(200));",
+        "pm.test('cookies cleared', () => {",
+        "  const setCookies = pm.response.headers.filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value);",
+        "  const cleared = setCookies.some(c => /unified_access/i.test(c) && /Max-Age=0|Expires=/i.test(c));",
+        "  pm.expect(cleared).to.be.true;",
+        "});"
+      ] } }]
     },
     {
       "name": "11. GET /auth/me after logout (401)",
       "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }]
+    },
+    {
+      "name": "12. Non-JSON login rejected (415)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+        "body": { "mode": "urlencoded", "urlencoded": [{ "key": "email", "value": "alice@acme.com" }, { "key": "password", "value": "password123" }] },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('415 unsupported media', () => pm.response.to.have.status(415));"] } }]
+    },
+    {
+      "name": "13. Login Alice for logout-everywhere",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"alice@acme.com\",\"password\":\"password123\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "14. Logout everywhere",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/auth/logout-everywhere"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('logout-everywhere 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "15. GET /auth/me after logout-everywhere (401)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }]
+    },
+    {
+      "name": "16. Refresh after logout-everywhere (401)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/auth/refresh"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('refresh 401', () => pm.response.to.have.status(401));"] } }]
     }
   ]
 }

@@ -6,6 +6,11 @@ node_modules/
 # Testing and Coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.pnpm-store/
 
 # Production and Build outputs
 build/

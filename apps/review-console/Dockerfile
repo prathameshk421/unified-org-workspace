@@ -10,6 +10,7 @@ COPY apps/review-console/package.json ./apps/review-console/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
+COPY packages/auth-client/package.json ./packages/auth-client/
 RUN pnpm install --frozen-lockfile --filter @unified/review-console...
 
 FROM deps AS builder

@@ -32,6 +32,45 @@ export async function requireAuth(
   }
 }
 
+/**
+ * BOLA gate for org-scoped resource routes.
+ * Do not attach to /auth/me or /auth/switch-org (null org is valid there).
+ */
+export function requireActiveOrg(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.auth?.activeOrgId) {
+    res.status(403).json({
+      error: "No active organization",
+      code: "no_active_org",
+    });
+    return;
+  }
+  next();
+}
+
+/**
+ * CSRF mitigation for SameSite=None (*.run.app): reject non-JSON mutating bodies
+ * so simple cross-site form posts cannot hit auth state-changing routes.
+ */
+export function requireJsonContentType(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const contentType = req.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    res.status(415).json({
+      error: "Content-Type must be application/json",
+      code: "unsupported_media_type",
+    });
+    return;
+  }
+  next();
+}
+
 export function getRefreshToken(req: Request): string | undefined {
   return req.cookies?.[env.refreshCookieName] as string | undefined;
 }
