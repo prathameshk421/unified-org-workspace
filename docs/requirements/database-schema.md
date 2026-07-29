@@ -76,6 +76,6 @@ pnpm --filter @unified/db db:migrate:deploy  # production deploy
 ## Out of Scope
 
 - Auth routes, JWT, password login (`feat/identity-auth`)
-- RBAC middleware
+- RBAC middleware (implemented — [rbac-middleware.md](./rbac-middleware.md))
 - Ticket / PR tables (Tier 2)
 - Using `DATABASE_APP_URL` in the API at runtime

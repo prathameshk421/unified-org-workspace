@@ -68,6 +68,27 @@ async function main() {
     },
   });
 
+  const eve = await prisma.user.upsert({
+    where: { email: "eve@example.com" },
+    update: { name: "Eve Guest", passwordHash },
+    create: {
+      email: "eve@example.com",
+      name: "Eve Guest",
+      passwordHash,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "platform@example.com" },
+    update: { name: "Platform Admin", passwordHash, isPlatformAdmin: true },
+    create: {
+      email: "platform@example.com",
+      name: "Platform Admin",
+      passwordHash,
+      isPlatformAdmin: true,
+    },
+  });
+
   await prisma.orgMembership.upsert({
     where: { userId_orgId: { userId: alice.id, orgId: acme.id } },
     update: { role: "ORG_ADMIN", acceptedAt: new Date() },
@@ -119,6 +140,17 @@ async function main() {
       userId: dave.id,
       orgId: globex.id,
       role: "REVIEWER",
+      acceptedAt: new Date(),
+    },
+  });
+
+  await prisma.orgMembership.upsert({
+    where: { userId_orgId: { userId: eve.id, orgId: acme.id } },
+    update: { role: "CROSS_ORG_GUEST", acceptedAt: new Date() },
+    create: {
+      userId: eve.id,
+      orgId: acme.id,
+      role: "CROSS_ORG_GUEST",
       acceptedAt: new Date(),
     },
   });
@@ -180,6 +212,8 @@ async function main() {
   console.log(`  - bob@acme.com     (SUPPORT_AGENT on Acme)`);
   console.log(`  - carol@globex.com (ORG_ADMIN on Globex)`);
   console.log(`  - dave@example.com (REVIEWER on Acme + Globex)`);
+  console.log(`  - eve@example.com    (CROSS_ORG_GUEST on Acme)`);
+  console.log(`  - platform@example.com (Platform Super Admin, no org memberships)`);
   console.log("\nCross-org connection:");
   console.log(`  - Acme <-> Globex (ACCEPTED)`);
 }

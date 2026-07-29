@@ -133,7 +133,7 @@ docs/setup.md
 
 - Database tables or Prisma models (→ `feat/database-schema`)
 - Auth routes, JWT logic, password hashing (→ `feat/identity-auth`)
-- RBAC middleware (→ `feat/rbac-middleware`)
+- RBAC middleware (implemented — [rbac-middleware.md](../requirements/rbac-middleware.md))
 - Any real UI pages or business logic (→ Tier 2 branches)
 - Real secrets in `.env` (only `.env.example`)
 

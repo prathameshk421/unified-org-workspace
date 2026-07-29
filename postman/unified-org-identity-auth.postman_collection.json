@@ -1,12 +1,13 @@
 {
   "info": {
     "name": "Unified Org — Identity Auth",
-    "description": "Identity auth + session-sync API checks (16 requests, 20 assertions). Set baseUrl to your API origin (local: http://localhost:4000). Run with: pnpm test:auth",
+    "description": "Identity auth + session-sync + RBAC API checks. Set baseUrl to your API origin (local: http://localhost:4000). Run with: pnpm test:auth",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:4000" },
-    { "key": "globexOrgId", "value": "" }
+    { "key": "globexOrgId", "value": "" },
+    { "key": "acmeOrgId", "value": "" }
   ],
   "item": [
     {
@@ -162,6 +163,144 @@
         "url": "{{baseUrl}}/auth/refresh"
       },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('refresh 401', () => pm.response.to.have.status(401));"] } }]
+    },
+    {
+      "name": "RBAC",
+      "item": [
+        {
+          "name": "17. GET /rbac/org unauthenticated (401)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/org" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }]
+        },
+        {
+          "name": "18. Login Alice for RBAC",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"alice@acme.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "19. GET /rbac/admin (Alice — 200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/admin" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('admin 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "20. GET /rbac/org — save acmeOrgId",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/org" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('org 200', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.collectionVariables.set('acmeOrgId', body.orgId);",
+            "pm.test('role ORG_ADMIN', () => pm.expect(body.role).to.eql('ORG_ADMIN'));"
+          ] } }]
+        },
+        {
+          "name": "21. GET /rbac/org ignores client orgId query",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/org?orgId={{globexOrgId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('org 200', () => pm.response.to.have.status(200));",
+            "pm.test('orgId from session not query', () => {",
+            "  pm.expect(pm.response.json().orgId).to.eql(pm.collectionVariables.get('acmeOrgId'));",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "22. GET /rbac/platform (Alice — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/platform" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('platform forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "23. Login Bob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"bob@acme.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "24. GET /rbac/admin (Bob — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/admin" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('admin forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "25. GET /rbac/agent (Bob — 200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/agent" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('agent 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "26. Login Dave",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "27. GET /rbac/reviewer (Dave — 200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/reviewer" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('reviewer 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "28. GET /rbac/admin (Dave — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/admin" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('admin forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "29. Login Eve (guest)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"eve@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "30. GET /rbac/admin (Eve — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/admin" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('admin forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "31. GET /rbac/agent (Eve — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/agent" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('agent forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "32. GET /rbac/reviewer (Eve — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/reviewer" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('reviewer forbidden', () => pm.response.to.have.status(403));"] } }]
+        },
+        {
+          "name": "33. Login Platform Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"platform@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "34. GET /rbac/platform (200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/platform" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('platform 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "35. GET /rbac/org (Platform — no active org 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/org" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('no active org', () => pm.response.to.have.status(403));",
+            "pm.test('code no_active_org', () => pm.expect(pm.response.json().code).to.eql('no_active_org'));"
+          ] } }]
+        }
+      ]
     }
   ]
 }

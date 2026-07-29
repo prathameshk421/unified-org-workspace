@@ -12,6 +12,7 @@ Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Co
 - [docs/requirements/tiered-build-plan.md](docs/requirements/tiered-build-plan.md)
 - [docs/requirements/identity-auth.md](docs/requirements/identity-auth.md)
 - [docs/requirements/session-sync.md](docs/requirements/session-sync.md)
+- [docs/requirements/rbac-middleware.md](docs/requirements/rbac-middleware.md)
 - [docs/requirements/database-schema.md](docs/requirements/database-schema.md)
 - [docs/setup.md](docs/setup.md)
 
@@ -49,6 +50,7 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 - Cookies live on the **API origin** (`unified_access` 15m JWT, `unified_refresh` 7d opaque token). Dashboards use `credentials: "include"`; **never** `document.cookie` for auth.
 - Active org is persisted on `Session.activeOrgId` (mirrored in JWT). Org switch updates all of the user's active sessions.
 - `requireAuth` re-checks `Session.revokedAt` and live `OrgMembership` on every protected route.
+- Org-scoped routes: `requireAuth` → `requireOrgAccess` (sets `req.orgId` from session only) → `requireRole(...)` as needed. Platform routes: `requirePlatformAdmin`. See [rbac-middleware.md](docs/requirements/rbac-middleware.md).
 - Logout-everywhere must invalidate prior tokens across both dashboards.
 - Do **not** relax Helmet CORP for session sync. Do **not** force `COOKIE_DOMAIN` on default Cloud Run deploy.
 - `ProtectedRoute` / `GuestRoute`: redirect only when `authStatus === "unauthenticated"`, never while `loading`.

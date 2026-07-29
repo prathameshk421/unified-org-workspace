@@ -119,6 +119,8 @@ Run the **Seed Demo Data** workflow once after the first successful deploy and m
 | `bob@acme.com` | Acme | SUPPORT_AGENT | `password123` |
 | `carol@globex.com` | Globex | ORG_ADMIN | `password123` |
 | `dave@example.com` | Acme + Globex | REVIEWER | `password123` |
+| `eve@example.com` | Acme | CROSS_ORG_GUEST | `password123` |
+| `platform@example.com` | — | Platform Super Admin | `password123` |
 
 Organizations: **Acme Corp** (`acme`) and **Globex Inc** (`globex`) with an accepted cross-org connection.
 

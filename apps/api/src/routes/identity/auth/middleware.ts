@@ -1,10 +1,23 @@
 import type { NextFunction, Request, Response } from "express";
+import type { OrgRole } from "@unified/types";
 import { env } from "../../../lib/env.js";
 import { AuthError, resolveAuthContext } from "./service.js";
 import { verifyAccessToken } from "./tokens.js";
 
 function getAccessToken(req: Request): string | undefined {
   return req.cookies?.[env.accessCookieName] as string | undefined;
+}
+
+function requireAuthenticated(
+  req: Request,
+  res: Response,
+): req is Request & { auth: NonNullable<Request["auth"]> } {
+  if (!req.auth) {
+    res.status(401).json({ error: "Authentication required" });
+    return false;
+  }
+
+  return true;
 }
 
 export async function requireAuth(
@@ -34,20 +47,68 @@ export async function requireAuth(
 
 /**
  * BOLA gate for org-scoped resource routes.
+ * Sets `req.orgId` from verified session/JWT only — never from client input.
  * Do not attach to /auth/me or /auth/switch-org (null org is valid there).
  */
-export function requireActiveOrg(
+export function requireOrgAccess(
   req: Request,
   res: Response,
   next: NextFunction,
 ): void {
-  if (!req.auth?.activeOrgId) {
+  if (!requireAuthenticated(req, res)) {
+    return;
+  }
+
+  if (!req.auth.activeOrgId) {
     res.status(403).json({
       error: "No active organization",
       code: "no_active_org",
     });
     return;
   }
+
+  req.orgId = req.auth.activeOrgId;
+  next();
+}
+
+/** Alias of `requireOrgAccess` (session-sync doc compatibility). */
+export const requireActiveOrg = requireOrgAccess;
+
+export function requireRole(...roles: OrgRole[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!requireAuthenticated(req, res)) {
+      return;
+    }
+
+    if (!req.auth.role || !roles.includes(req.auth.role)) {
+      res.status(403).json({
+        error: "Insufficient role",
+        code: "insufficient_role",
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+export function requirePlatformAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!requireAuthenticated(req, res)) {
+    return;
+  }
+
+  if (!req.auth.isPlatformAdmin) {
+    res.status(403).json({
+      error: "Platform admin required",
+      code: "platform_admin_required",
+    });
+    return;
+  }
+
   next();
 }
 

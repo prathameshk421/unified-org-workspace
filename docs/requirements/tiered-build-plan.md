@@ -19,7 +19,8 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 - RBAC: Org Admin, Support Agent, Reviewer/Approver, Cross-Org Guest, Platform Super Admin
 
 ### Required automated tests
-- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return 403/404
+- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return 403/404 *(full resource-ID test requires Tier 2 tickets/PRs; auth-layer org scoping + switch-org BOLA covered by Newman)*
+- **RBAC:** unauthenticated → 401; wrong role / no active org → 403 — Newman `/rbac` probes ([rbac-middleware.md](./rbac-middleware.md))
 - **Session sync test:** login on one dashboard is recognized as authenticated on the other
 - **Token lifecycle / revocation test:** logout-everywhere invalidates tokens issued before the logout across both dashboards
 - **Audit append-only test:** an `UPDATE` or `DELETE` attempt against the audit log table fails at the DB permission level, not just application logic

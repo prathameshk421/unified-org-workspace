@@ -41,7 +41,7 @@ Per-app adapters: `ProtectedRoute` / `GuestRoute` (redirect only when `authStatu
 - `OrgSwitcher` may send `orgId` **only** to `POST /auth/switch-org`.
 - Never put `orgId` on data fetches.
 - After switch: re-fetch `/auth/me` and broadcast `ORG_SWITCHED` via `BroadcastChannel`.
-- Backend exports `requireActiveOrg` for future resource routes (not wired to `/auth/*`).
+- Backend exports `requireOrgAccess` (alias `requireActiveOrg`) for org-scoped resource routes (not wired to `/auth/*`). See [rbac-middleware.md](./rbac-middleware.md).
 
 ## Acceptance criteria
 
@@ -68,6 +68,7 @@ Demo users (password `password123`): `alice@acme.com`, `dave@example.com` (multi
 ## Explicitly out of scope
 
 - Full resource-ID BOLA tests (no tickets/PRs yet)
-- RBAC `requireRole` middleware
 - Next.js middleware SSR auth
 - Enabling custom domain by default
+
+RBAC middleware (`requireRole`, `requireOrgAccess`, `requirePlatformAdmin`) is implemented in [rbac-middleware.md](./rbac-middleware.md).

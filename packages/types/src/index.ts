@@ -7,6 +7,22 @@ export const OrgRole = {
 
 export type OrgRole = (typeof OrgRole)[keyof typeof OrgRole];
 
+/** Roles that can mutate tickets in-org (guests excluded). */
+export const TICKET_MUTATOR_ROLES = [
+  OrgRole.ORG_ADMIN,
+  OrgRole.SUPPORT_AGENT,
+  OrgRole.REVIEWER,
+] as const;
+
+export const PR_MUTATOR_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
+
+export const AUDIT_VIEWER_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
+
+export const TICKET_READER_ROLES = [
+  ...TICKET_MUTATOR_ROLES,
+  OrgRole.CROSS_ORG_GUEST,
+] as const;
+
 export const OrgConnectionStatus = {
   PENDING: "PENDING",
   ACCEPTED: "ACCEPTED",

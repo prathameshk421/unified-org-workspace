@@ -544,6 +544,11 @@ export async function resolveAuthContext(
 ): Promise<AuthContext> {
   const session = await prisma.session.findUnique({
     where: { id: claims.sid },
+    include: {
+      user: {
+        select: { isPlatformAdmin: true },
+      },
+    },
   });
 
   if (!session || session.userId !== claims.sub) {
@@ -553,6 +558,8 @@ export async function resolveAuthContext(
   if (session.revokedAt || session.expiresAt < new Date()) {
     throw new AuthError("Session expired", 401);
   }
+
+  const isPlatformAdmin = session.user.isPlatformAdmin;
 
   // Prefer Session.activeOrgId (source of truth after org switch) over JWT claim.
   const candidateOrgId = session.activeOrgId ?? claims.activeOrgId;
@@ -565,7 +572,7 @@ export async function resolveAuthContext(
         sessionId: claims.sid,
         activeOrgId: candidateOrgId,
         role,
-        isPlatformAdmin: claims.isPlatformAdmin,
+        isPlatformAdmin,
       };
     } catch (error) {
       if (!(error instanceof AuthError) || error.statusCode !== 403) {
@@ -580,6 +587,6 @@ export async function resolveAuthContext(
     sessionId: claims.sid,
     activeOrgId: null,
     role: null,
-    isPlatformAdmin: claims.isPlatformAdmin,
+    isPlatformAdmin,
   };
 }
