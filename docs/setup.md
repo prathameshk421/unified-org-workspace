@@ -60,7 +60,7 @@
 
 With the API running (`pnpm --filter @unified/api dev`), test auth via curl or Postman. See [requirements/identity-auth.md](./requirements/identity-auth.md).
 
-Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman) with API on port 4000.
+Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman, 16 requests / 20 assertions) with API on port 4000.
 
 ## Common commands
 

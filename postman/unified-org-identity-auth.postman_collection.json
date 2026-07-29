@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Unified Org — Identity Auth",
-    "description": "Identity auth + session-sync API checks. Set baseUrl=http://localhost:4000. Run with: pnpm test:auth",
+    "description": "Identity auth + session-sync API checks (16 requests, 20 assertions). Set baseUrl to your API origin (local: http://localhost:4000). Run with: pnpm test:auth",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

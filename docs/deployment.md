@@ -73,7 +73,7 @@ Submit these public URLs + demo credentials for the assignment deliverable.
 
 ### Optional: custom domain
 
-Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `api.` / `hub.` / `console.` subdomains. Only needed if you want shared cookies across dashboards (Tier 1 session sync).
+Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `api.` / `hub.` / `console.` subdomains. Optional — default `*.run.app` deploy supports session sync via API-origin cookies (`SameSite=None`). Custom domain enables `SameSite=Strict` on a shared parent cookie domain.
 
 ## Environment and secrets
 

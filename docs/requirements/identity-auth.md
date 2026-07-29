@@ -74,10 +74,14 @@ curl -s -c $JAR -b $JAR -X POST $API/auth/switch-org \
   -d "{\"orgId\":\"$GLOBEX_ID\"}" -w '\nHTTP %{http_code}\n'
 
 # 7. Refresh tokens
-curl -s -c $JAR -b $JAR -X POST $API/auth/refresh | jq
+curl -s -c $JAR -b $JAR -X POST $API/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d '{}' | jq
 
 # 8. Logout
-curl -s -c $JAR -b $JAR -X POST $API/auth/logout | jq
+curl -s -c $JAR -b $JAR -X POST $API/auth/logout \
+  -H 'Content-Type: application/json' \
+  -d '{}' | jq
 curl -s -c $JAR -b $JAR $API/auth/me -w '\nHTTP %{http_code}\n'
 ```
 
@@ -86,14 +90,23 @@ curl -s -c $JAR -b $JAR $API/auth/me -w '\nHTTP %{http_code}\n'
 Import [`postman/unified-org-identity-auth.postman_collection.json`](../../postman/unified-org-identity-auth.postman_collection.json) into Postman desktop, or run automated tests with Newman:
 
 ```bash
-# API must be running on localhost:4000
+# Local — API must be running on localhost:4000
+pnpm test:auth
+
+# Or with explicit baseUrl (local or production)
 npx newman run postman/unified-org-identity-auth.postman_collection.json \
   --env-var baseUrl=http://localhost:4000
+
+# Production example (set baseUrl to your Cloud Run API URL)
+npx newman run postman/unified-org-identity-auth.postman_collection.json \
+  --env-var baseUrl=https://unified-org-api-xxxxx-uc.a.run.app
 ```
 
-All 14 assertions should pass (login, me, BOLA 403, switch-org, refresh, logout).
+The collection has **16 requests** and **20 assertions**: health, login, `/auth/me`, BOLA `switch-org` 403, switch-org, refresh, logout (with cookie clear), post-logout 401, non-JSON login 415, logout-everywhere, and post-logout-everywhere 401 on `/auth/me` and `/auth/refresh`.
 
-**Note:** Postman cloud MCP can create collections but cannot execute requests against localhost. Use Newman or Postman desktop Collection Runner for local API testing.
+Requires seeded demo users (`pnpm --filter @unified/db db:seed` locally, or the **Seed Demo Data** workflow in production).
+
+**Note:** Postman cloud MCP can create collections but cannot execute requests against localhost. Use Newman or Postman desktop Collection Runner for API testing.
 
 ## Environment variables
 
