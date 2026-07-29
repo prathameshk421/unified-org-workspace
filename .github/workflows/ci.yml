@@ -58,6 +58,8 @@ jobs:
         with:
           name: auth-e2e-build
           retention-days: 1
+          # Required: .next is a hidden directory and is skipped by default.
+          include-hidden-files: true
           path: |
             apps/api/dist
             packages/types/dist
@@ -118,6 +120,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: auth-e2e-build
+
+      - name: Verify build artifacts
+        run: |
+          test -f apps/api/dist/index.js
+          test -d apps/support-hub/.next
+          test -d apps/review-console/.next
+          test -d packages/types/dist
+          echo "Build artifacts restored:"
+          du -sh apps/api/dist packages/types/dist apps/support-hub/.next apps/review-console/.next
 
       - name: Generate Prisma client + migrate + seed
         run: |
