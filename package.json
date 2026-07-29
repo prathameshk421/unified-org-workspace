@@ -11,6 +11,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:auth": "newman run postman/unified-org-identity-auth.postman_collection.json --env-var baseUrl=http://localhost:4000",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

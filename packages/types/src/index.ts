@@ -31,3 +31,59 @@ export interface AppMetadata {
   name: AppName;
   version: string;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  isPlatformAdmin: boolean;
+  createdAt?: string;
+}
+
+export interface MembershipSummary {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  role: OrgRole;
+}
+
+export interface ActiveOrgContext {
+  orgId: string;
+  orgName?: string;
+  orgSlug?: string;
+  role: OrgRole;
+}
+
+export interface MeResponse {
+  user: AuthUser;
+  memberships: MembershipSummary[];
+  activeOrg: ActiveOrgContext | null;
+}
+
+export interface LoginResponse {
+  user: AuthUser;
+  activeOrg: Pick<ActiveOrgContext, "orgId" | "role"> | null;
+}
+
+export interface RegisterResponse {
+  user: Pick<AuthUser, "id" | "email" | "name">;
+}
+
+export interface SwitchOrgRequest {
+  orgId: string;
+}
+
+export interface SwitchOrgResponse {
+  activeOrg: Pick<ActiveOrgContext, "orgId" | "role">;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}

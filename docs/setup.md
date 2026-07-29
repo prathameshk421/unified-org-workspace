@@ -56,6 +56,12 @@
 | Support Hub | http://localhost:3000 |
 | Review & Audit Console | http://localhost:3001 |
 
+## Auth verification (Branch 3)
+
+With the API running (`pnpm --filter @unified/api dev`), test auth via curl or Postman. See [requirements/identity-auth.md](./requirements/identity-auth.md).
+
+Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman) with API on port 4000.
+
 ## Common commands
 
 ```bash

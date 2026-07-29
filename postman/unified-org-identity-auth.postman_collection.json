@@ -1,0 +1,105 @@
+{
+  "info": {
+    "name": "Unified Org — Identity Auth",
+    "description": "Branch 3 auth endpoints. Set baseUrl=http://localhost:4000. Run with: npx newman run postman/unified-org-identity-auth.postman_collection.json --env-var baseUrl=http://localhost:4000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "globexOrgId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('health ok', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('ok'); });"] } }]
+    },
+    {
+      "name": "2. Login Dave",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "3. GET /auth/me (Dave) — save Globex orgId",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('me 200', () => pm.response.to.have.status(200));",
+        "const body = pm.response.json();",
+        "const globex = body.memberships.find(m => m.orgSlug === 'globex');",
+        "pm.collectionVariables.set('globexOrgId', globex.orgId);",
+        "pm.test('globexOrgId saved', () => pm.expect(globex.orgId).to.be.a('string').and.not.empty);"
+      ] } }]
+    },
+    {
+      "name": "4. Login Alice (Acme)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"alice@acme.com\",\"password\":\"password123\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('login 200', () => pm.response.to.have.status(200));",
+        "pm.test('cookies set', () => { pm.expect(pm.cookies.has('unified_access')).to.be.true; });"
+      ] } }]
+    },
+    {
+      "name": "5. GET /auth/me (Alice)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('me 200', () => pm.response.to.have.status(200));",
+        "pm.test('active org Acme', () => pm.expect(pm.response.json().activeOrg.orgSlug).to.eql('acme'));"
+      ] } }]
+    },
+    {
+      "name": "6. BOLA: switch-org Globex (403)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"orgId\":\"{{globexOrgId}}\"}" },
+        "url": "{{baseUrl}}/auth/switch-org"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('forbidden', () => pm.response.to.have.status(403));"] } }]
+    },
+    {
+      "name": "7. Login Dave + switch Globex",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "8. Switch org to Globex (Dave)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"orgId\":\"{{globexOrgId}}\"}" },
+        "url": "{{baseUrl}}/auth/switch-org"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('switch 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "9. Refresh tokens",
+      "request": { "method": "POST", "url": "{{baseUrl}}/auth/refresh" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('refresh 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "10. Logout",
+      "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('logout 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "11. GET /auth/me after logout (401)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }]
+    }
+  ]
+}

@@ -12,6 +12,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"No tests yet\""
   },
+  "dependencies": {
+    "@unified/types": "workspace:*"
+  },
   "devDependencies": {
     "@unified/config": "workspace:*",
     "eslint": "^9.28.0",
