@@ -18,6 +18,17 @@ export const PR_MUTATOR_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
 
 export const AUDIT_VIEWER_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
 
+export const AuditAction = {
+  AUTH_REGISTER: "auth.register",
+  AUTH_LOGIN: "auth.login",
+  AUTH_LOGOUT: "auth.logout",
+  AUTH_LOGOUT_EVERYWHERE: "auth.logout_everywhere",
+  AUTH_SWITCH_ORG: "auth.switch_org",
+  HTTP_MUTATION: "http.mutation",
+} as const;
+
+export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+
 export const TICKET_READER_ROLES = [
   ...TICKET_MUTATOR_ROLES,
   OrgRole.CROSS_ORG_GUEST,

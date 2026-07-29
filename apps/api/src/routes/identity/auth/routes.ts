@@ -29,6 +29,7 @@ import {
   switchOrg,
 } from "./service.js";
 import { env } from "../../../lib/env.js";
+import { markAuditWritten } from "../../../middleware/audit-mutations.js";
 
 const router: RouterType = Router();
 const authRateLimit = createRateLimiter("auth");
@@ -65,6 +66,7 @@ router.post(
       const meta = getClientMeta(req);
       const result = await registerUser({ ...body, ...meta });
       setAuthCookies(res, result.accessToken, result.refreshToken);
+      markAuditWritten(res);
       res.status(201).json({ user: result.user });
     } catch (error) {
       handleAuthError(res, error);
@@ -82,6 +84,7 @@ router.post(
       const meta = getClientMeta(req);
       const result = await loginUser({ ...body, ...meta });
       setAuthCookies(res, result.accessToken, result.refreshToken);
+      markAuditWritten(res);
       res.json({
         user: result.user,
         activeOrg: result.activeOrgId
@@ -130,6 +133,7 @@ router.post(
         userId: auth.userId,
         activeOrgId: auth.activeOrgId,
       });
+      markAuditWritten(res);
       clearAuthCookies(res);
       res.json({ ok: true });
     } catch (error) {
@@ -150,6 +154,7 @@ router.post(
         activeOrgId: auth.activeOrgId,
         currentSessionId: auth.sessionId,
       });
+      markAuditWritten(res);
       clearAuthCookies(res);
       res.json({ ok: true });
     } catch (error) {
@@ -184,6 +189,7 @@ router.post(
         orgId: body.orgId,
       });
       setAccessCookie(res, result.accessToken);
+      markAuditWritten(res);
       res.json({
         activeOrg: {
           orgId: result.activeOrgId,

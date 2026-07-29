@@ -1,5 +1,6 @@
-import { Prisma } from "@prisma/client";
 import type { OrgRole } from "@unified/types";
+import { AuditAction } from "@unified/types";
+import { record } from "../../../lib/audit-log.js";
 import { prisma } from "../../../lib/prisma.js";
 import type { AuthContext } from "./types.js";
 import {
@@ -174,25 +175,6 @@ async function revokeAllUserSessions(userId: string): Promise<void> {
   ]);
 }
 
-async function writeAuditLog(input: {
-  orgId: string;
-  userId: string;
-  action: string;
-  entityId: string;
-  metadata?: Record<string, unknown>;
-}): Promise<void> {
-  await prisma.auditLog.create({
-    data: {
-      orgId: input.orgId,
-      userId: input.userId,
-      action: input.action,
-      entityType: "session",
-      entityId: input.entityId,
-      metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
-    },
-  });
-}
-
 export async function registerUser(input: {
   email: string;
   password: string;
@@ -232,6 +214,15 @@ export async function registerUser(input: {
     ipAddress: input.ipAddress,
   });
 
+  await record({
+    orgId: null,
+    userId: user.id,
+    action: AuditAction.AUTH_REGISTER,
+    entityType: "user",
+    entityId: user.id,
+    metadata: { email: user.email },
+  });
+
   return {
     user: { id: user.id, email: user.email, name: user.name },
     accessToken,
@@ -267,13 +258,22 @@ export async function loginUser(input: {
 
   const { activeOrgId, role } = await getDefaultOrgContext(user.id);
 
-  const { accessToken, refreshToken } = await createSessionWithTokens({
+  const { accessToken, refreshToken, sessionId } = await createSessionWithTokens({
     userId: user.id,
     isPlatformAdmin: user.isPlatformAdmin,
     activeOrgId,
     role,
     userAgent: input.userAgent,
     ipAddress: input.ipAddress,
+  });
+
+  await record({
+    orgId: activeOrgId,
+    userId: user.id,
+    action: AuditAction.AUTH_LOGIN,
+    entityType: "session",
+    entityId: sessionId,
+    metadata: { email: user.email },
   });
 
   return {
@@ -421,14 +421,13 @@ export async function logoutSession(input: {
 }): Promise<void> {
   await revokeSession(input.sessionId);
 
-  if (input.activeOrgId) {
-    await writeAuditLog({
-      orgId: input.activeOrgId,
-      userId: input.userId,
-      action: "auth.logout",
-      entityId: input.sessionId,
-    });
-  }
+  await record({
+    orgId: input.activeOrgId,
+    userId: input.userId,
+    action: AuditAction.AUTH_LOGOUT,
+    entityType: "session",
+    entityId: input.sessionId,
+  });
 }
 
 export async function logoutEverywhere(input: {
@@ -438,14 +437,13 @@ export async function logoutEverywhere(input: {
 }): Promise<void> {
   await revokeAllUserSessions(input.userId);
 
-  if (input.activeOrgId) {
-    await writeAuditLog({
-      orgId: input.activeOrgId,
-      userId: input.userId,
-      action: "auth.logout_everywhere",
-      entityId: input.currentSessionId ?? input.userId,
-    });
-  }
+  await record({
+    orgId: input.activeOrgId,
+    userId: input.userId,
+    action: AuditAction.AUTH_LOGOUT_EVERYWHERE,
+    entityType: "session",
+    entityId: input.currentSessionId ?? input.userId,
+  });
 }
 
 export async function switchOrg(input: {
@@ -475,12 +473,13 @@ export async function switchOrg(input: {
     isPlatformAdmin: input.isPlatformAdmin,
   });
 
-  await writeAuditLog({
+  await record({
     orgId: input.orgId,
     userId: input.userId,
-    action: "auth.switch_org",
+    action: AuditAction.AUTH_SWITCH_ORG,
+    entityType: "session",
     entityId: input.sessionId,
-    metadata: { targetOrgId: input.orgId, role },
+    metadata: { role },
   });
 
   return {

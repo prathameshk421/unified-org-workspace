@@ -1,4 +1,5 @@
 import type { AuthContext } from "../routes/identity/auth/types.js";
+import type { AuditRecordInput } from "../lib/audit-log.js";
 
 declare global {
   namespace Express {
@@ -9,6 +10,11 @@ declare global {
        * from verified session/JWT — never from client params, query, or body.
        */
       orgId?: string;
+    }
+
+    interface Locals {
+      auditEvents?: AuditRecordInput[];
+      auditWritten?: boolean;
     }
   }
 }

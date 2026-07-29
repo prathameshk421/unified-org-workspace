@@ -104,6 +104,9 @@ jobs:
           pnpm --filter @unified/db exec prisma migrate deploy
           pnpm --filter @unified/db exec tsx prisma/seed.ts
 
+      - name: Verify audit_logs append-only as unified_app
+        run: pnpm --filter @unified/db test:audit-append-only
+
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 

@@ -22,6 +22,7 @@ Verified against:
 | Platform Super Admin | `User.isPlatformAdmin` (not an org membership role) |
 | Org roles | `ORG_ADMIN`, `SUPPORT_AGENT`, `REVIEWER`, `CROSS_ORG_GUEST` |
 | Audit append-only | Postgres role `unified_app` with `INSERT`/`SELECT` only on `audit_logs` |
+| Audit `orgId` | Nullable for org-less auth/platform events; `ON DELETE SET NULL` preserves history |
 | Migrate/seed user | `postgres` superuser via `DATABASE_URL` |
 | Runtime API user | `unified_app` via `DATABASE_APP_URL` (wired in `feat/identity-auth`) |
 

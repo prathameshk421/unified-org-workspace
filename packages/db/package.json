@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
     "test": "echo \"No tests yet\"",
+    "test:audit-append-only": "dotenv -e ../../.env -- tsx scripts/verify-audit-append-only.ts",
     "db:generate": "dotenv -e ../../.env -- prisma generate",
     "db:push": "dotenv -e ../../.env -- prisma db push",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",

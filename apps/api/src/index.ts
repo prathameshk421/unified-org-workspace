@@ -4,6 +4,7 @@ import express from "express";
 import helmet from "helmet";
 import type { HealthCheckResponse } from "@unified/types";
 import { env } from "./lib/env.js";
+import { auditMutations } from "./middleware/audit-mutations.js";
 import { identityRouter } from "./routes/identity/index.js";
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(auditMutations);
 
 app.get("/health", (_req, res) => {
   const payload: HealthCheckResponse = {

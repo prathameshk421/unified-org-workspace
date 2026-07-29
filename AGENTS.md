@@ -14,6 +14,7 @@ Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Co
 - [docs/requirements/session-sync.md](docs/requirements/session-sync.md)
 - [docs/requirements/rbac-middleware.md](docs/requirements/rbac-middleware.md)
 - [docs/requirements/database-schema.md](docs/requirements/database-schema.md)
+- [docs/requirements/audit-log.md](docs/requirements/audit-log.md)
 - [docs/setup.md](docs/setup.md)
 
 ## Hand long-running commands to the user
@@ -79,6 +80,7 @@ Stack: pnpm + Turborepo, Node 22, Prisma 6, PostgreSQL 16, Redis (provisioned; n
 ## Verification
 
 - Auth/BOLA foundation: `pnpm test:auth` (Newman) — only if API is already running on `:4000`; otherwise ask the user.
+- Audit append-only (DB permissions): `pnpm --filter @unified/db test:audit-append-only` — requires Postgres migrated; uses `DATABASE_APP_URL`.
 - Session sync e2e: `bash scripts/run-auth-e2e.sh` — hand to the user.
 - Demo users: `*@example.com` / `password123` (alice, bob, carol, dave; **dave** = multi-org Acme + Globex).
 
