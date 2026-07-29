@@ -162,6 +162,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
   try {
     const auth = req.auth!;
     const me = await getMe(auth.userId, auth);
+    res.setHeader("Cache-Control", "no-store");
     res.json(me);
   } catch (error) {
     handleAuthError(res, error);

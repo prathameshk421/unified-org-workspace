@@ -93,18 +93,20 @@ model AuditLog {
 }
 
 model Session {
-  id        String    @id @default(cuid())
-  userId    String
-  userAgent String?
-  ipAddress String?
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  activeOrgId String?
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
 
   @@index([userId])
+  @@index([activeOrgId])
   @@map("sessions")
 }
 

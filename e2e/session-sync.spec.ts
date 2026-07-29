@@ -47,7 +47,7 @@ test.describe("session sync", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("org switcher for multi-org user", async ({ page }) => {
+  test("org switcher for multi-org user", async ({ page, context }) => {
     await login(page, "dave@example.com", "password123", HUB);
     await expect(page.getByTestId("org-switcher")).toBeVisible();
 
@@ -62,11 +62,23 @@ test.describe("session sync", () => {
     const other = allValues.find((v) => v && v !== firstValue);
     expect(other).toBeTruthy();
 
+    const firstOrgName = await page.getByTestId("active-org").innerText();
+
     await select.selectOption(other!);
-    await expect(page.getByTestId("active-org")).not.toHaveText("", {
+    await expect(select).toHaveValue(other!);
+    await expect(page.getByTestId("active-org")).not.toHaveText(firstOrgName, {
       timeout: 10_000,
     });
-    // After switch, select value reflects new active org
-    await expect(select).toHaveValue(other!);
+
+    // Sibling dashboard should see the same active org after navigation.
+    const consolePage = await context.newPage();
+    await consolePage.goto(`${CONSOLE}/`);
+    await expect(consolePage.getByTestId("auth-status")).toContainText(
+      "dave@example.com",
+    );
+    await expect(consolePage.getByTestId("active-org")).toHaveText(
+      await page.getByTestId("active-org").innerText(),
+      { timeout: 10_000 },
+    );
   });
 });

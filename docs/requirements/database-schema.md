@@ -35,7 +35,7 @@ Verified against:
 | User | `users` | Identity |
 | OrgMembership | `org_memberships` | User ↔ org with role |
 | AuditLog | `audit_logs` | Append-only mutation trail |
-| Session | `sessions` | Session revocation root |
+| Session | `sessions` | Session revocation root; stores `activeOrgId` for cross-dashboard org sync |
 | RefreshToken | `refresh_tokens` | Token revocation / rotation |
 | OrgConnection | `org_connections` | Cross-org partnership |
 

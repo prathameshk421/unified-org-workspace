@@ -6,8 +6,9 @@ Shared Identity/Org session across Support Hub and Review Console via **API-orig
 
 1. User logs in from either dashboard → browser `POST` to API with `credentials: "include"`.
 2. API sets `unified_access` / `unified_refresh` on the **API host** (optionally `Domain=.parent.com`).
-3. Each dashboard hydrates via `GET /auth/me` with `credentials: "include"`.
-4. The browser attaches cookies to API requests; apps never call `document.cookie` for auth.
+3. **Active org** is persisted on the server `Session.activeOrgId` (and mirrored in the access JWT). Org switch updates all of the user's active sessions so both dashboards see the same org after reload.
+4. Each dashboard hydrates via `GET /auth/me` with `credentials: "include"` (`Cache-Control: no-store`).
+5. The browser attaches cookies to API requests; apps never call `document.cookie` for auth.
 
 ## Cookie SameSite matrix
 

@@ -78,6 +78,7 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     return fetchFn(`${baseUrl}${path}`, {
       ...init,
       credentials: "include",
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         ...init?.headers,

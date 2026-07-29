@@ -107,6 +107,7 @@ async function createSessionWithTokens(input: {
   const session = await prisma.session.create({
     data: {
       userId: input.userId,
+      activeOrgId: input.activeOrgId,
       userAgent: input.userAgent,
       ipAddress: input.ipAddress,
       expiresAt: sessionExpiresAt,
@@ -333,7 +334,19 @@ export async function refreshSession(input: {
   let activeOrgId: string | null = null;
   let role: OrgRole | null = null;
 
-  if (input.accessToken) {
+  // Prefer DB-backed session active org so switches sync across dashboards
+  // even when a client still holds a stale access JWT.
+  if (session.activeOrgId) {
+    try {
+      role = await verifyMembership(session.userId, session.activeOrgId);
+      activeOrgId = session.activeOrgId;
+    } catch {
+      activeOrgId = null;
+      role = null;
+    }
+  }
+
+  if (!activeOrgId && input.accessToken) {
     const priorClaims = await verifyAccessTokenAllowExpired(input.accessToken);
     if (priorClaims && priorClaims.sid === session.id) {
       if (priorClaims.activeOrgId) {
@@ -352,6 +365,14 @@ export async function refreshSession(input: {
     const defaultOrg = await getDefaultOrgContext(session.userId);
     activeOrgId = defaultOrg.activeOrgId;
     role = defaultOrg.role;
+  }
+
+  // Keep Session row in sync when we fall back to JWT/default.
+  if (session.activeOrgId !== activeOrgId) {
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { activeOrgId },
+    });
   }
 
   const newRefreshToken = createOpaqueRefreshToken();
@@ -438,6 +459,13 @@ export async function switchOrg(input: {
   role: OrgRole;
 }> {
   const role = await verifyMembership(input.userId, input.orgId);
+
+  // Persist on all active sessions for this user so Hub/Console (or multiple
+  // devices) see the same active org after reload — not just the JWT cookie.
+  await prisma.session.updateMany({
+    where: { userId: input.userId, revokedAt: null },
+    data: { activeOrgId: input.orgId },
+  });
 
   const accessToken = await signAccessToken({
     userId: input.userId,
@@ -526,15 +554,25 @@ export async function resolveAuthContext(
     throw new AuthError("Session expired", 401);
   }
 
-  if (claims.activeOrgId) {
-    const role = await verifyMembership(claims.sub, claims.activeOrgId);
-    return {
-      userId: claims.sub,
-      sessionId: claims.sid,
-      activeOrgId: claims.activeOrgId,
-      role,
-      isPlatformAdmin: claims.isPlatformAdmin,
-    };
+  // Prefer Session.activeOrgId (source of truth after org switch) over JWT claim.
+  const candidateOrgId = session.activeOrgId ?? claims.activeOrgId;
+
+  if (candidateOrgId) {
+    try {
+      const role = await verifyMembership(claims.sub, candidateOrgId);
+      return {
+        userId: claims.sub,
+        sessionId: claims.sid,
+        activeOrgId: candidateOrgId,
+        role,
+        isPlatformAdmin: claims.isPlatformAdmin,
+      };
+    } catch (error) {
+      if (!(error instanceof AuthError) || error.statusCode !== 403) {
+        throw error;
+      }
+      // Membership lost — fall through to no active org.
+    }
   }
 
   return {
