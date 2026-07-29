@@ -23,12 +23,6 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Update seed job image
-        run: |
-          gcloud run jobs update unified-org-seed \
-            --region="${{ vars.GCP_REGION }}" \
-            --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/unified-org/db-migrate:latest"
-
       - name: Run demo seed job
         run: |
           gcloud run jobs execute unified-org-seed \

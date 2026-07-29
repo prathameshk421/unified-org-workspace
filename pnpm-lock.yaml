@@ -243,6 +243,9 @@ importers:
 
   packages/ui:
     devDependencies:
+      '@tailwindcss/postcss':
+        specifier: ^4.1.8
+        version: 4.3.3
       '@types/react':
         specifier: ^19.1.6
         version: 19.2.17
@@ -261,6 +264,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.8(react@19.2.8)
+      tailwindcss:
+        specifier: ^4.1.8
+        version: 4.3.3
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

@@ -101,6 +101,12 @@ jobs:
             --region="${{ env.GCP_REGION }}" \
             --image="${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ env.IMAGE_SHA }}"
 
+      - name: Update seed job image
+        run: |
+          gcloud run jobs update unified-org-seed \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/db-migrate:${{ env.IMAGE_SHA }}"
+
       - name: Run database migrations
         run: |
           gcloud run jobs execute unified-org-migrate \
