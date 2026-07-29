@@ -1,7 +1,8 @@
 resource "google_cloud_run_v2_service" "api" {
-  name     = "${local.name_prefix}-api"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                 = "${local.name_prefix}-api"
+  location             = var.region
+  ingress              = "INGRESS_TRAFFIC_ALL"
+  deletion_protection  = false
 
   template {
     service_account = google_service_account.cloud_run_runtime.email
@@ -108,13 +109,16 @@ resource "google_cloud_run_v2_service" "api" {
     google_secret_manager_secret_version.database_app_url,
     google_secret_manager_secret_version.jwt_secret,
     google_secret_manager_secret_version.redis_url,
+    google_project_iam_member.runtime_secret_accessor,
+    google_project_iam_member.runtime_sql_client,
   ]
 }
 
 resource "google_cloud_run_v2_service" "support_hub" {
-  name     = "${local.name_prefix}-support-hub"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "${local.name_prefix}-support-hub"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
 
   template {
     service_account = google_service_account.cloud_run_runtime.email
@@ -165,9 +169,10 @@ resource "google_cloud_run_v2_service" "support_hub" {
 }
 
 resource "google_cloud_run_v2_service" "review_console" {
-  name     = "${local.name_prefix}-review-console"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "${local.name_prefix}-review-console"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
 
   template {
     service_account = google_service_account.cloud_run_runtime.email
@@ -218,8 +223,9 @@ resource "google_cloud_run_v2_service" "review_console" {
 }
 
 resource "google_cloud_run_v2_job" "migrate" {
-  name     = "${local.name_prefix}-migrate"
-  location = var.region
+  name                = "${local.name_prefix}-migrate"
+  location            = var.region
+  deletion_protection = false
 
   template {
     template {
@@ -281,12 +287,15 @@ resource "google_cloud_run_v2_job" "migrate" {
     google_project_service.required,
     google_artifact_registry_repository.main,
     google_secret_manager_secret_version.database_url,
+    google_project_iam_member.runtime_secret_accessor,
+    google_project_iam_member.runtime_sql_client,
   ]
 }
 
 resource "google_cloud_run_v2_job" "seed" {
-  name     = "${local.name_prefix}-seed"
-  location = var.region
+  name                = "${local.name_prefix}-seed"
+  location            = var.region
+  deletion_protection = false
 
   template {
     template {
@@ -349,6 +358,8 @@ resource "google_cloud_run_v2_job" "seed" {
     google_project_service.required,
     google_artifact_registry_repository.main,
     google_secret_manager_secret_version.database_url,
+    google_project_iam_member.runtime_secret_accessor,
+    google_project_iam_member.runtime_sql_client,
   ]
 }
 
