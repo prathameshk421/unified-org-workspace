@@ -67,6 +67,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
+            NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ env.IMAGE_SHA }}
@@ -80,6 +81,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
+            NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/review-console:${{ env.IMAGE_SHA }}

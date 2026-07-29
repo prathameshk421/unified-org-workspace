@@ -124,11 +124,13 @@ jobs:
             file: apps/support-hub/Dockerfile
             build_args: |
               NEXT_PUBLIC_SUPPORT_HUB_URL=https://hub.example.com
+              NEXT_PUBLIC_REVIEW_CONSOLE_URL=https://console.example.com
               NEXT_PUBLIC_API_URL=https://api.example.com
           - name: review-console
             file: apps/review-console/Dockerfile
             build_args: |
               NEXT_PUBLIC_REVIEW_CONSOLE_URL=https://console.example.com
+              NEXT_PUBLIC_SUPPORT_HUB_URL=https://hub.example.com
               NEXT_PUBLIC_API_URL=https://api.example.com
           - name: db-migrate
             file: packages/db/Dockerfile

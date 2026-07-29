@@ -21,6 +21,10 @@ Shared Identity/Org session across Support Hub and Review Console via **API-orig
 
 CSRF with `SameSite=None`: mutating `/auth/*` routes reject non-`application/json` Content-Type (415).
 
+## API headers (Helmet / CORP)
+
+The API uses default `helmet()` which sets `Cross-Origin-Resource-Policy: same-origin`. This does **not** block session-sync auth: CORP applies to **no-cors** resource loads, while `@unified/auth-client` uses **cors-mode** `fetch` with `credentials: "include"`. CORS (`Access-Control-Allow-Origin` + `Allow-Credentials`) governs those requests. Do not relax helmet CORP for this feature.
+
 ## Frontend package
 
 `@unified/auth-client`:

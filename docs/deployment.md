@@ -99,11 +99,15 @@ Cookie SameSite policy (application code): custom domain → `Strict`; default `
 
 ### Next.js build-time vars (set in CD)
 
-| Variable | Service |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | support-hub, review-console |
-| `NEXT_PUBLIC_SUPPORT_HUB_URL` | support-hub |
-| `NEXT_PUBLIC_REVIEW_CONSOLE_URL` | review-console |
+Both dashboards need all three URLs baked at image build time (sibling navigation links).
+
+| Variable | support-hub | review-console | GitHub Actions source |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_URL` | yes | yes | `API_URL` |
+| `NEXT_PUBLIC_SUPPORT_HUB_URL` | yes | yes | `SUPPORT_HUB_URL` |
+| `NEXT_PUBLIC_REVIEW_CONSOLE_URL` | yes | yes | `REVIEW_CONSOLE_URL` |
+
+Docker builds fail if `NEXT_PUBLIC_API_URL` is empty.
 
 ## Demo credentials
 
