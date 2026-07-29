@@ -15,6 +15,7 @@ RUN pnpm install --frozen-lockfile --filter @unified/api...
 FROM deps AS builder
 WORKDIR /app
 COPY . .
+RUN pnpm --filter @unified/db exec prisma generate
 RUN pnpm turbo build --filter=@unified/api
 
 FROM base AS runner

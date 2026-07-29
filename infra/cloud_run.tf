@@ -61,16 +61,8 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name  = "SESSION_COOKIE_NAME"
-        value = "unified_session"
-      }
-
-      dynamic "env" {
-        for_each = var.enable_custom_domain ? [1] : []
-        content {
-          name  = "CORS_ORIGINS"
-          value = "https://${local.hub_hostname},https://${local.console_hostname}"
-        }
+        name = "CORS_ORIGINS"
+        value = var.enable_custom_domain ? "https://${local.hub_hostname},https://${local.console_hostname}" : "${google_cloud_run_v2_service.support_hub.uri},${google_cloud_run_v2_service.review_console.uri}"
       }
 
       dynamic "env" {
