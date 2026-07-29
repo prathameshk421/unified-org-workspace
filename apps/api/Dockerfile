@@ -23,11 +23,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 expressjs
 
-# Preserve monorepo paths so pnpm symlinks resolve (apps/api/node_modules -> .pnpm store)
+# Preserve monorepo paths so pnpm workspace symlinks resolve:
+# apps/api/node_modules/@unified/types -> ../../../../packages/types
 COPY --from=builder --chown=expressjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=expressjs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=expressjs:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=expressjs:nodejs /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=expressjs:nodejs /app/packages/types/package.json ./packages/types/package.json
+COPY --from=builder --chown=expressjs:nodejs /app/packages/types/dist ./packages/types/dist
 
 USER expressjs
 WORKDIR /app/apps/api

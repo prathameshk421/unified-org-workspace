@@ -25,8 +25,11 @@ export const env = {
   refreshCookieName: process.env.REFRESH_COOKIE_NAME ?? "unified_refresh",
   cookieDomain: process.env.COOKIE_DOMAIN || undefined,
   cookieSecure:
-    process.env.COOKIE_SECURE === "true" ||
-    process.env.NODE_ENV === "production",
+    process.env.COOKIE_SECURE === "true"
+      ? true
+      : process.env.COOKIE_SECURE === "false"
+        ? false
+        : process.env.NODE_ENV === "production",
   corsOrigins,
   accessTokenTtlSeconds: 15 * 60,
   refreshTokenDays: 7,
