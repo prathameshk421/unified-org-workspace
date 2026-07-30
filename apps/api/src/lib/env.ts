@@ -6,6 +6,12 @@ function requireEnv(key: string): string {
   return value;
 }
 
+function positiveIntEnv(key: string, fallback: number): number {
+  const raw = process.env[key];
+  const parsed = raw === undefined ? NaN : Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 const jwtSecret = requireEnv("JWT_SECRET");
 if (jwtSecret.length < 32) {
   throw new Error("JWT_SECRET must be at least 32 characters");
@@ -34,4 +40,6 @@ export const env = {
   accessTokenTtlSeconds: 15 * 60,
   refreshTokenDays: 7,
   bcryptRounds: 12,
+  authRateLimitMax: positiveIntEnv("AUTH_RATE_LIMIT_MAX", 10),
+  authRateLimitWindowMs: positiveIntEnv("AUTH_RATE_LIMIT_WINDOW_MS", 60_000),
 } as const;

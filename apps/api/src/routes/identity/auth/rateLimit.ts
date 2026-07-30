@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { env } from "../../../lib/env.js";
 
 interface RateLimitEntry {
   count: number;
@@ -7,8 +8,10 @@ interface RateLimitEntry {
 
 const buckets = new Map<string, RateLimitEntry>();
 
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 10;
+/** Test-only: clears in-memory rate limit state between unit tests. */
+export function resetRateLimitBucketsForTests(): void {
+  buckets.clear();
+}
 
 function getClientKey(req: Request, email?: string): string {
   const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
@@ -24,12 +27,15 @@ export function createRateLimiter(scope: string) {
 
     const entry = buckets.get(key);
     if (!entry || entry.resetAt <= now) {
-      buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+      buckets.set(key, {
+        count: 1,
+        resetAt: now + env.authRateLimitWindowMs,
+      });
       next();
       return;
     }
 
-    if (entry.count >= MAX_REQUESTS) {
+    if (entry.count >= env.authRateLimitMax) {
       res.status(429).json({ error: "Too many requests. Try again later." });
       return;
     }

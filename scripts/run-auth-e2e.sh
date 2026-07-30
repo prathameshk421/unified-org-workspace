@@ -21,6 +21,8 @@ export API_PORT="${API_PORT:-4000}"
 # Keep API cookies usable on http://localhost (Secure cookies would break HTTP e2e).
 export NODE_ENV="${NODE_ENV:-development}"
 export COOKIE_SECURE="${COOKIE_SECURE:-false}"
+# Playwright suite logs in repeatedly; default 10/min per email trips 429 mid-run.
+export AUTH_RATE_LIMIT_MAX="${AUTH_RATE_LIMIT_MAX:-1000}"
 
 has_prod_builds=0
 if [[ -f apps/api/dist/index.js && -d apps/support-hub/.next && -d apps/review-console/.next ]]; then
@@ -39,6 +41,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
+port_in_use() {
+  lsof -iTCP:"$1" -sTCP:LISTEN -t >/dev/null 2>&1
+}
+
+require_free_port() {
+  local port="$1"
+  local service="$2"
+  if port_in_use "$port"; then
+    echo "Port ${port} is already in use (${service})." >&2
+    echo "Stop the existing process and retry, e.g.:" >&2
+    echo "  lsof -iTCP:${port} -sTCP:LISTEN" >&2
+    exit 1
+  fi
+}
+
+assert_process_alive() {
+  local pid="$1"
+  local name="$2"
+  sleep 1
+  if ! kill -0 "$pid" 2>/dev/null; then
+    echo "${name} failed to start (PID ${pid} exited)." >&2
+    if [[ "$name" == "API" ]] && port_in_use "${API_PORT}"; then
+      echo "Port ${API_PORT} is in use by another process — the health check may have passed against a stale server." >&2
+    fi
+    exit 1
+  fi
+}
+
+require_free_port "${API_PORT}" "API"
+require_free_port 3000 "Support Hub"
+require_free_port 3001 "Review Console"
+
 if [[ "$USE_PROD" -eq 1 ]]; then
   if [[ "$has_prod_builds" -ne 1 ]]; then
     echo "AUTH_E2E_USE_PROD=1 but builds are missing." >&2
@@ -51,24 +85,30 @@ if [[ "$USE_PROD" -eq 1 ]]; then
   # API stays NODE_ENV=development so Secure cookies are not forced on localhost HTTP.
   NODE_ENV=development pnpm --filter @unified/api exec node dist/index.js &
   API_PID=$!
+  assert_process_alive "$API_PID" "API"
 
   NODE_ENV=production pnpm --filter @unified/support-hub start &
   HUB_PID=$!
+  assert_process_alive "$HUB_PID" "Support Hub"
 
   NODE_ENV=production pnpm --filter @unified/review-console start &
   CONSOLE_PID=$!
+  assert_process_alive "$CONSOLE_PID" "Review Console"
 else
   echo "No production builds found — starting with next dev / tsx (local fallback)..."
   echo "Tip: run 'pnpm build' first (or set AUTH_E2E_USE_PROD=1 with artifacts) for faster startup."
 
   pnpm --filter @unified/api exec tsx src/index.ts &
   API_PID=$!
+  assert_process_alive "$API_PID" "API"
 
   pnpm --filter @unified/support-hub dev &
   HUB_PID=$!
+  assert_process_alive "$HUB_PID" "Support Hub"
 
   pnpm --filter @unified/review-console dev &
   CONSOLE_PID=$!
+  assert_process_alive "$CONSOLE_PID" "Review Console"
 fi
 
 echo "Waiting for services (prod=${USE_PROD})..."
@@ -87,4 +127,8 @@ for i in $(seq 1 60); do
 done
 
 pnpm test:auth
+
+echo "Ensuring Playwright Chromium is installed..."
+pnpm exec playwright install chromium
+
 pnpm exec playwright test

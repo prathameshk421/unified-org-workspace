@@ -11,6 +11,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:integration": "pnpm --filter @unified/api test:integration",
     "test:auth": "newman run postman/unified-org-identity-auth.postman_collection.json --env-var baseUrl=http://localhost:4000",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
@@ -24,13 +25,17 @@
       "prisma",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "serialised-error": "file:scripts/vendor/serialised-error"
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@unified/config": "workspace:*",
     "newman": "^6.2.1",
     "prettier": "^3.5.3",
+    "serialised-error": "file:scripts/vendor/serialised-error",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   }

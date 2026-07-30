@@ -98,6 +98,7 @@ jobs:
       AUTH_E2E_USE_PROD: "1"
       # Force non-Secure cookies on http://localhost (overrides NODE_ENV production default).
       COOKIE_SECURE: "false"
+      AUTH_RATE_LIMIT_MAX: "1000"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -160,6 +161,70 @@ jobs:
 
       - name: Run Newman + Playwright session sync
         run: bash scripts/run-auth-e2e.sh
+
+  api-integration:
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: unified_org
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      JWT_SECRET: ci-only-secret-min-32-chars-long!!
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unified_org
+      DATABASE_APP_URL: postgresql://unified_app:unified_app@localhost:5432/unified_org
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      COOKIE_SECURE: "false"
+      NODE_ENV: test
+      AUTH_RATE_LIMIT_MAX: "1000"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client + migrate
+        run: |
+          pnpm --filter @unified/db exec prisma generate
+          pnpm --filter @unified/db exec prisma migrate deploy
+
+      - name: Build API dependencies
+        run: pnpm turbo build --filter=@unified/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unified_org
+
+      - name: Run API integration tests
+        run: pnpm --filter @unified/api test:integration
+
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-integration-junit
+          retention-days: 7
+          path: apps/api/test-results/integration.junit.xml
 
   docker-smoke:
     runs-on: ubuntu-latest

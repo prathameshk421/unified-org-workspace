@@ -5,6 +5,7 @@ node_modules/
 
 # Testing and Coverage
 coverage/
+apps/api/test-results/
 .nyc_output/
 test-results/
 playwright-report/

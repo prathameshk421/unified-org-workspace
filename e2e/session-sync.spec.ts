@@ -1,15 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-const HUB = process.env.HUB_URL ?? "http://localhost:3000";
-const CONSOLE = process.env.CONSOLE_URL ?? "http://localhost:3001";
-
-async function login(page: Page, email: string, password: string, baseUrl: string) {
-  await page.goto(`${baseUrl}/login`);
-  await page.fill('[name=email]', email);
-  await page.fill('[name=password]', password);
-  await page.click('[data-testid=login-submit]');
-  await expect(page.getByTestId("auth-status")).toContainText(email);
-}
+import { CONSOLE, HUB, login } from "./fixtures.js";
 
 test.describe("session sync", () => {
   test("login on hub is recognized on console", async ({ page, context }) => {
@@ -39,7 +29,7 @@ test.describe("session sync", () => {
   });
 
   test("logout-everywhere invalidates session", async ({ page }) => {
-    await login(page, "alice@acme.com", "password123", HUB);
+    await login(page, "bob@acme.com", "password123", HUB);
     await page.getByTestId("logout-everywhere").click();
     await expect(page).toHaveURL(/\/login/);
 

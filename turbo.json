@@ -16,7 +16,17 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": [
+        "CI",
+        "NODE_ENV",
+        "JWT_SECRET",
+        "DATABASE_URL",
+        "DATABASE_APP_URL",
+        "COOKIE_SECURE",
+        "AUTH_RATE_LIMIT_MAX",
+        "AUTH_RATE_LIMIT_WINDOW_MS"
+      ]
     }
   }
 }

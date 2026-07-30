@@ -1,0 +1,12 @@
+{
+  "name": "serialised-error",
+  "version": "1.1.3",
+  "description": "Vendored copy — upstream npm tarball extracts incompletely under pnpm on this workspace.",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "object-hash": "^1.1.2",
+    "stack-trace": "0.0.9",
+    "uuid": "^3.0.0"
+  }
+}
