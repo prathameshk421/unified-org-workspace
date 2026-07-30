@@ -2,6 +2,7 @@
 
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import Link from "next/link";
 
 export function AuthDashboard({
   title,
@@ -41,20 +42,20 @@ export function AuthDashboard({
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <a
+          <Link
             href="/tickets"
             className="inline-flex items-center justify-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             data-testid="tickets-link"
           >
             Tickets
-          </a>
-          <a
+          </Link>
+          <Link
             href="/settings"
             className="inline-flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-muted"
             data-testid="settings-link"
           >
             Organization settings
-          </a>
+          </Link>
           <Button type="button" data-testid="logout" onClick={() => void logout()}>
             Sign out
           </Button>
