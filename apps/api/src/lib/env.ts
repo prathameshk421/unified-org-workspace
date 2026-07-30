@@ -1,3 +1,9 @@
+import path from "node:path";
+import {
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENT_MAX_PER_TICKET,
+} from "@unified/types";
+
 function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -42,4 +48,9 @@ export const env = {
   bcryptRounds: 12,
   authRateLimitMax: positiveIntEnv("AUTH_RATE_LIMIT_MAX", 10),
   authRateLimitWindowMs: positiveIntEnv("AUTH_RATE_LIMIT_WINDOW_MS", 60_000),
+  attachmentsDir:
+    process.env.ATTACHMENTS_DIR ??
+    path.join(process.cwd(), "data", "attachments"),
+  attachmentMaxBytes: ATTACHMENT_MAX_BYTES,
+  attachmentMaxPerTicket: ATTACHMENT_MAX_PER_TICKET,
 } as const;

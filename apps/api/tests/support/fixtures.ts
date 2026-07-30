@@ -113,7 +113,19 @@ export async function cleanupRunFixtures(): Promise<void> {
   const userIds = [...trackedUserIds];
   const orgIds = [...trackedOrgIds];
 
+  if (orgIds.length > 0) {
+    await ownerDb.ticket.deleteMany({ where: { orgId: { in: orgIds } } });
+  }
+
   if (userIds.length > 0) {
+    await ownerDb.ticket.deleteMany({
+      where: {
+        OR: [
+          { createdById: { in: userIds } },
+          { assigneeId: { in: userIds } },
+        ],
+      },
+    });
     await ownerDb.auditLog.deleteMany({ where: { userId: { in: userIds } } });
     await ownerDb.user.deleteMany({ where: { id: { in: userIds } } });
   }

@@ -6,6 +6,8 @@ import type { HealthCheckResponse } from "@unified/types";
 import { env } from "./lib/env.js";
 import { auditMutations } from "./middleware/audit-mutations.js";
 import { identityRouter } from "./routes/identity/index.js";
+import { orgSettingsRouter } from "./routes/org-settings/index.js";
+import { ticketsRouter } from "./routes/tickets/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -34,6 +36,8 @@ export function createApp(): Express {
   });
 
   app.use(identityRouter);
+  app.use(orgSettingsRouter);
+  app.use(ticketsRouter);
 
   return app;
 }
