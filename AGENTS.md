@@ -15,6 +15,7 @@ Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Co
 - [docs/requirements/rbac-middleware.md](docs/requirements/rbac-middleware.md)
 - [docs/requirements/database-schema.md](docs/requirements/database-schema.md)
 - [docs/requirements/audit-log.md](docs/requirements/audit-log.md)
+- [docs/requirements/ai-progress-tracker.md](docs/requirements/ai-progress-tracker.md)
 - [docs/setup.md](docs/setup.md)
 
 ## Hand long-running commands to the user
@@ -64,7 +65,7 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 - **Tier 1 is non-negotiable.** Do not start Tier 2 product work until Tier 1 passes its required tests (auth, session sync, org scoping, audit append-only, RBAC). See [tiered-build-plan.md](docs/requirements/tiered-build-plan.md).
 - **Audit log** is append-only at the **database permission level** (`unified_app` = INSERT/SELECT only on `audit_logs`) — app-only guards are insufficient.
 - **DB dual URLs:** migrate/seed with `DATABASE_URL`; runtime API uses `DATABASE_APP_URL`.
-- **AI digests (when built):** scoped to user's org + explicit shares only; delivered by background job, not on page load; requires a dedicated leak test.
+- **AI digests:** scoped to user's org + explicit shares only; delivered by background job (`pnpm --filter @unified/api digest:once`), not on page load; dedicated leak test in BOLA allowlist. Groq LLM summarizes scoped facts only (template fallback).
 
 ## Repo layout & ports
 

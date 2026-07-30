@@ -15,6 +15,7 @@ import { orgSettingsRouter } from "./routes/org-settings/index.js";
 import { orgRouter, prsRouter } from "./routes/prs/index.js";
 import { sharesRouter } from "./routes/shares/index.js";
 import { ticketsRouter } from "./routes/tickets/index.js";
+import { notificationsRouter } from "./routes/notifications/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -51,6 +52,7 @@ export function createApp(): Express {
   app.use("/audit", auditRouter);
   app.use(orgSettingsRouter);
   app.use(ticketsRouter);
+  app.use(notificationsRouter);
 
   return app;
 }

@@ -11,6 +11,7 @@ resource "google_project_service" "required" {
     "redis.googleapis.com",
     "storage.googleapis.com",
     "vpcaccess.googleapis.com",
+    "cloudscheduler.googleapis.com",
   ])
 
   project            = var.project_id

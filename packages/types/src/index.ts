@@ -67,6 +67,8 @@ export const AuditAction = {
   CONNECTION_FORCE_REVOKE: "connection.force_revoke",
   SHARE_CREATE: "share.create",
   SHARE_REVOKE: "share.revoke",
+  DIGEST_RUN_COMPLETED: "digest.run_completed",
+  DIGEST_RUN_FAILED: "digest.run_failed",
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
@@ -163,6 +165,48 @@ export const ShareGrantStatus = {
 
 export type ShareGrantStatus =
   (typeof ShareGrantStatus)[keyof typeof ShareGrantStatus];
+
+export const DigestRunStatus = {
+  RUNNING: "RUNNING",
+  SUCCEEDED: "SUCCEEDED",
+  FAILED: "FAILED",
+  SKIPPED: "SKIPPED",
+} as const;
+
+export type DigestRunStatus =
+  (typeof DigestRunStatus)[keyof typeof DigestRunStatus];
+
+export const NotificationType = {
+  DIGEST: "DIGEST",
+} as const;
+
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
+
+export const NotificationChannel = {
+  IN_APP: "IN_APP",
+} as const;
+
+export type NotificationChannel =
+  (typeof NotificationChannel)[keyof typeof NotificationChannel];
+
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  items: NotificationDto[];
+  nextCursor: string | null;
+}
+
+export interface NotificationUnreadCountResponse {
+  count: number;
+}
 
 export type ResourceAccess = "member" | "shared";
 

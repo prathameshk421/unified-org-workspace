@@ -51,6 +51,21 @@ enum ShareGrantStatus {
   REVOKED
 }
 
+enum DigestRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+enum NotificationType {
+  DIGEST
+}
+
+enum NotificationChannel {
+  IN_APP
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -100,6 +115,7 @@ model User {
   shareGrantsRevoked        ShareGrant[]       @relation("ShareGrantRevokedBy")
   requestedConnections      OrgConnection[]    @relation("OrgConnectionRequestedBy")
   respondedConnections      OrgConnection[]    @relation("OrgConnectionRespondedBy")
+  notifications             Notification[]
 
   @@map("users")
 }
@@ -381,4 +397,47 @@ model PrComment {
   @@index([pullRequestId])
   @@index([orgId, pullRequestId])
   @@map("pr_comments")
+}
+
+model DigestRun {
+  id                 String          @id @default(cuid())
+  scheduledFor       DateTime        @unique
+  status             DigestRunStatus @default(RUNNING)
+  startedAt          DateTime        @default(now())
+  finishedAt         DateTime?
+  processedUserCount Int             @default(0)
+  notifiedUserCount  Int             @default(0)
+  errorMessage       String?
+  stats              Json            @default("{}")
+
+  notifications Notification[]
+
+  @@index([status, startedAt])
+  @@map("digest_runs")
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String
+  type        NotificationType    @default(DIGEST)
+  channel     NotificationChannel @default(IN_APP)
+  title       String
+  body        String
+  /// Server-only structured facts — never select into API DTOs
+  facts       Json                @default("{}")
+  /// Resource ids for revoke redaction: ["ticket:cuid", "pr:cuid"]
+  resourceIds String[]            @default([])
+  redactedAt  DateTime?
+  digestRunId String
+  readAt      DateTime?
+  createdAt   DateTime            @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  digestRun DigestRun @relation(fields: [digestRunId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, digestRunId, type, channel])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@index([userId, redactedAt])
+  @@map("notifications")
 }

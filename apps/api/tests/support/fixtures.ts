@@ -226,6 +226,12 @@ export async function cleanupRunFixtures(): Promise<void> {
     });
   }
 
+  if (userIds.length > 0) {
+    await ownerDb.notification.deleteMany({
+      where: { userId: { in: userIds } },
+    });
+  }
+
   // HIGH-RISK: authorId/reviewerId are Restrict — must delete PRs before users
   if (orgIds.length > 0) {
     await ownerDb.pullRequest.deleteMany({ where: { orgId: { in: orgIds } } });

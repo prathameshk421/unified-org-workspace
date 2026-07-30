@@ -18,6 +18,11 @@ flowchart LR
     API["api"]
     Migrate["migrate Job"]
     Seed["seed Job"]
+    Digest["digest Job"]
+  end
+
+  subgraph sched [Scheduler]
+    CS["Cloud Scheduler 06:00 UTC"]
   end
 
   subgraph data [Managed data]
@@ -36,6 +41,9 @@ flowchart LR
   API --> SM
   Migrate --> SQL
   Seed --> SQL
+  CS --> Digest
+  Digest --> SQL
+  Digest --> SM
 ```
 
 | Component      | GCP service                              | Notes                             |
@@ -45,10 +53,12 @@ flowchart LR
 | Review Console | Cloud Run (`unified-org-review-console`) | Next.js standalone                |
 | Migrations     | Cloud Run Job (`unified-org-migrate`)    | `prisma migrate deploy`           |
 | Demo seed      | Cloud Run Job (`unified-org-seed`)       | One-shot via `seed-demo` workflow |
+| AI digest      | Cloud Run Job (`unified-org-digest`)     | Same API image; `node dist/worker/digest-once.js` |
+| Digest schedule| Cloud Scheduler (`unified-org-digest-daily`) | `0 6 * * *` UTC → job `:run`   |
 | Database       | Cloud SQL PostgreSQL 16                  | Private IP + Cloud SQL connector  |
 | Cache          | Memorystore Redis 7                      | VPC-private                       |
 | Images         | Artifact Registry (`unified-org`)        | Built by GitHub Actions           |
-| Secrets        | Secret Manager                           | JWT, DB URLs, Redis URL           |
+| Secrets        | Secret Manager                           | JWT, DB URLs, Redis URL, Groq     |
 | Deploy auth    | Workload Identity Federation             | No JSON service-account keys      |
 
 ## URLs
@@ -84,12 +94,15 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 
 ### Secret Manager (populated by Terraform)
 
-| Secret             | Used by           | Description                                          |
-| ------------------ | ----------------- | ---------------------------------------------------- |
-| `JWT_SECRET`       | API               | Session/JWT signing                                  |
-| `DATABASE_URL`     | Migrate/seed jobs | Postgres owner (`postgres`) via Cloud SQL private IP |
-| `DATABASE_APP_URL` | API runtime       | Restricted `unified_app` role (append-only audit)    |
-| `REDIS_URL`        | API               | Memorystore connection string                        |
+| Secret             | Used by                    | Description                                          |
+| ------------------ | -------------------------- | ---------------------------------------------------- |
+| `JWT_SECRET`       | API (+ digest job)         | Session/JWT signing                                  |
+| `DATABASE_URL`     | Migrate/seed jobs          | Postgres owner (`postgres`) via Cloud SQL private IP |
+| `DATABASE_APP_URL` | API runtime + digest job   | Restricted `unified_app` role (append-only audit)    |
+| `REDIS_URL`        | API                        | Memorystore connection string                        |
+| `GROQ_API_KEY`     | Digest job only            | From `var.groq_api_key` in `terraform.tfvars` (default `"unset"` → template-only digests) |
+
+There is **no** GitHub Actions secret for Groq — set it in Terraform / Secret Manager. CD only rebuilds and updates the digest job image.
 
 ### Cloud Run API env (set by Terraform)
 
@@ -105,6 +118,28 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 Local/dev: omit GCS vars (or set `ATTACHMENTS_BACKEND=fs`) and optionally `ATTACHMENTS_DIR`. Cloud Run uses the runtime SA + ADC — no JSON key. The seed job uploads demo attachment bytes to GCS when `ATTACHMENTS_*` is set (same backend as API runtime).
 
 Cookie SameSite policy (application code): custom domain → `Strict`; gateway / secure no-domain → `None`; local → `Strict`. Hub↔Console sync needs a shared site (gateway or custom domain) — see [session-sync.md](./requirements/session-sync.md).
+
+### Cloud Run digest job env (set by Terraform)
+
+The API **service** does not need Groq/digest vars — only the `unified-org-digest` job does. Notifications APIs read `notifications` rows already written by the worker.
+
+| Variable             | Source                         | Notes |
+| -------------------- | ------------------------------ | ----- |
+| `DIGEST_ENABLED`     | `var.digest_enabled` (default `true`) | `false` skips processing |
+| `DIGEST_LLM_ENABLED` | `true` when `groq_api_key != "unset"` | Otherwise template fallback |
+| `GROQ_MODEL`         | hardcoded                      | `openai/gpt-oss-20b` |
+| `GROQ_API_KEY`       | Secret Manager                 | From `terraform.tfvars` `groq_api_key` |
+| `DATABASE_APP_URL`   | Secret Manager                 | Same restricted role as API |
+| `JWT_SECRET`         | Secret Manager                 | Mounted for image parity; worker does not require it |
+
+Optional tuning vars (`DIGEST_TICKET_STALE_DAYS`, etc.) exist for local runs — see [setup.md](./setup.md#ai-progress-tracker-digest). Prod uses code defaults unless you extend Terraform.
+
+In `infra/terraform.tfvars`:
+
+```hcl
+digest_enabled = true
+groq_api_key   = "gsk_..."   # or leave default "unset" for template-only digests
+```
 
 ### Next.js build-time vars (set in CD)
 
@@ -155,6 +190,8 @@ terraform apply
 ```
 
 `enable_custom_domain = false` by default — skips DNS and domain mappings.
+
+Optional AI digests: set `groq_api_key` (and keep `digest_enabled = true`) in `terraform.tfvars` before apply — see [AI Progress Tracker](#ai-progress-tracker-digest).
 
 Save outputs:
 
@@ -246,9 +283,17 @@ gcloud run jobs execute unified-org-migrate --region=<region> --wait
 
 Trigger the **Seed Demo Data** workflow in GitHub Actions.
 
+### Run digest job manually
+
+Deploy updates the digest job image automatically. To trigger a run outside the 06:00 UTC schedule:
+
+```bash
+gcloud run jobs execute unified-org-digest --region=<region> --wait
+```
+
 ### Rotate secrets
 
-Update values in Secret Manager, then redeploy affected Cloud Run services/jobs so new revisions pick up `latest` secret versions.
+Update values in Secret Manager, then redeploy affected Cloud Run services/jobs so new revisions pick up `latest` secret versions. For Groq: change `groq_api_key` in `terraform.tfvars` and `terraform apply`, or add a new Secret Manager version for `GROQ_API_KEY`, then re-execute / redeploy the digest job.
 
 ### Terraform changes
 
@@ -260,15 +305,29 @@ terraform apply
 
 Cloud Run container images are managed by CD (`lifecycle.ignore_changes` on image) — Terraform will not revert deployed images.
 
+## AI Progress Tracker (digest)
+
+Product behavior: [requirements/ai-progress-tracker.md](./requirements/ai-progress-tracker.md). Local commands: [setup.md](./setup.md#ai-progress-tracker-digest).
+
+| Piece | Name / command |
+| ----- | -------------- |
+| Migration | Included in `unified-org-migrate` (`digest_runs`, `notifications`) |
+| Cloud Run Job | `unified-org-digest` (API image, entrypoint `node dist/worker/digest-once.js`) |
+| Scheduler | `unified-org-digest-daily` — cron `0 6 * * *` (Etc/UTC) POSTs the job `:run` API |
+| CD | Deploy workflow runs `gcloud run jobs update unified-org-digest` after API image publish |
+| GitHub secrets/vars | None specific to digests (Groq is Terraform → Secret Manager only) |
+
+Enable LLM summaries by setting `groq_api_key` in `terraform.tfvars` (never commit the real key). With the default `"unset"`, digests still run using the template summarizer when `digest_enabled = true`.
+
 ## Known limits (first cut)
 
 - No auto-seed on deploy
-- No background worker / digest job (Tier 2)
 - Single-region, cost-optimized sizing (`db-f1-micro`, Redis BASIC 1 GB)
 - Redis is provisioned but not yet used by application code
 
 ## Related docs
 
 - [Local setup](./setup.md)
+- [AI Progress Tracker](./requirements/ai-progress-tracker.md)
 - [Assignment spec](./requirements/assignment-spec.md)
 - [Database schema](./requirements/database-schema.md)

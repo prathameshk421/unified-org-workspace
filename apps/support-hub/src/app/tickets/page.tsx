@@ -6,6 +6,7 @@ import { OrgRole } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
 import { ProtectedRoute } from "../../components/auth-guards";
+import { NotificationBellContainer } from "../../components/notification-bell-container";
 import { listTickets } from "../../lib/tickets-api";
 import type { TicketResponse } from "@unified/types";
 
@@ -81,11 +82,14 @@ function TicketsListContent() {
               </Link>
             </p>
           </div>
-          {canMutate ? (
-            <Link href="/tickets/new">
-              <Button type="button">New ticket</Button>
-            </Link>
-          ) : null}
+          <div className="flex items-center gap-3">
+            <NotificationBellContainer />
+            {canMutate ? (
+              <Link href="/tickets/new">
+                <Button type="button">New ticket</Button>
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {loading ? (

@@ -3,6 +3,7 @@
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
 import Link from "next/link";
+import { NotificationBellContainer } from "./notification-bell-container";
 
 export function AuthDashboard({
   title,
@@ -19,6 +20,9 @@ export function AuthDashboard({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface-muted px-6">
+      <div className="absolute right-6 top-6">
+        <NotificationBellContainer />
+      </div>
       <div className="w-full max-w-lg text-center">
         <p className="text-sm font-medium uppercase tracking-wide text-brand-600">
           Unified Org Workspace

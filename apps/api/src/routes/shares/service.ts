@@ -328,6 +328,15 @@ export async function revokeShare(input: {
     },
   });
 
+  const { redactNotificationsForResource } = await import(
+    "../../digest/redact.js"
+  );
+  await redactNotificationsForResource({
+    userId: grant.grantedToUserId,
+    resourceType: grant.resourceType,
+    resourceId: grant.resourceId,
+  });
+
   return { grant: toShareGrantDto(updated), revokedBy };
 }
 

@@ -24,6 +24,12 @@ http {
     server_name  _;
     root         /usr/share/nginx/html;
 
+    # Cloud Run terminates TLS and speaks plain HTTP to :8080, so nginx would
+    # otherwise expand every redirect to http://host:8080/... and the browser
+    # would block it as mixed content on an HTTPS page.
+    absolute_redirect off;
+    port_in_redirect  off;
+
     # Landing page (exact / only)
     location = / {
       try_files /index.html =404;
@@ -31,6 +37,13 @@ http {
 
     location = /index.html {
       try_files /index.html =404;
+    }
+
+    # Root asset probe: serve from disk instead of falling through to the
+    # catch-all redirect below.
+    location = /favicon.ico {
+      try_files /favicon.ico =404;
+      access_log off;
     }
 
     location /api/ {

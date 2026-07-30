@@ -466,3 +466,113 @@ resource "google_cloud_run_v2_service_iam_member" "gateway_public" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+# Digest worker — same API image, DATABASE_APP_URL (unified_app), not DATABASE_URL
+resource "google_cloud_run_v2_job" "digest" {
+  name                = "${local.name_prefix}-digest"
+  location            = var.region
+  deletion_protection = false
+
+  template {
+    template {
+      service_account = google_service_account.cloud_run_runtime.email
+      timeout         = "600s"
+      max_retries     = 1
+
+      vpc_access {
+        egress = "PRIVATE_RANGES_ONLY"
+        network_interfaces {
+          network    = google_compute_network.main.id
+          subnetwork = google_compute_subnetwork.main.id
+        }
+      }
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.postgres.connection_name]
+        }
+      }
+
+      containers {
+        image   = local.api_image
+        command = ["node", "dist/worker/digest-once.js"]
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+
+        env {
+          name  = "DIGEST_ENABLED"
+          value = var.digest_enabled ? "true" : "false"
+        }
+
+        env {
+          name  = "DIGEST_LLM_ENABLED"
+          value = var.groq_api_key != "unset" ? "true" : "false"
+        }
+
+        env {
+          name  = "GROQ_MODEL"
+          value = "openai/gpt-oss-20b"
+        }
+
+        env {
+          name = "DATABASE_APP_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.database_app_url.secret_id
+              version = "latest"
+            }
+          }
+        }
+
+        env {
+          name = "JWT_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.jwt_secret.secret_id
+              version = "latest"
+            }
+          }
+        }
+
+        env {
+          name = "GROQ_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.groq_api_key.secret_id
+              version = "latest"
+            }
+          }
+        }
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "512Mi"
+          }
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
+
+  depends_on = [
+    google_project_service.required,
+    google_artifact_registry_repository.main,
+    google_secret_manager_secret_version.database_app_url,
+    google_secret_manager_secret_version.jwt_secret,
+    google_secret_manager_secret_version.groq_api_key,
+    google_project_iam_member.runtime_secret_accessor,
+    google_project_iam_member.runtime_sql_client,
+  ]
+}

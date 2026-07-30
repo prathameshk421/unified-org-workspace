@@ -52,6 +52,19 @@ resource "google_secret_manager_secret_version" "redis_url" {
   secret_data = "redis://${google_redis_instance.main.host}:${google_redis_instance.main.port}"
 }
 
+resource "google_secret_manager_secret" "groq_api_key" {
+  secret_id = "GROQ_API_KEY"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "groq_api_key" {
+  secret      = google_secret_manager_secret.groq_api_key.id
+  secret_data = var.groq_api_key
+}
+
 resource "random_password" "jwt_secret" {
   length  = 64
   special = true

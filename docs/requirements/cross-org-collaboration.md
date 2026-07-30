@@ -250,11 +250,11 @@ Fixtures: `apps/api/tests/support/share-fixtures.ts` (cleanup deletes `share_gra
 - Full platform admin **console UI** (API force-revoke / list-all only)
 - Org-wide broadcast shares
 - Same-org `ShareGrant` / in-org guest via grants
-- AI digest leak test (**required when AI Progress Tracker lands**)
 - Share → PR reviewer elevation
 - Playwright share e2e
 - Redis / notification fanout
 
+AI digest leak coverage lives in `apps/api/tests/integration/ai-digest-leak.test.ts` (BOLA allowlist).
 ---
 
 ## Invariant

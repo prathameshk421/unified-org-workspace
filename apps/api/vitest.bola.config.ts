@@ -25,6 +25,7 @@ const BOLA_INCLUDE = [
   "tests/integration/org-settings.test.ts",
   "tests/integration/audit.test.ts",
   "tests/integration/audit-viewer.test.ts",
+  "tests/integration/ai-digest-leak.test.ts",
   "tests/integration/product-bola/**/*.test.ts",
 ] as const;
 

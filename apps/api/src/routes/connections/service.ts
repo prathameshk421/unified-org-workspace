@@ -376,6 +376,15 @@ export async function revokeConnection(input: {
 
   const now = new Date();
 
+  const activeGrants = await prisma.shareGrant.findMany({
+    where: { orgConnectionId: conn.id, status: "ACTIVE" },
+    select: {
+      grantedToUserId: true,
+      resourceType: true,
+      resourceId: true,
+    },
+  });
+
   const [, grantResult] = await prisma.$transaction([
     prisma.orgConnection.update({
       where: { id: conn.id },
@@ -394,6 +403,11 @@ export async function revokeConnection(input: {
       },
     }),
   ]);
+
+  const { redactNotificationsForGrants } = await import(
+    "../../digest/redact.js"
+  );
+  await redactNotificationsForGrants(activeGrants);
 
   const refreshed = await prisma.orgConnection.findUniqueOrThrow({
     where: { id: conn.id },

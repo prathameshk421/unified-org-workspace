@@ -123,6 +123,7 @@ output "secret_ids" {
     google_secret_manager_secret.database_url.secret_id,
     google_secret_manager_secret.database_app_url.secret_id,
     google_secret_manager_secret.redis_url.secret_id,
+    google_secret_manager_secret.groq_api_key.secret_id,
   ]
   sensitive = false
 }

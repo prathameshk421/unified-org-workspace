@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { OrgRole } from "@unified/types";
 import { canMutatePrs, canViewAudit } from "@/lib/roles";
+import { NotificationBellContainer } from "@/components/notification-bell-container";
 
 function NavLink({
   href,
@@ -79,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
+            <NotificationBellContainer />
             <span className="text-muted">{user?.email}</span>
             <OrgSwitcher className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm" />
           </div>

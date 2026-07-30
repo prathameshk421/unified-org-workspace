@@ -145,6 +145,12 @@ jobs:
             --region="${{ env.GCP_REGION }}" \
             --image="${{ env.ARTIFACT_REGISTRY }}/api:${{ env.IMAGE_SHA }}"
 
+      - name: Update digest job image
+        run: |
+          gcloud run jobs update unified-org-digest \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/api:${{ env.IMAGE_SHA }}"
+
       - name: Deploy Support Hub
         run: |
           gcloud run services update unified-org-support-hub \
@@ -184,3 +190,26 @@ jobs:
           done
           echo "Health check failed after 5 attempts"
           exit 1
+
+      # Cloud Run speaks plain HTTP to the container, so an nginx redirect that
+      # leaks an absolute origin is blocked as mixed content on the HTTPS page.
+      - name: Assert gateway redirects are not insecure
+        run: |
+          failed=0
+          for path in /support-hub /console /api /favicon.ico; do
+            loc=$(curl --silent --show-error --head "${{ env.GATEWAY_ORIGIN }}${path}" \
+              | tr -d '\r' | awk 'tolower($1)=="location:"{print $2}')
+            case "${loc}" in
+              http://*)
+                echo "Insecure redirect on ${path}: ${loc}"
+                failed=1
+                ;;
+              *)
+                echo "OK ${path} -> ${loc:-<no redirect>}"
+                ;;
+            esac
+          done
+          if [ "${failed}" -ne 0 ]; then
+            echo "Gateway emitted absolute http:// redirects"
+            exit 1
+          fi

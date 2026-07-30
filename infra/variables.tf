@@ -58,3 +58,16 @@ variable "placeholder_image" {
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
+
+variable "groq_api_key" {
+  description = "Groq API key for AI digests (set in terraform.tfvars; use unset to keep LLM disabled)"
+  type        = string
+  sensitive   = true
+  default     = "unset"
+}
+
+variable "digest_enabled" {
+  description = "Whether the digest Cloud Run Job should process users"
+  type        = bool
+  default     = true
+}
