@@ -20,8 +20,7 @@ function getClientKey(req: Request, email?: string): string {
 
 export function createRateLimiter(scope: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const email =
-      typeof req.body?.email === "string" ? req.body.email : undefined;
+    const email = typeof req.body?.email === "string" ? req.body.email : undefined;
     const key = `${scope}:${getClientKey(req, email)}`;
     const now = Date.now();
 

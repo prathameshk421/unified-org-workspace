@@ -4,30 +4,30 @@ Cookie-based JWT authentication for the unified org workspace API.
 
 ## Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/register` | Create user + auto-login |
-| POST | `/auth/login` | Email/password login |
-| POST | `/auth/refresh` | Rotate refresh token |
-| POST | `/auth/logout` | Revoke current session |
-| POST | `/auth/logout-everywhere` | Revoke all user sessions |
-| GET | `/auth/me` | Current user + memberships + active org |
-| POST | `/auth/switch-org` | Switch active org (membership required) |
+| Method | Path                      | Description                             |
+| ------ | ------------------------- | --------------------------------------- |
+| POST   | `/auth/register`          | Create user + auto-login                |
+| POST   | `/auth/login`             | Email/password login                    |
+| POST   | `/auth/refresh`           | Rotate refresh token                    |
+| POST   | `/auth/logout`            | Revoke current session                  |
+| POST   | `/auth/logout-everywhere` | Revoke all user sessions                |
+| GET    | `/auth/me`                | Current user + memberships + active org |
+| POST   | `/auth/switch-org`        | Switch active org (membership required) |
 
 ## Cookies
 
-| Cookie | TTL | Purpose |
-|--------|-----|---------|
-| `unified_access` | 15 min | JWT access token (httpOnly) |
+| Cookie            | TTL    | Purpose                                               |
+| ----------------- | ------ | ----------------------------------------------------- |
+| `unified_access`  | 15 min | JWT access token (httpOnly)                           |
 | `unified_refresh` | 7 days | Opaque refresh token (httpOnly, SHA-256 hashed in DB) |
 
 **Flags:** `httpOnly`, dynamic `sameSite` (see matrix below), `secure` in production (or `COOKIE_SECURE=true`).
 
-| Env | `COOKIE_DOMAIN` | SameSite |
-|-----|-----------------|----------|
-| Local | omit | `strict` |
-| `*.run.app` (secure, no domain) | omit | `none` |
-| Custom parent domain | `.yourparent.com` | `strict` |
+| Env                             | `COOKIE_DOMAIN`   | SameSite |
+| ------------------------------- | ----------------- | -------- |
+| Local                           | omit              | `strict` |
+| `*.run.app` (secure, no domain) | omit              | `none`   |
+| Custom parent domain            | `.yourparent.com` | `strict` |
 
 **Local / client-only sync:** omit `COOKIE_DOMAIN` — cookies are host-only on the **API** origin (`localhost:4000`). Dashboards on `:3000` / `:3001` do not host session cookies; they call the API with `credentials: "include"`, so the browser sends the API cookies and both dashboards share one session. (Older wording that “ports cannot share cookies” referred to dashboard-to-dashboard cookie jars, not this API-origin model.)
 

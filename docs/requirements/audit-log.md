@@ -12,15 +12,15 @@ Verified against:
 
 ## Locked Decisions
 
-| Area | Choice |
-|---|---|
-| Runtime DB role | **`unified_app`** (not `app_writer`) via `DATABASE_APP_URL` |
-| Writer location | `apps/api/src/lib/audit-log.ts` — uses API `prisma` only |
-| Middleware | `auditMutations` flushes queued events on successful mutations; never logs raw `req.body` |
-| `orgId` on auth events | Nullable — `null` for register / org-less login / logout without active org |
-| Org delete | `audit_logs.orgId` FK `ON DELETE SET NULL` — history preserved |
-| Excluded routes | `/health`, `POST /auth/refresh` |
-| Action constants | `AuditAction` in `@unified/types` |
+| Area                   | Choice                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| Runtime DB role        | **`unified_app`** (not `app_writer`) via `DATABASE_APP_URL`                               |
+| Writer location        | `apps/api/src/lib/audit-log.ts` — uses API `prisma` only                                  |
+| Middleware             | `auditMutations` flushes queued events on successful mutations; never logs raw `req.body` |
+| `orgId` on auth events | Nullable — `null` for register / org-less login / logout without active org               |
+| Org delete             | `audit_logs.orgId` FK `ON DELETE SET NULL` — history preserved                            |
+| Excluded routes        | `/health`, `POST /auth/refresh`                                                           |
+| Action constants       | `AuditAction` in `@unified/types`                                                         |
 
 ---
 
@@ -45,14 +45,14 @@ Inserts one row into `audit_logs` via the API Prisma client (`unified_app`).
 
 ## Auth Audit Coverage
 
-| Mutation | Action | `orgId` |
-|---|---|---|
-| `POST /auth/register` | `auth.register` | `null` |
-| `POST /auth/login` | `auth.login` | session active org or `null` |
-| `POST /auth/logout` | `auth.logout` | session active org or `null` |
-| `POST /auth/logout-everywhere` | `auth.logout_everywhere` | same |
-| `POST /auth/switch-org` | `auth.switch_org` | target org (membership-verified) |
-| `POST /auth/refresh` | — | excluded |
+| Mutation                       | Action                   | `orgId`                          |
+| ------------------------------ | ------------------------ | -------------------------------- |
+| `POST /auth/register`          | `auth.register`          | `null`                           |
+| `POST /auth/login`             | `auth.login`             | session active org or `null`     |
+| `POST /auth/logout`            | `auth.logout`            | session active org or `null`     |
+| `POST /auth/logout-everywhere` | `auth.logout_everywhere` | same                             |
+| `POST /auth/switch-org`        | `auth.switch_org`        | target org (membership-verified) |
+| `POST /auth/refresh`           | —                        | excluded                         |
 
 ---
 

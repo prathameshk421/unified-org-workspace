@@ -1,11 +1,7 @@
 import { Router, type Router as RouterType } from "express";
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
-import {
-  clearAuthCookies,
-  setAccessCookie,
-  setAuthCookies,
-} from "./cookies.js";
+import { clearAuthCookies, setAccessCookie, setAuthCookies } from "./cookies.js";
 import {
   getClientMeta,
   getRefreshToken,
@@ -13,11 +9,7 @@ import {
   requireJsonContentType,
 } from "./middleware.js";
 import { createRateLimiter } from "./rateLimit.js";
-import {
-  loginSchema,
-  registerSchema,
-  switchOrgSchema,
-} from "./schemas.js";
+import { loginSchema, registerSchema, switchOrgSchema } from "./schemas.js";
 import {
   AuthError,
   getMe,
@@ -87,9 +79,7 @@ router.post(
       markAuditWritten(res);
       res.json({
         user: result.user,
-        activeOrg: result.activeOrgId
-          ? { orgId: result.activeOrgId, role: result.role }
-          : null,
+        activeOrg: result.activeOrgId ? { orgId: result.activeOrgId, role: result.role } : null,
       });
     } catch (error) {
       handleAuthError(res, error);
@@ -109,9 +99,7 @@ router.post(
         return;
       }
 
-      const accessToken = req.cookies?.[env.accessCookieName] as
-        | string
-        | undefined;
+      const accessToken = req.cookies?.[env.accessCookieName] as string | undefined;
       const result = await refreshSession({ refreshToken, accessToken });
       setAuthCookies(res, result.accessToken, result.refreshToken);
       res.json({ ok: true });
@@ -121,26 +109,21 @@ router.post(
   },
 );
 
-router.post(
-  "/logout",
-  requireJsonContentType,
-  requireAuth,
-  async (req: Request, res: Response) => {
-    try {
-      const auth = req.auth!;
-      await logoutSession({
-        sessionId: auth.sessionId,
-        userId: auth.userId,
-        activeOrgId: auth.activeOrgId,
-      });
-      markAuditWritten(res);
-      clearAuthCookies(res);
-      res.json({ ok: true });
-    } catch (error) {
-      handleAuthError(res, error);
-    }
-  },
-);
+router.post("/logout", requireJsonContentType, requireAuth, async (req: Request, res: Response) => {
+  try {
+    const auth = req.auth!;
+    await logoutSession({
+      sessionId: auth.sessionId,
+      userId: auth.userId,
+      activeOrgId: auth.activeOrgId,
+    });
+    markAuditWritten(res);
+    clearAuthCookies(res);
+    res.json({ ok: true });
+  } catch (error) {
+    handleAuthError(res, error);
+  }
+});
 
 router.post(
   "/logout-everywhere",

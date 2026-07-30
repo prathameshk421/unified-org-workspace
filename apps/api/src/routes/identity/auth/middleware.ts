@@ -20,11 +20,7 @@ function requireAuthenticated(
   return true;
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const token = getAccessToken(req);
     if (!token) {
@@ -50,11 +46,7 @@ export async function requireAuth(
  * Sets `req.orgId` from verified session/JWT only — never from client input.
  * Do not attach to /auth/me or /auth/switch-org (null org is valid there).
  */
-export function requireOrgAccess(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function requireOrgAccess(req: Request, res: Response, next: NextFunction): void {
   if (!requireAuthenticated(req, res)) {
     return;
   }
@@ -92,11 +84,7 @@ export function requireRole(...roles: OrgRole[]) {
   };
 }
 
-export function requirePlatformAdmin(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function requirePlatformAdmin(req: Request, res: Response, next: NextFunction): void {
   if (!requireAuthenticated(req, res)) {
     return;
   }
@@ -116,11 +104,7 @@ export function requirePlatformAdmin(
  * CSRF mitigation for SameSite=None (*.run.app): reject non-JSON mutating bodies
  * so simple cross-site form posts cannot hit auth state-changing routes.
  */
-export function requireJsonContentType(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function requireJsonContentType(req: Request, res: Response, next: NextFunction): void {
   const contentType = req.get("content-type") ?? "";
   if (!contentType.toLowerCase().startsWith("application/json")) {
     res.status(415).json({

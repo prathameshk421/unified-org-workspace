@@ -30,9 +30,7 @@ interface MembershipSummary {
   role: OrgRole;
 }
 
-async function getAcceptedMemberships(
-  userId: string,
-): Promise<MembershipSummary[]> {
+async function getAcceptedMemberships(userId: string): Promise<MembershipSummary[]> {
   const memberships = await prisma.orgMembership.findMany({
     where: {
       userId,
@@ -71,10 +69,7 @@ async function getDefaultOrgContext(userId: string): Promise<{
   return { activeOrgId: first.orgId, role: first.role };
 }
 
-async function verifyMembership(
-  userId: string,
-  orgId: string,
-): Promise<OrgRole> {
+async function verifyMembership(userId: string, orgId: string): Promise<OrgRole> {
   const membership = await prisma.orgMembership.findUnique({
     where: {
       userId_orgId: { userId, orgId },
@@ -508,8 +503,7 @@ export async function getMe(userId: string, auth: AuthContext) {
   const memberships = await getAcceptedMemberships(userId);
 
   const activeOrg = auth.activeOrgId
-    ? memberships.find((membership) => membership.orgId === auth.activeOrgId) ??
-      null
+    ? (memberships.find((membership) => membership.orgId === auth.activeOrgId) ?? null)
     : null;
 
   return {
@@ -532,15 +526,13 @@ export async function getMe(userId: string, auth: AuthContext) {
   };
 }
 
-export async function resolveAuthContext(
-  claims: {
-    sub: string;
-    sid: string;
-    activeOrgId: string | null;
-    role: OrgRole | null;
-    isPlatformAdmin: boolean;
-  },
-): Promise<AuthContext> {
+export async function resolveAuthContext(claims: {
+  sub: string;
+  sid: string;
+  activeOrgId: string | null;
+  role: OrgRole | null;
+  isPlatformAdmin: boolean;
+}): Promise<AuthContext> {
   const session = await prisma.session.findUnique({
     where: { id: claims.sid },
     include: {

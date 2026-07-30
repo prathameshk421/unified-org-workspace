@@ -30,9 +30,7 @@ describe("tokens", () => {
     expect(claims.activeOrgId).toBe("org-1");
     expect(claims.role).toBe("ORG_ADMIN");
     expect(claims.isPlatformAdmin).toBe(false);
-    expect(claims.jti).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    );
+    expect(claims.jti).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
   it("issues unique jti values", async () => {
@@ -66,17 +64,16 @@ describe("tokens", () => {
     });
 
     const [, payload] = token.split(".");
-    const decoded = JSON.parse(
-      Buffer.from(payload!, "base64url").toString("utf8"),
-    ) as { iat: number; exp: number };
+    const decoded = JSON.parse(Buffer.from(payload!, "base64url").toString("utf8")) as {
+      iat: number;
+      exp: number;
+    };
 
     expect(decoded.exp - decoded.iat).toBe(900);
   });
 
   it("rejects alg none", async () => {
-    const header = Buffer.from(
-      JSON.stringify({ alg: "none", typ: "JWT" }),
-    ).toString("base64url");
+    const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
     const payload = Buffer.from(
       JSON.stringify({
         sub: "u",
@@ -94,9 +91,7 @@ describe("tokens", () => {
   });
 
   it("rejects token signed with a different secret", async () => {
-    const wrongSecret = new TextEncoder().encode(
-      "wrong-secret-at-least-32-characters!!",
-    );
+    const wrongSecret = new TextEncoder().encode("wrong-secret-at-least-32-characters!!");
     const token = await new SignJWT({
       jti: crypto.randomUUID(),
       sid: "s",
@@ -123,17 +118,14 @@ describe("tokens", () => {
     });
 
     const parts = token.split(".");
-    const payload = JSON.parse(
-      Buffer.from(parts[1]!, "base64url").toString("utf8"),
-    ) as Record<string, unknown>;
+    const payload = JSON.parse(Buffer.from(parts[1]!, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
     payload.isPlatformAdmin = true;
-    const tamperedPayload = Buffer.from(JSON.stringify(payload)).toString(
-      "base64url",
-    );
+    const tamperedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
 
-    await expect(
-      verifyAccessToken(`${parts[0]}.${tamperedPayload}.${parts[2]}`),
-    ).rejects.toThrow();
+    await expect(verifyAccessToken(`${parts[0]}.${tamperedPayload}.${parts[2]}`)).rejects.toThrow();
   });
 
   it("rejects expired tokens", async () => {
@@ -165,9 +157,7 @@ describe("tokens", () => {
       .setExpirationTime("900s")
       .sign(jwtSecret);
 
-    await expect(verifyAccessToken(token)).rejects.toThrow(
-      "Invalid access token claims",
-    );
+    await expect(verifyAccessToken(token)).rejects.toThrow("Invalid access token claims");
   });
 
   it("hashRefreshToken is stable SHA-256 hex", () => {

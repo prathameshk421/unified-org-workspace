@@ -9,6 +9,7 @@ This doc breaks the assignment into three tiers. **Each tier assumes the previou
 These are called out explicitly in the brief as required and tested. No Tier 2 work begins until these pass.
 
 ### Features
+
 - Email + password authentication
 - Central Identity/Org service as single source of truth for users & orgs (both dashboards read from it, neither owns the data)
 - Session sync mechanism across both dashboards under one parent domain
@@ -19,7 +20,8 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 - RBAC: Org Admin, Support Agent, Reviewer/Approver, Cross-Org Guest, Platform Super Admin
 
 ### Required automated tests
-- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return 403/404 *(full resource-ID test requires Tier 2 tickets/PRs; auth-layer org scoping + switch-org BOLA covered by Newman)*
+
+- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return 403/404 _(full resource-ID test requires Tier 2 tickets/PRs; auth-layer org scoping + switch-org BOLA covered by Newman)_
 - **RBAC:** unauthenticated → 401; wrong role / no active org → 403 — Newman `/rbac` probes ([rbac-middleware.md](./rbac-middleware.md))
 - **Session sync test:** login on one dashboard is recognized as authenticated on the other
 - **Token lifecycle / revocation test:** logout-everywhere invalidates tokens issued before the logout across both dashboards
@@ -30,12 +32,14 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 ## Tier 2 — Core Product (requires Tier 1 complete)
 
 ### Support Hub
+
 - Ticket CRUD, comments, attachments, status management
 - Per-tenant feature flags
 - Ticket sharing with users from another org (shared users see only the shared ticket, nothing else from the sharing org)
 - Reviewer/Approver role access to Support Hub tickets
 
 ### Review & Audit Console
+
 - PR entity: title, description, status (draft → in-review → approved/rejected → merged), linked org, author, reviewers
 - Approval workflow: multiple reviewers, configurable "requires N approvals," request-changes action
 - Versioning: edits after review starts create a new version with a diff view against the previous version
@@ -43,24 +47,29 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 - Reviewer/Approver access to both the PR workflow and the unified audit viewer
 
 ### Cross-Org Collaboration
+
 - Org-to-org connections: request, approve, revoke (either side)
 - Item-level sharing only (one ticket/PR at a time — never full workspace access)
 - External users: view + comment only, no editing/deleting/access to unshared content
 
 ### AI Progress Tracker
+
 - Personalized digest scoped to the user (their assigned/overdue items, pending reviews)
 - Delivered via a **background job** on a configurable schedule — not computed on page load
 - In-app notification bell (minimum channel)
 - Digest scope limited to the user's own org plus anything explicitly shared with them
 
-### GitHub Webhook Integration *(promoted to required)*
+### GitHub Webhook Integration _(promoted to required)_
+
 - Webhook endpoint with signature verification
 - Maps GitHub PR events to internal PR status (opened → draft/in-review, synchronize → new version, closed+merged → merged)
 
-### Email / Push Delivery *(promoted to required)*
+### Email / Push Delivery _(promoted to required)_
+
 - Second notification channel alongside in-app bell, using the same digest/notification pipeline
 
 ### Required automated tests
+
 - Ticket/PR CRUD tests scoped per org (isolation extended to cover the cross-org share path)
 - Cross-org share test: external/shared user can access only the shared item, confirmed to be blocked from all other org data
 - **AI leak test:** digest generation for a user must never include data from an org they don't belong to or that wasn't explicitly shared with them

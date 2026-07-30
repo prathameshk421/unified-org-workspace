@@ -8,12 +8,7 @@ import {
   createUser,
   trackApiRegisteredUser,
 } from "../support/fixtures.js";
-import {
-  agent,
-  loginAgent,
-  parseSetCookie,
-  waitForAudit,
-} from "../support/http.js";
+import { agent, loginAgent, parseSetCookie, waitForAudit } from "../support/http.js";
 
 describe("auth flow", () => {
   afterAll(async () => {
@@ -149,9 +144,7 @@ describe("auth flow", () => {
 
     await waitForAudit(
       (row) =>
-        row.action === AuditAction.AUTH_LOGIN &&
-        row.userId === user.id &&
-        row.orgId === org.id,
+        row.action === AuditAction.AUTH_LOGIN && row.userId === user.id && row.orgId === org.id,
     );
   });
 });

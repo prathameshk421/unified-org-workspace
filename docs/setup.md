@@ -50,11 +50,11 @@
 
 ## App URLs
 
-| App | URL |
-|---|---|
-| API | http://localhost:4000/health |
-| Support Hub | http://localhost:3000 |
-| Review & Audit Console | http://localhost:3001 |
+| App                    | URL                          |
+| ---------------------- | ---------------------------- |
+| API                    | http://localhost:4000/health |
+| Support Hub            | http://localhost:3000        |
+| Review & Audit Console | http://localhost:3001        |
 
 ## Auth verification (Branch 3)
 

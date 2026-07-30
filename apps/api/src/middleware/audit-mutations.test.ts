@@ -10,11 +10,7 @@ vi.mock("../lib/audit-log.js", () => ({
   record,
 }));
 
-import {
-  auditMutations,
-  markAuditWritten,
-  queueAudit,
-} from "./audit-mutations.js";
+import { auditMutations, markAuditWritten, queueAudit } from "./audit-mutations.js";
 
 function runMutation(
   method: string,

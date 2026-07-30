@@ -46,13 +46,8 @@ router.get(
   },
 );
 
-router.get(
-  "/platform",
-  requireAuth,
-  requirePlatformAdmin,
-  (_req: Request, res: Response) => {
-    res.json({ ok: true, probe: "platform" });
-  },
-);
+router.get("/platform", requireAuth, requirePlatformAdmin, (_req: Request, res: Response) => {
+  res.json({ ok: true, probe: "platform" });
+});
 
 export { router as rbacProbeRouter };

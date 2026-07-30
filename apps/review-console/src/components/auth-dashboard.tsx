@@ -2,6 +2,8 @@
 
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import Link from "next/link";
+import { canMutatePrs, canViewAudit } from "@/lib/roles";
 
 export function AuthDashboard({
   title,
@@ -15,6 +17,8 @@ export function AuthDashboard({
   siblingUrl?: string;
 }) {
   const { user, activeOrg, logout, logoutEverywhere } = useAuth();
+  const showPrs = canMutatePrs(activeOrg?.role);
+  const showAudit = canViewAudit(activeOrg?.role);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface-muted px-6">
@@ -39,6 +43,25 @@ export function AuthDashboard({
             <OrgSwitcher className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" />
           </div>
         </div>
+
+        {showPrs || showAudit ? (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            {showPrs ? (
+              <Link href="/prs">
+                <Button type="button" variant="secondary" data-testid="nav-prs">
+                  Pull requests
+                </Button>
+              </Link>
+            ) : null}
+            {showAudit ? (
+              <Link href="/audit">
+                <Button type="button" variant="secondary" data-testid="nav-audit">
+                  Audit log
+                </Button>
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button type="button" data-testid="logout" onClick={() => void logout()}>

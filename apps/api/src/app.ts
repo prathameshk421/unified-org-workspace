@@ -5,7 +5,9 @@ import helmet from "helmet";
 import type { HealthCheckResponse } from "@unified/types";
 import { env } from "./lib/env.js";
 import { auditMutations } from "./middleware/audit-mutations.js";
+import { auditRouter } from "./routes/audit/index.js";
 import { identityRouter } from "./routes/identity/index.js";
+import { orgRouter, prsRouter } from "./routes/prs/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -34,6 +36,9 @@ export function createApp(): Express {
   });
 
   app.use(identityRouter);
+  app.use(prsRouter);
+  app.use(orgRouter);
+  app.use("/audit", auditRouter);
 
   return app;
 }

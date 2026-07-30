@@ -22,9 +22,7 @@ function isPermissionDenied(error: unknown): boolean {
 
   const message = error.message.toLowerCase();
   return (
-    message.includes("permission denied") ||
-    message.includes("42501") ||
-    message.includes("p2010")
+    message.includes("permission denied") || message.includes("42501") || message.includes("p2010")
   );
 }
 
@@ -74,9 +72,7 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(
-    "audit_logs append-only verified: INSERT ok, UPDATE/DELETE denied for unified_app",
-  );
+  console.log("audit_logs append-only verified: INSERT ok, UPDATE/DELETE denied for unified_app");
 }
 
 main()

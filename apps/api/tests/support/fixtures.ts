@@ -51,12 +51,14 @@ export async function createOrg(name?: string): Promise<FixtureOrg> {
   return { id: org.id, slug: org.slug, name: org.name };
 }
 
-export async function createUser(input: {
-  email?: string;
-  name?: string;
-  isPlatformAdmin?: boolean;
-  orgs?: Array<{ org: FixtureOrg; role: OrgRole; accepted?: boolean }>;
-} = {}): Promise<FixtureUser> {
+export async function createUser(
+  input: {
+    email?: string;
+    name?: string;
+    isPlatformAdmin?: boolean;
+    orgs?: Array<{ org: FixtureOrg; role: OrgRole; accepted?: boolean }>;
+  } = {},
+): Promise<FixtureUser> {
   const passwordHash = await getPasswordHash();
   const email = input.email ?? createRunTaggedEmail();
 
@@ -112,6 +114,11 @@ export async function createPendingMembership(input: {
 export async function cleanupRunFixtures(): Promise<void> {
   const userIds = [...trackedUserIds];
   const orgIds = [...trackedOrgIds];
+
+  // HIGH-RISK: authorId/reviewerId are Restrict — must delete PRs before users
+  if (orgIds.length > 0) {
+    await ownerDb.pullRequest.deleteMany({ where: { orgId: { in: orgIds } } });
+  }
 
   if (userIds.length > 0) {
     await ownerDb.auditLog.deleteMany({ where: { userId: { in: userIds } } });

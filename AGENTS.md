@@ -66,14 +66,14 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 
 ## Repo layout & ports
 
-| Piece | Notes |
-|---|---|
-| `apps/api` | Express Identity API — port **4000** |
-| `apps/support-hub` | Next.js 15 Dashboard 1 — port **3000** |
-| `apps/review-console` | Next.js 15 Dashboard 2 — port **3001** |
-| `packages/auth-client` | Credentialed fetch + `AuthProvider` / `OrgSwitcher` |
-| `packages/db` | Prisma schema, migrations, seed |
-| `packages/types`, `packages/ui`, `packages/config` | Shared types, UI, tooling config |
+| Piece                                              | Notes                                               |
+| -------------------------------------------------- | --------------------------------------------------- |
+| `apps/api`                                         | Express Identity API — port **4000**                |
+| `apps/support-hub`                                 | Next.js 15 Dashboard 1 — port **3000**              |
+| `apps/review-console`                              | Next.js 15 Dashboard 2 — port **3001**              |
+| `packages/auth-client`                             | Credentialed fetch + `AuthProvider` / `OrgSwitcher` |
+| `packages/db`                                      | Prisma schema, migrations, seed                     |
+| `packages/types`, `packages/ui`, `packages/config` | Shared types, UI, tooling config                    |
 
 Stack: pnpm + Turborepo, Node 22, Prisma 6, PostgreSQL 16, Redis (provisioned; not yet used by app code).
 

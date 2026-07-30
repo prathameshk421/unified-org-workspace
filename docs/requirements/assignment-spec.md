@@ -1,9 +1,10 @@
 # Full-Stack Assignment
 
 ## Unified Org Workspace
+
 ### (Ticketing + PR/Audit Console, JWT-Linked Identity)
 
-*Froncort.AI — Full-Stack Intern Process, Round 2*
+_Froncort.AI — Full-Stack Intern Process, Round 2_
 
 ---
 
@@ -66,13 +67,13 @@ Frontend must be **Next.js or React.js**. Backend and database are your choice, 
 
 The system recognizes the following roles, each with a distinct scope of access:
 
-| Role | Scope |
-|---|---|
-| **Org Admin** | Full control within their own organization, across both dashboards. |
-| **Support Agent** | Dashboard 1 only; manages tickets for their organization. |
-| **Reviewer / Approver** | Access to both dashboards: reviews and approves pull requests in Dashboard 2, reviews tickets in the Support Hub (Dashboard 1), and has access to the unified audit trail viewer. |
-| **Cross-Org Guest** | Limited, explicitly granted access to specific shared tickets or PRs from a partner organization — no access to anything else within that organization. |
-| **Platform Super Admin** | Manages organizations, cross-org connections, and global platform settings. |
+| Role                     | Scope                                                                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Org Admin**            | Full control within their own organization, across both dashboards.                                                                                                               |
+| **Support Agent**        | Dashboard 1 only; manages tickets for their organization.                                                                                                                         |
+| **Reviewer / Approver**  | Access to both dashboards: reviews and approves pull requests in Dashboard 2, reviews tickets in the Support Hub (Dashboard 1), and has access to the unified audit trail viewer. |
+| **Cross-Org Guest**      | Limited, explicitly granted access to specific shared tickets or PRs from a partner organization — no access to anything else within that organization.                           |
+| **Platform Super Admin** | Manages organizations, cross-org connections, and global platform settings.                                                                                                       |
 
 Additional security requirements:
 
@@ -152,4 +153,4 @@ This assignment tests your ability to:
 
 ---
 
-*© 2026 Froncort.AI | All Rights Reserved.*
+_© 2026 Froncort.AI | All Rights Reserved._

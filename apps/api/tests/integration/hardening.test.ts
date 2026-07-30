@@ -12,16 +12,12 @@ describe("hardening", () => {
       .set("Access-Control-Request-Method", "POST")
       .expect(204);
 
-    expect(res.headers["access-control-allow-origin"]).toBe(
-      "http://localhost:3000",
-    );
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
     expect(res.headers["access-control-allow-credentials"]).toBe("true");
   });
 
   it("does not reflect disallowed origins", async () => {
-    const res = await request(app)
-      .get("/health")
-      .set("Origin", "http://evil.com");
+    const res = await request(app).get("/health").set("Origin", "http://evil.com");
 
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });

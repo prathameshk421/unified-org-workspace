@@ -1,19 +1,10 @@
 import { OrgRole } from "@unified/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createUser } from "../support/fixtures.js";
 import { agent, loginAgent } from "../support/http.js";
 
 type Principal =
-  | "anonymous"
-  | "org_admin"
-  | "support_agent"
-  | "reviewer"
-  | "cross_org_guest"
-  | "platform_admin";
+  "anonymous" | "org_admin" | "support_agent" | "reviewer" | "cross_org_guest" | "platform_admin";
 
 type Probe = "/rbac/org" | "/rbac/admin" | "/rbac/agent" | "/rbac/reviewer" | "/rbac/platform";
 
@@ -197,15 +188,12 @@ describe("RBAC probes", () => {
     }
   }
 
-  it.each(cases)(
-    "$principal -> $probe = $status",
-    async ({ principal, probe, status, code }) => {
-      const client = clientFor(principal);
-      const res = await client.get(probe).expect(status);
+  it.each(cases)("$principal -> $probe = $status", async ({ principal, probe, status, code }) => {
+    const client = clientFor(principal);
+    const res = await client.get(probe).expect(status);
 
-      if (code) {
-        expect(res.body.code).toBe(code);
-      }
-    },
-  );
+    if (code) {
+      expect(res.body.code).toBe(code);
+    }
+  });
 });

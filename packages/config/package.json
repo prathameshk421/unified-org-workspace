@@ -5,8 +5,11 @@
   "type": "module",
   "exports": {
     "./typescript/base": "./typescript/base.json",
+    "./typescript/base.json": "./typescript/base.json",
     "./typescript/node": "./typescript/node.json",
+    "./typescript/node.json": "./typescript/node.json",
     "./typescript/nextjs": "./typescript/nextjs.json",
+    "./typescript/nextjs.json": "./typescript/nextjs.json",
     "./eslint": "./eslint/index.mjs",
     "./prettier": "./prettier/index.mjs",
     "./tailwind/theme.css": "./tailwind/theme.css"

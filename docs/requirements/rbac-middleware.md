@@ -4,24 +4,24 @@ Express route guards for organization roles and platform admin access. Builds on
 
 ## Middleware
 
-| Export | Purpose | Status |
-|---|---|---|
-| `requireAuth` | Cookie JWT + live `Session` / `OrgMembership` / `User.isPlatformAdmin` re-check | Existing (hardened) |
-| `requireOrgAccess` | Requires active org; sets `req.orgId` from `req.auth.activeOrgId` only | New |
-| `requireActiveOrg` | Alias of `requireOrgAccess` (session-sync doc compatibility) | Alias |
-| `requireRole(...roles)` | Membership role must be in allowlist | New |
-| `requirePlatformAdmin` | `req.auth.isPlatformAdmin === true` (live DB value) | New |
+| Export                  | Purpose                                                                         | Status              |
+| ----------------------- | ------------------------------------------------------------------------------- | ------------------- |
+| `requireAuth`           | Cookie JWT + live `Session` / `OrgMembership` / `User.isPlatformAdmin` re-check | Existing (hardened) |
+| `requireOrgAccess`      | Requires active org; sets `req.orgId` from `req.auth.activeOrgId` only          | New                 |
+| `requireActiveOrg`      | Alias of `requireOrgAccess` (session-sync doc compatibility)                    | Alias               |
+| `requireRole(...roles)` | Membership role must be in allowlist                                            | New                 |
+| `requirePlatformAdmin`  | `req.auth.isPlatformAdmin === true` (live DB value)                             | New                 |
 
 Location: [`apps/api/src/routes/identity/auth/middleware.ts`](../../apps/api/src/routes/identity/auth/middleware.ts)
 
 ### Status codes
 
-| Condition | Code | Response `code` |
-|---|---|---|
-| No / invalid token | **401** | — |
-| No active org on org-scoped route | **403** | `no_active_org` |
-| Wrong membership role | **403** | `insufficient_role` |
-| Not platform admin | **403** | `platform_admin_required` |
+| Condition                         | Code    | Response `code`           |
+| --------------------------------- | ------- | ------------------------- |
+| No / invalid token                | **401** | —                         |
+| No active org on org-scoped route | **403** | `no_active_org`           |
+| Wrong membership role             | **403** | `insufficient_role`       |
+| Not platform admin                | **403** | `platform_admin_required` |
 
 ### Org scoping
 
@@ -38,12 +38,12 @@ Location: [`apps/api/src/routes/identity/auth/middleware.ts`](../../apps/api/src
 
 ## Role mapping (brief ↔ schema)
 
-| Assignment brief | Implementation |
-|---|---|
-| Org Admin | `OrgRole.ORG_ADMIN` |
-| Support Agent | `OrgRole.SUPPORT_AGENT` |
-| Reviewer / Approver | `OrgRole.REVIEWER` |
-| Cross-Org Guest | `OrgRole.CROSS_ORG_GUEST` |
+| Assignment brief     | Implementation                                    |
+| -------------------- | ------------------------------------------------- |
+| Org Admin            | `OrgRole.ORG_ADMIN`                               |
+| Support Agent        | `OrgRole.SUPPORT_AGENT`                           |
+| Reviewer / Approver  | `OrgRole.REVIEWER`                                |
+| Cross-Org Guest      | `OrgRole.CROSS_ORG_GUEST`                         |
 | Platform Super Admin | `User.isPlatformAdmin` + `requirePlatformAdmin()` |
 
 Do **not** rename `REVIEWER` → `REVIEWER_APPROVER` or add `PLATFORM_SUPER_ADMIN` to `OrgRole` without a migration plan.
@@ -52,22 +52,22 @@ Do **not** rename `REVIEWER` → `REVIEWER_APPROVER` or add `PLATFORM_SUPER_ADMI
 
 Shared constants for Tier 2 route guards:
 
-| Constant | Roles |
-|---|---|
+| Constant               | Roles                              |
+| ---------------------- | ---------------------------------- |
 | `TICKET_MUTATOR_ROLES` | ORG_ADMIN, SUPPORT_AGENT, REVIEWER |
-| `TICKET_READER_ROLES` | above + CROSS_ORG_GUEST |
-| `PR_MUTATOR_ROLES` | ORG_ADMIN, REVIEWER |
-| `AUDIT_VIEWER_ROLES` | ORG_ADMIN, REVIEWER |
+| `TICKET_READER_ROLES`  | above + CROSS_ORG_GUEST            |
+| `PR_MUTATOR_ROLES`     | ORG_ADMIN, REVIEWER                |
+| `AUDIT_VIEWER_ROLES`   | ORG_ADMIN, REVIEWER                |
 
 ## Permissions matrix (future product routes)
 
-| Capability | ORG_ADMIN | SUPPORT_AGENT | REVIEWER | CROSS_ORG_GUEST | Platform admin |
-|---|---|---|---|---|---|
-| Org-scoped API (`requireOrgAccess`) | yes | yes | yes | yes* | only if member + active org |
-| Ticket mutate | yes | yes | yes | no | n/a |
-| PR mutate / approve | yes | no | yes | no | n/a |
-| Audit viewer | yes | no | yes | no | n/a |
-| Platform orgs / connections / settings | no | no | no | no | **yes** |
+| Capability                             | ORG_ADMIN | SUPPORT_AGENT | REVIEWER | CROSS_ORG_GUEST | Platform admin              |
+| -------------------------------------- | --------- | ------------- | -------- | --------------- | --------------------------- |
+| Org-scoped API (`requireOrgAccess`)    | yes       | yes           | yes      | yes*            | only if member + active org |
+| Ticket mutate                          | yes       | yes           | yes      | no              | n/a                         |
+| PR mutate / approve                    | yes       | no            | yes      | no              | n/a                         |
+| Audit viewer                           | yes       | no            | yes      | no              | n/a                         |
+| Platform orgs / connections / settings | no        | no            | no       | no              | **yes**                     |
 
 \*Guest needs org membership for in-org guest role; cross-org **share** access is item-level (Tier 2), not workspace-wide.
 
@@ -75,13 +75,7 @@ Shared constants for Tier 2 route guards:
 
 ```ts
 // Org-scoped ticket list (Tier 2)
-router.get(
-  "/tickets",
-  requireAuth,
-  requireOrgAccess,
-  requireRole(...TICKET_READER_ROLES),
-  handler,
-);
+router.get("/tickets", requireAuth, requireOrgAccess, requireRole(...TICKET_READER_ROLES), handler);
 
 // Platform-only (Tier 2+)
 router.get("/platform/orgs", requireAuth, requirePlatformAdmin, handler);
@@ -93,24 +87,24 @@ Always scope Prisma queries by `req.orgId` (or `req.auth.activeOrgId`) — never
 
 Safe echo endpoints under `/rbac` (no product data):
 
-| Method | Path | Guards |
-|---|---|---|
-| GET | `/rbac/org` | auth + org access |
-| GET | `/rbac/admin` | auth + org + `ORG_ADMIN` |
-| GET | `/rbac/agent` | auth + org + `SUPPORT_AGENT` or `ORG_ADMIN` |
-| GET | `/rbac/reviewer` | auth + org + `REVIEWER` or `ORG_ADMIN` |
-| GET | `/rbac/platform` | auth + platform admin |
+| Method | Path             | Guards                                      |
+| ------ | ---------------- | ------------------------------------------- |
+| GET    | `/rbac/org`      | auth + org access                           |
+| GET    | `/rbac/admin`    | auth + org + `ORG_ADMIN`                    |
+| GET    | `/rbac/agent`    | auth + org + `SUPPORT_AGENT` or `ORG_ADMIN` |
+| GET    | `/rbac/reviewer` | auth + org + `REVIEWER` or `ORG_ADMIN`      |
+| GET    | `/rbac/platform` | auth + platform admin                       |
 
 ## Demo users (seed)
 
-| Email | Org | Role / flag | Password |
-|---|---|---|---|
-| `alice@acme.com` | Acme | ORG_ADMIN | `password123` |
-| `bob@acme.com` | Acme | SUPPORT_AGENT | `password123` |
-| `carol@globex.com` | Globex | ORG_ADMIN | `password123` |
-| `dave@example.com` | Acme + Globex | REVIEWER | `password123` |
-| `eve@example.com` | Acme | CROSS_ORG_GUEST | `password123` |
-| `platform@example.com` | none | Platform Super Admin | `password123` |
+| Email                  | Org           | Role / flag          | Password      |
+| ---------------------- | ------------- | -------------------- | ------------- |
+| `alice@acme.com`       | Acme          | ORG_ADMIN            | `password123` |
+| `bob@acme.com`         | Acme          | SUPPORT_AGENT        | `password123` |
+| `carol@globex.com`     | Globex        | ORG_ADMIN            | `password123` |
+| `dave@example.com`     | Acme + Globex | REVIEWER             | `password123` |
+| `eve@example.com`      | Acme          | CROSS_ORG_GUEST      | `password123` |
+| `platform@example.com` | none          | Platform Super Admin | `password123` |
 
 ## Verification
 

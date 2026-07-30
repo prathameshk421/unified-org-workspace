@@ -2,9 +2,7 @@ import { expect, test } from "@playwright/test";
 import { HUB, login } from "./fixtures.js";
 
 test.describe("cross-tab sync", () => {
-  test("logout in one tab signs out the other without reload", async ({
-    context,
-  }) => {
+  test("logout in one tab signs out the other without reload", async ({ context }) => {
     const pageA = await context.newPage();
     const pageB = await context.newPage();
 
@@ -17,9 +15,7 @@ test.describe("cross-tab sync", () => {
     await expect(pageB).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 
-  test("org switch in one tab updates the other without reload", async ({
-    context,
-  }) => {
+  test("org switch in one tab updates the other without reload", async ({ context }) => {
     const pageA = await context.newPage();
     const pageB = await context.newPage();
 
@@ -36,13 +32,10 @@ test.describe("cross-tab sync", () => {
     const other = allValues.find((value) => value && value !== firstValue);
     expect(other).toBeTruthy();
 
-    const switchedOrgName = await options
-      .evaluateAll((els, otherValue) => {
-        const match = els.find(
-          (el) => (el as HTMLOptionElement).value === otherValue,
-        );
-        return match?.textContent?.trim() ?? "";
-      }, other!);
+    const switchedOrgName = await options.evaluateAll((els, otherValue) => {
+      const match = els.find((el) => (el as HTMLOptionElement).value === otherValue);
+      return match?.textContent?.trim() ?? "";
+    }, other!);
 
     await select.selectOption(other!);
     await expect(pageA.getByTestId("active-org")).toHaveText(switchedOrgName, {

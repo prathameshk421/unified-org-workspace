@@ -8,11 +8,7 @@ import {
   createPendingMembership,
   createUser,
 } from "../support/fixtures.js";
-import {
-  agent,
-  loginAgent,
-  mintToken,
-} from "../support/http.js";
+import { agent, loginAgent, mintToken } from "../support/http.js";
 
 describe("BOLA", () => {
   afterAll(async () => {
@@ -134,10 +130,7 @@ describe("BOLA", () => {
       isPlatformAdmin: false,
     });
 
-    await agent()
-      .get("/rbac/org")
-      .set("Cookie", `${env.accessCookieName}=${hijacked}`)
-      .expect(401);
+    await agent().get("/rbac/org").set("Cookie", `${env.accessCookieName}=${hijacked}`).expect(401);
   });
 
   it("ignores orgId in query and body on org-scoped routes", async () => {
@@ -149,14 +142,10 @@ describe("BOLA", () => {
 
     const client = await loginAgent(user.email);
 
-    const orgProbe = await client
-      .get(`/rbac/org?orgId=${orgB.id}`)
-      .expect(200);
+    const orgProbe = await client.get(`/rbac/org?orgId=${orgB.id}`).expect(200);
     expect(orgProbe.body.orgId).toBe(orgA.id);
 
-    const adminProbe = await client
-      .get(`/rbac/admin?orgId=${orgB.id}`)
-      .expect(200);
+    const adminProbe = await client.get(`/rbac/admin?orgId=${orgB.id}`).expect(200);
     expect(adminProbe.body.probe).toBe("admin");
   });
 
@@ -174,9 +163,12 @@ describe("BOLA", () => {
       },
     });
 
-    await client.get("/rbac/org").expect(403).expect((res) => {
-      expect(res.body.code).toBe("no_active_org");
-    });
+    await client
+      .get("/rbac/org")
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("no_active_org");
+      });
 
     const me = await client.get("/auth/me").expect(200);
     expect(me.body.activeOrg).toBeNull();
@@ -197,9 +189,12 @@ describe("BOLA", () => {
       data: { role: OrgRole.SUPPORT_AGENT },
     });
 
-    await client.get("/rbac/admin").expect(403).expect((res) => {
-      expect(res.body.code).toBe("insufficient_role");
-    });
+    await client
+      .get("/rbac/admin")
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("insufficient_role");
+      });
   });
 
   it("reflects role in switched org, not previous org", async () => {

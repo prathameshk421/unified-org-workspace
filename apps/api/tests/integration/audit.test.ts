@@ -2,11 +2,7 @@ import { AuditAction } from "@unified/types";
 import { OrgRole } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { appDb, ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createUser } from "../support/fixtures.js";
 import { agent, loginAgent, waitForAudit } from "../support/http.js";
 
 function isPermissionDenied(error: unknown): boolean {
@@ -16,9 +12,7 @@ function isPermissionDenied(error: unknown): boolean {
 
   const message = error.message.toLowerCase();
   return (
-    message.includes("permission denied") ||
-    message.includes("42501") ||
-    message.includes("p2010")
+    message.includes("permission denied") || message.includes("42501") || message.includes("p2010")
   );
 }
 
@@ -65,10 +59,7 @@ describe("audit", () => {
       .send({})
       .expect(200);
 
-    await waitForAudit(
-      (row) =>
-        row.action === AuditAction.AUTH_LOGOUT && row.userId === user.id,
-    );
+    await waitForAudit((row) => row.action === AuditAction.AUTH_LOGOUT && row.userId === user.id);
 
     const everywhereClient = await loginAgent(user.email);
     await everywhereClient
@@ -78,9 +69,7 @@ describe("audit", () => {
       .expect(200);
 
     await waitForAudit(
-      (row) =>
-        row.action === AuditAction.AUTH_LOGOUT_EVERYWHERE &&
-        row.userId === user.id,
+      (row) => row.action === AuditAction.AUTH_LOGOUT_EVERYWHERE && row.userId === user.id,
     );
   });
 
@@ -119,13 +108,13 @@ describe("audit", () => {
       appDb.$executeRaw`UPDATE audit_logs SET action = 'hacked' WHERE id = ${row.id}`,
     ).rejects.toSatisfy(isPermissionDenied);
 
-    await expect(
-      appDb.$executeRaw`DELETE FROM audit_logs WHERE id = ${row.id}`,
-    ).rejects.toSatisfy(isPermissionDenied);
+    await expect(appDb.$executeRaw`DELETE FROM audit_logs WHERE id = ${row.id}`).rejects.toSatisfy(
+      isPermissionDenied,
+    );
 
-    await expect(
-      appDb.$executeRaw`TRUNCATE TABLE audit_logs`,
-    ).rejects.toSatisfy(isPermissionDenied);
+    await expect(appDb.$executeRaw`TRUNCATE TABLE audit_logs`).rejects.toSatisfy(
+      isPermissionDenied,
+    );
 
     await expect(
       appDb.$executeRaw`ALTER TABLE audit_logs ADD COLUMN hacked boolean`,

@@ -84,12 +84,7 @@ export function LoginForm({ appName }: { appName: string }) {
               {error}
             </p>
           ) : null}
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={pending}
-            data-testid="login-submit"
-          >
+          <Button type="submit" className="w-full" disabled={pending} data-testid="login-submit">
             {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>

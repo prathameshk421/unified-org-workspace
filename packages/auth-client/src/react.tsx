@@ -41,10 +41,7 @@ const CHANNEL_NAME = "unified-auth";
 const STORAGE_KEY = "unified-auth-event";
 
 type AuthBroadcast =
-  | { type: "LOGIN" }
-  | { type: "LOGOUT" }
-  | { type: "ORG_SWITCHED" }
-  | { type: "REFRESH_DONE" };
+  { type: "LOGIN" } | { type: "LOGOUT" } | { type: "ORG_SWITCHED" } | { type: "REFRESH_DONE" };
 
 function broadcast(event: AuthBroadcast): void {
   try {
@@ -56,10 +53,7 @@ function broadcast(event: AuthBroadcast): void {
   }
 
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...event, at: Date.now() }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...event, at: Date.now() }));
   } catch {
     // localStorage unavailable
   }
@@ -243,17 +237,7 @@ export function AuthProvider({ apiBaseUrl, children }: AuthProviderProps) {
       switchOrg,
       refetch,
     }),
-    [
-      status,
-      user,
-      activeOrg,
-      memberships,
-      login,
-      logout,
-      logoutEverywhere,
-      switchOrg,
-      refetch,
-    ],
+    [status, user, activeOrg, memberships, login, logout, logoutEverywhere, switchOrg, refetch],
   );
 
   if (!apiBaseUrl) {

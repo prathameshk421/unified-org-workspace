@@ -12,11 +12,11 @@ Shared Identity/Org session across Support Hub and Review Console via **API-orig
 
 ## Cookie SameSite matrix
 
-| Environment | `COOKIE_DOMAIN` | Secure | SameSite | Notes |
-|---|---|---|---|---|
-| Local | unset | false | `strict` | Host-only cookies on `localhost:4000`; hub `:3000` / console `:3001` sync via credentialed API calls |
-| Cloud Run default (`*.run.app`) | unset | true | `none` | Cross-site hub/console → api; requires CORS allowlist |
-| Custom parent domain | `.example.com` | true | `strict` | `hub.` / `console.` / `api.` same-site |
+| Environment                     | `COOKIE_DOMAIN` | Secure | SameSite | Notes                                                                                                |
+| ------------------------------- | --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------- |
+| Local                           | unset           | false  | `strict` | Host-only cookies on `localhost:4000`; hub `:3000` / console `:3001` sync via credentialed API calls |
+| Cloud Run default (`*.run.app`) | unset           | true   | `none`   | Cross-site hub/console → api; requires CORS allowlist                                                |
+| Custom parent domain            | `.example.com`  | true   | `strict` | `hub.` / `console.` / `api.` same-site                                                               |
 
 `COOKIE_DOMAIN` stays **optional** (Terraform sets it only when `enable_custom_domain=true`). Do not force it on default deploy.
 

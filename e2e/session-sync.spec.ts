@@ -7,9 +7,7 @@ test.describe("session sync", () => {
 
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText(
-      "alice@acme.com",
-    );
+    await expect(consolePage.getByTestId("auth-status")).toContainText("alice@acme.com");
   });
 
   test("logout on hub logs out console", async ({ page, context }) => {
@@ -17,9 +15,7 @@ test.describe("session sync", () => {
 
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText(
-      "alice@acme.com",
-    );
+    await expect(consolePage.getByTestId("auth-status")).toContainText("alice@acme.com");
 
     await page.getByTestId("logout").click();
     await expect(page).toHaveURL(/\/login/);
@@ -63,9 +59,7 @@ test.describe("session sync", () => {
     // Sibling dashboard should see the same active org after navigation.
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText(
-      "dave@example.com",
-    );
+    await expect(consolePage.getByTestId("auth-status")).toContainText("dave@example.com");
     await expect(consolePage.getByTestId("active-org")).toHaveText(
       await page.getByTestId("active-org").innerText(),
       { timeout: 10_000 },

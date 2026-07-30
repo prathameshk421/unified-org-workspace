@@ -2,9 +2,7 @@ import { expect, test } from "@playwright/test";
 import { HUB, login } from "./fixtures.js";
 
 test.describe("BOLA UI", () => {
-  test("never sends orgId on data fetches except switch-org", async ({
-    page,
-  }) => {
+  test("never sends orgId on data fetches except switch-org", async ({ page }) => {
     const violations: string[] = [];
 
     page.on("request", (request) => {

@@ -16,9 +16,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      const returnTo = encodeURIComponent(
-        `${window.location.pathname}${window.location.search}`,
-      );
+      const returnTo = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
       router.replace(`/login?returnTo=${returnTo}`);
     }
   }, [status, router]);

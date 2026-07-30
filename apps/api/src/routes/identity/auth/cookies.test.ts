@@ -2,8 +2,7 @@ import type { Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 function mockResponse() {
-  const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> =
-    [];
+  const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
 
   const res = {
     cookie(name: string, value: string, options: Record<string, unknown>) {

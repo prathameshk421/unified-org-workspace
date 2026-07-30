@@ -4,10 +4,10 @@ A multi-tenant, dual-dashboard org workspace (ticketing + PR/audit console) with
 
 ## Monorepo
 
-| App | Package | Port |
-|---|---|---|
-| API | `@unified/api` | 4000 |
-| Support Hub | `@unified/support-hub` | 3000 |
+| App                    | Package                   | Port |
+| ---------------------- | ------------------------- | ---- |
+| API                    | `@unified/api`            | 4000 |
+| Support Hub            | `@unified/support-hub`    | 3000 |
 | Review & Audit Console | `@unified/review-console` | 3001 |
 
 ## Getting started

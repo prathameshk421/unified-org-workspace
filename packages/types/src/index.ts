@@ -18,6 +18,23 @@ export const PR_MUTATOR_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
 
 export const AUDIT_VIEWER_ROLES = [OrgRole.ORG_ADMIN, OrgRole.REVIEWER] as const;
 
+export const PrStatus = {
+  DRAFT: "DRAFT",
+  IN_REVIEW: "IN_REVIEW",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  MERGED: "MERGED",
+} as const;
+
+export type PrStatus = (typeof PrStatus)[keyof typeof PrStatus];
+
+export const PrReviewDecision = {
+  APPROVE: "APPROVE",
+  REQUEST_CHANGES: "REQUEST_CHANGES",
+} as const;
+
+export type PrReviewDecision = (typeof PrReviewDecision)[keyof typeof PrReviewDecision];
+
 export const AuditAction = {
   AUTH_REGISTER: "auth.register",
   AUTH_LOGIN: "auth.login",
@@ -25,14 +42,19 @@ export const AuditAction = {
   AUTH_LOGOUT_EVERYWHERE: "auth.logout_everywhere",
   AUTH_SWITCH_ORG: "auth.switch_org",
   HTTP_MUTATION: "http.mutation",
+  PR_CREATE: "pr.create",
+  PR_UPDATE: "pr.update",
+  PR_SUBMIT_REVIEW: "pr.submit_review",
+  PR_APPROVE: "pr.approve",
+  PR_REQUEST_CHANGES: "pr.request_changes",
+  PR_REJECT: "pr.reject",
+  PR_MERGE: "pr.merge",
+  PR_STATUS_CHANGE: "pr.status_change",
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 
-export const TICKET_READER_ROLES = [
-  ...TICKET_MUTATOR_ROLES,
-  OrgRole.CROSS_ORG_GUEST,
-] as const;
+export const TICKET_READER_ROLES = [...TICKET_MUTATOR_ROLES, OrgRole.CROSS_ORG_GUEST] as const;
 
 export const OrgConnectionStatus = {
   PENDING: "PENDING",
@@ -41,8 +63,7 @@ export const OrgConnectionStatus = {
   REVOKED: "REVOKED",
 } as const;
 
-export type OrgConnectionStatus =
-  (typeof OrgConnectionStatus)[keyof typeof OrgConnectionStatus];
+export type OrgConnectionStatus = (typeof OrgConnectionStatus)[keyof typeof OrgConnectionStatus];
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
@@ -113,4 +134,79 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
+}
+
+export interface PullRequestSummary {
+  id: string;
+  title: string;
+  description: string;
+  status: PrStatus;
+  authorId: string;
+  requiresApprovals: number;
+  currentVersion: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrReviewerSummary {
+  userId: string;
+}
+
+export interface PrReviewDto {
+  id: string;
+  reviewerId: string;
+  versionId: string;
+  decision: PrReviewDecision;
+  comment: string;
+  createdAt: string;
+}
+
+export interface PrVersionDto {
+  id: string;
+  versionNumber: number;
+  title: string;
+  description: string;
+  createdById: string;
+  createdAt: string;
+}
+
+export interface PullRequestDetail extends PullRequestSummary {
+  reviewers: PrReviewerSummary[];
+  reviews: PrReviewDto[];
+  versions: PrVersionDto[];
+}
+
+export interface PrDiffChange {
+  field: "title" | "description";
+  before: string;
+  after: string;
+}
+
+export interface PrDiffResponse {
+  fromVersion: number;
+  toVersion: number;
+  changes: PrDiffChange[];
+}
+
+export interface CreatePrRequest {
+  title: string;
+  description?: string;
+  requiresApprovals?: number;
+  reviewerIds?: string[];
+}
+
+export interface UpdatePrRequest {
+  title?: string;
+  description?: string;
+  requiresApprovals?: number;
+  reviewerIds?: string[];
+}
+
+export interface SubmitReviewRequest {
+  decision: PrReviewDecision;
+  comment?: string;
+}
+
+export interface TransitionPrRequest {
+  to: PrStatus;
 }

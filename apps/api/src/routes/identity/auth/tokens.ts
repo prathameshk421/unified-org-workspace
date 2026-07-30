@@ -47,9 +47,7 @@ export async function signAccessToken(input: {
     .sign(jwtSecret);
 }
 
-export async function verifyAccessToken(
-  token: string,
-): Promise<AccessTokenClaims> {
+export async function verifyAccessToken(token: string): Promise<AccessTokenClaims> {
   const { payload } = await jwtVerify(token, jwtSecret, {
     algorithms: ["HS256"],
   });
@@ -92,10 +90,8 @@ function parseAccessPayload(payload: Record<string, unknown>): AccessTokenClaims
     sub,
     sid,
     jti,
-    activeOrgId:
-      typeof payload.activeOrgId === "string" ? payload.activeOrgId : null,
-    role:
-      typeof payload.role === "string" ? (payload.role as OrgRole) : null,
+    activeOrgId: typeof payload.activeOrgId === "string" ? payload.activeOrgId : null,
+    role: typeof payload.role === "string" ? (payload.role as OrgRole) : null,
     isPlatformAdmin: payload.isPlatformAdmin === true,
   };
 }

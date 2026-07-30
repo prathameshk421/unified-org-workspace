@@ -1,5 +1,5 @@
 {
-  "extends": "@unified/config/typescript/nextjs",
+  "extends": "@unified/config/typescript/nextjs.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
     "paths": {

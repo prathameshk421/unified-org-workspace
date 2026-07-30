@@ -40,11 +40,7 @@ export interface AuthClient {
   switchOrg(input: SwitchOrgRequest): Promise<SwitchOrgResponse>;
 }
 
-const NO_RETRY_PATHS = new Set([
-  "/auth/refresh",
-  "/auth/login",
-  "/auth/register",
-]);
+const NO_RETRY_PATHS = new Set(["/auth/refresh", "/auth/login", "/auth/register"]);
 
 let refreshPromise: Promise<void> | null = null;
 
@@ -71,10 +67,7 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   const fetchFn = options.fetchImpl ?? fetch;
   const baseUrl = options.baseUrl.replace(/\/$/, "");
 
-  async function rawRequest(
-    path: string,
-    init?: RequestInit,
-  ): Promise<Response> {
+  async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
     return fetchFn(`${baseUrl}${path}`, {
       ...init,
       credentials: "include",
@@ -119,7 +112,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     return parseJson<T>(response);
   }
 
-  async function logoutWithRefresh(path: "/auth/logout" | "/auth/logout-everywhere"): Promise<void> {
+  async function logoutWithRefresh(
+    path: "/auth/logout" | "/auth/logout-everywhere",
+  ): Promise<void> {
     try {
       await request<{ ok: true }>(path, {
         method: "POST",

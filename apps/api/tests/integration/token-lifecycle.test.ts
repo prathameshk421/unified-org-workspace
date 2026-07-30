@@ -3,17 +3,8 @@ import { OrgRole } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { env } from "../../src/lib/env.js";
 import { ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createUser,
-} from "../support/fixtures.js";
-import {
-  agent,
-  loginAgent,
-  mintToken,
-  parseSetCookie,
-} from "../support/http.js";
+import { cleanupRunFixtures, createOrg, createUser } from "../support/fixtures.js";
+import { agent, loginAgent, mintToken, parseSetCookie } from "../support/http.js";
 
 describe("token lifecycle", () => {
   afterAll(async () => {
@@ -98,12 +89,10 @@ describe("token lifecycle", () => {
     expect(reuse.body.code).toBe("token_reuse");
     const cleared = parseSetCookie(reuse);
     expect(
-      cleared.unified_access?.maxAge === 0 ||
-        cleared.unified_access?.expires !== undefined,
+      cleared.unified_access?.maxAge === 0 || cleared.unified_access?.expires !== undefined,
     ).toBe(true);
     expect(
-      cleared.unified_refresh?.maxAge === 0 ||
-        cleared.unified_refresh?.expires !== undefined,
+      cleared.unified_refresh?.maxAge === 0 || cleared.unified_refresh?.expires !== undefined,
     ).toBe(true);
 
     const session = await ownerDb.session.findFirstOrThrow({
@@ -132,18 +121,10 @@ describe("token lifecycle", () => {
     });
 
     const client = await loginAgent(user.email);
-    await client
-      .post("/auth/logout")
-      .set("Content-Type", "application/json")
-      .send({})
-      .expect(200);
+    await client.post("/auth/logout").set("Content-Type", "application/json").send({}).expect(200);
 
     await client.get("/auth/me").expect(401);
-    await client
-      .post("/auth/refresh")
-      .set("Content-Type", "application/json")
-      .send({})
-      .expect(401);
+    await client.post("/auth/refresh").set("Content-Type", "application/json").send({}).expect(401);
   });
 
   it("logout-everywhere revokes all active sessions", async () => {
@@ -194,10 +175,7 @@ describe("token lifecycle", () => {
       { expiresIn: "-1s" },
     );
 
-    await agent()
-      .get("/auth/me")
-      .set("Cookie", `${env.accessCookieName}=${expired}`)
-      .expect(401);
+    await agent().get("/auth/me").set("Cookie", `${env.accessCookieName}=${expired}`).expect(401);
   });
 
   it("rejects revoked sessions even with valid JWT", async () => {
@@ -302,10 +280,7 @@ describe("token lifecycle", () => {
     const access = parseSetCookie(loginRes).unified_access?.value;
     expect(refresh).toBeTruthy();
     expect(access).toBeTruthy();
-    const cookie = [
-      `${env.refreshCookieName}=${refresh}`,
-      `${env.accessCookieName}=${access}`,
-    ];
+    const cookie = [`${env.refreshCookieName}=${refresh}`, `${env.accessCookieName}=${access}`];
 
     const results = await Promise.all(
       Array.from({ length: 5 }, () =>
@@ -332,9 +307,7 @@ describe("token lifecycle", () => {
     });
 
     const client = await loginAgent(user.email);
-    const loginAccess = (
-      await client.get("/auth/me").expect(200)
-    ).headers["set-cookie"];
+    const loginAccess = (await client.get("/auth/me").expect(200)).headers["set-cookie"];
 
     const switchRes = await client
       .post("/auth/switch-org")
@@ -347,11 +320,7 @@ describe("token lifecycle", () => {
     expect(parseSetCookie(switchRes).unified_refresh).toBeUndefined();
     void loginAccess;
 
-    await client
-      .post("/auth/refresh")
-      .set("Content-Type", "application/json")
-      .send({})
-      .expect(200);
+    await client.post("/auth/refresh").set("Content-Type", "application/json").send({}).expect(200);
   });
 
   it("syncs active org across sessions after switch-org", async () => {

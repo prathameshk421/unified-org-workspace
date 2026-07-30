@@ -1,8 +1,4 @@
-import {
-  assertAppRole,
-  cleanupStaleFixtures,
-  disconnectDatabases,
-} from "./support/db.js";
+import { assertAppRole, cleanupStaleFixtures, disconnectDatabases } from "./support/db.js";
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
   await cleanupStaleFixtures();

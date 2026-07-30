@@ -52,10 +52,7 @@ function parseCookiePair(pair: string): ParsedCookie | null {
   return parsed;
 }
 
-export function parseSetCookie(
-  res: Response,
-  cookieName?: string,
-): Record<string, ParsedCookie> {
+export function parseSetCookie(res: Response, cookieName?: string): Record<string, ParsedCookie> {
   const header = res.headers["set-cookie"];
   const cookies: Record<string, ParsedCookie> = {};
 
@@ -93,9 +90,7 @@ export async function mintToken(
   },
   options?: { expiresIn?: string; secret?: string },
 ): Promise<string> {
-  const secret = new TextEncoder().encode(
-    options?.secret ?? env.jwtSecret,
-  );
+  const secret = new TextEncoder().encode(options?.secret ?? env.jwtSecret);
 
   return new SignJWT({
     jti: crypto.randomUUID(),

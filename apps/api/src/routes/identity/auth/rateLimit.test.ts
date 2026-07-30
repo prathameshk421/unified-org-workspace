@@ -3,8 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const RATE_LIMIT_ENV = {
   JWT_SECRET: "test-only-secret-min-32-characters-long!!",
-  DATABASE_APP_URL:
-    "postgresql://unified_app:unified_app@localhost:5432/unified_org",
+  DATABASE_APP_URL: "postgresql://unified_app:unified_app@localhost:5432/unified_org",
   AUTH_RATE_LIMIT_MAX: "10",
   AUTH_RATE_LIMIT_WINDOW_MS: "60000",
 } as const;

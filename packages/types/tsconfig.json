@@ -1,5 +1,5 @@
 {
-  "extends": "@unified/config/typescript/node",
+  "extends": "@unified/config/typescript/node.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist"

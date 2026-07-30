@@ -17,9 +17,7 @@ if (jwtSecret.length < 32) {
   throw new Error("JWT_SECRET must be at least 32 characters");
 }
 
-const corsOrigins = (
-  process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001"
-)
+const corsOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);

@@ -173,6 +173,82 @@ async function main() {
     },
   });
 
+  await prisma.pullRequest.deleteMany({
+    where: { orgId: { in: [acme.id, globex.id] } },
+  });
+
+  const draftTitle = "Acme onboarding checklist";
+  const draftDescription = "Draft PR for internal onboarding docs.";
+
+  await prisma.pullRequest.create({
+    data: {
+      orgId: acme.id,
+      authorId: alice.id,
+      title: draftTitle,
+      description: draftDescription,
+      status: "DRAFT",
+      requiresApprovals: 1,
+      currentVersion: 1,
+      versions: {
+        create: {
+          versionNumber: 1,
+          title: draftTitle,
+          description: draftDescription,
+          createdById: alice.id,
+        },
+      },
+    },
+  });
+
+  const reviewTitle = "Acme API rate limiting";
+  const reviewDescription = "Proposal to add per-org rate limits on public endpoints.";
+
+  await prisma.pullRequest.create({
+    data: {
+      orgId: acme.id,
+      authorId: alice.id,
+      title: reviewTitle,
+      description: reviewDescription,
+      status: "IN_REVIEW",
+      requiresApprovals: 2,
+      currentVersion: 1,
+      versions: {
+        create: {
+          versionNumber: 1,
+          title: reviewTitle,
+          description: reviewDescription,
+          createdById: alice.id,
+        },
+      },
+      reviewers: {
+        create: [{ userId: dave.id }, { userId: bob.id }],
+      },
+    },
+  });
+
+  const globexTitle = "Globex data retention policy";
+  const globexDescription = "Update retention windows for customer audit exports.";
+
+  await prisma.pullRequest.create({
+    data: {
+      orgId: globex.id,
+      authorId: carol.id,
+      title: globexTitle,
+      description: globexDescription,
+      status: "DRAFT",
+      requiresApprovals: 1,
+      currentVersion: 1,
+      versions: {
+        create: {
+          versionNumber: 1,
+          title: globexTitle,
+          description: globexDescription,
+          createdById: carol.id,
+        },
+      },
+    },
+  });
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -216,6 +292,11 @@ async function main() {
   console.log(`  - platform@example.com (Platform Super Admin, no org memberships)`);
   console.log("\nCross-org connection:");
   console.log(`  - Acme <-> Globex (ACCEPTED)`);
+  console.log("\nSample pull requests:");
+  console.log(
+    `  - Acme: 1 DRAFT (alice), 1 IN_REVIEW with 2 reviewers (alice, requiresApprovals: 2)`,
+  );
+  console.log(`  - Globex: 1 DRAFT (carol)`);
 }
 
 main()

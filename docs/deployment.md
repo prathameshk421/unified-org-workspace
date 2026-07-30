@@ -38,18 +38,18 @@ flowchart LR
   Seed --> SQL
 ```
 
-| Component | GCP service | Notes |
-|---|---|---|
-| API | Cloud Run (`unified-org-api`) | Express, listens on `$PORT` |
-| Support Hub | Cloud Run (`unified-org-support-hub`) | Next.js standalone |
-| Review Console | Cloud Run (`unified-org-review-console`) | Next.js standalone |
-| Migrations | Cloud Run Job (`unified-org-migrate`) | `prisma migrate deploy` |
-| Demo seed | Cloud Run Job (`unified-org-seed`) | One-shot via `seed-demo` workflow |
-| Database | Cloud SQL PostgreSQL 16 | Private IP + Cloud SQL connector |
-| Cache | Memorystore Redis 7 | VPC-private |
-| Images | Artifact Registry (`unified-org`) | Built by GitHub Actions |
-| Secrets | Secret Manager | JWT, DB URLs, Redis URL |
-| Deploy auth | Workload Identity Federation | No JSON service-account keys |
+| Component      | GCP service                              | Notes                             |
+| -------------- | ---------------------------------------- | --------------------------------- |
+| API            | Cloud Run (`unified-org-api`)            | Express, listens on `$PORT`       |
+| Support Hub    | Cloud Run (`unified-org-support-hub`)    | Next.js standalone                |
+| Review Console | Cloud Run (`unified-org-review-console`) | Next.js standalone                |
+| Migrations     | Cloud Run Job (`unified-org-migrate`)    | `prisma migrate deploy`           |
+| Demo seed      | Cloud Run Job (`unified-org-seed`)       | One-shot via `seed-demo` workflow |
+| Database       | Cloud SQL PostgreSQL 16                  | Private IP + Cloud SQL connector  |
+| Cache          | Memorystore Redis 7                      | VPC-private                       |
+| Images         | Artifact Registry (`unified-org`)        | Built by GitHub Actions           |
+| Secrets        | Secret Manager                           | JWT, DB URLs, Redis URL           |
+| Deploy auth    | Workload Identity Federation             | No JSON service-account keys      |
 
 ## URLs
 
@@ -63,10 +63,10 @@ terraform output cloud_run_urls
 
 Example:
 
-| Service | URL |
-|---|---|
-| API | `https://unified-org-api-xxxxx-uc.a.run.app` |
-| Support Hub | `https://unified-org-support-hub-xxxxx-uc.a.run.app` |
+| Service        | URL                                                     |
+| -------------- | ------------------------------------------------------- |
+| API            | `https://unified-org-api-xxxxx-uc.a.run.app`            |
+| Support Hub    | `https://unified-org-support-hub-xxxxx-uc.a.run.app`    |
 | Review Console | `https://unified-org-review-console-xxxxx-uc.a.run.app` |
 
 Submit these public URLs + demo credentials for the assignment deliverable.
@@ -79,21 +79,21 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 
 ### Secret Manager (populated by Terraform)
 
-| Secret | Used by | Description |
-|---|---|---|
-| `JWT_SECRET` | API | Session/JWT signing |
-| `DATABASE_URL` | Migrate/seed jobs | Postgres owner (`postgres`) via Cloud SQL private IP |
-| `DATABASE_APP_URL` | API runtime | Restricted `unified_app` role (append-only audit) |
-| `REDIS_URL` | API | Memorystore connection string |
+| Secret             | Used by           | Description                                          |
+| ------------------ | ----------------- | ---------------------------------------------------- |
+| `JWT_SECRET`       | API               | Session/JWT signing                                  |
+| `DATABASE_URL`     | Migrate/seed jobs | Postgres owner (`postgres`) via Cloud SQL private IP |
+| `DATABASE_APP_URL` | API runtime       | Restricted `unified_app` role (append-only audit)    |
+| `REDIS_URL`        | API               | Memorystore connection string                        |
 
 ### Cloud Run API env (set by Terraform)
 
-| Variable | Example | Notes |
-|---|---|---|
-| `COOKIE_DOMAIN` | `.example.com` | **Only** when `enable_custom_domain=true`. Omit on default `*.run.app` deploy. |
-| `API_URL` | `https://api.example.com` | Set when custom domain enabled |
-| `ACCESS_COOKIE_NAME` | `unified_access` | Optional; default shown |
-| `REFRESH_COOKIE_NAME` | `unified_refresh` | Optional; default shown |
+| Variable              | Example                   | Notes                                                                          |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `COOKIE_DOMAIN`       | `.example.com`            | **Only** when `enable_custom_domain=true`. Omit on default `*.run.app` deploy. |
+| `API_URL`             | `https://api.example.com` | Set when custom domain enabled                                                 |
+| `ACCESS_COOKIE_NAME`  | `unified_access`          | Optional; default shown                                                        |
+| `REFRESH_COOKIE_NAME` | `unified_refresh`         | Optional; default shown                                                        |
 
 Cookie SameSite policy (application code): custom domain → `Strict`; default `*.run.app` (secure, no domain) → `None`; local → `Strict`. Session sync uses API-origin cookies + credentialed fetches from both dashboards — see [session-sync.md](./requirements/session-sync.md).
 
@@ -101,11 +101,11 @@ Cookie SameSite policy (application code): custom domain → `Strict`; default `
 
 Both dashboards need all three URLs baked at image build time (sibling navigation links).
 
-| Variable | support-hub | review-console | GitHub Actions source |
-|---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | yes | yes | `API_URL` |
-| `NEXT_PUBLIC_SUPPORT_HUB_URL` | yes | yes | `SUPPORT_HUB_URL` |
-| `NEXT_PUBLIC_REVIEW_CONSOLE_URL` | yes | yes | `REVIEW_CONSOLE_URL` |
+| Variable                         | support-hub | review-console | GitHub Actions source |
+| -------------------------------- | ----------- | -------------- | --------------------- |
+| `NEXT_PUBLIC_API_URL`            | yes         | yes            | `API_URL`             |
+| `NEXT_PUBLIC_SUPPORT_HUB_URL`    | yes         | yes            | `SUPPORT_HUB_URL`     |
+| `NEXT_PUBLIC_REVIEW_CONSOLE_URL` | yes         | yes            | `REVIEW_CONSOLE_URL`  |
 
 Docker builds fail if `NEXT_PUBLIC_API_URL` is empty.
 
@@ -113,14 +113,14 @@ Docker builds fail if `NEXT_PUBLIC_API_URL` is empty.
 
 Run the **Seed Demo Data** workflow once after the first successful deploy and migration.
 
-| Email | Org | Role | Password |
-|---|---|---|---|
-| `alice@acme.com` | Acme | ORG_ADMIN | `password123` |
-| `bob@acme.com` | Acme | SUPPORT_AGENT | `password123` |
-| `carol@globex.com` | Globex | ORG_ADMIN | `password123` |
-| `dave@example.com` | Acme + Globex | REVIEWER | `password123` |
-| `eve@example.com` | Acme | CROSS_ORG_GUEST | `password123` |
-| `platform@example.com` | — | Platform Super Admin | `password123` |
+| Email                  | Org           | Role                 | Password      |
+| ---------------------- | ------------- | -------------------- | ------------- |
+| `alice@acme.com`       | Acme          | ORG_ADMIN            | `password123` |
+| `bob@acme.com`         | Acme          | SUPPORT_AGENT        | `password123` |
+| `carol@globex.com`     | Globex        | ORG_ADMIN            | `password123` |
+| `dave@example.com`     | Acme + Globex | REVIEWER             | `password123` |
+| `eve@example.com`      | Acme          | CROSS_ORG_GUEST      | `password123` |
+| `platform@example.com` | —             | Platform Super Admin | `password123` |
 
 Organizations: **Acme Corp** (`acme`) and **Globex Inc** (`globex`) with an accepted cross-org connection.
 
@@ -158,15 +158,15 @@ terraform output cloud_run_urls
 
 Settings → Secrets and variables → Actions → **Variables**:
 
-| Variable | Value |
-|---|---|
-| `GCP_PROJECT_ID` | `unified-org-workspace` |
-| `GCP_REGION` | `us-central1` |
-| `WIF_PROVIDER` | `terraform output wif_provider` |
-| `WIF_SERVICE_ACCOUNT` | `terraform output github_deploy_service_account` |
-| `API_URL` | from `terraform output cloud_run_urls` → `api` |
-| `SUPPORT_HUB_URL` | from `terraform output cloud_run_urls` → `support_hub` |
-| `REVIEW_CONSOLE_URL` | from `terraform output cloud_run_urls` → `review_console` |
+| Variable              | Value                                                     |
+| --------------------- | --------------------------------------------------------- |
+| `GCP_PROJECT_ID`      | `unified-org-workspace`                                   |
+| `GCP_REGION`          | `us-central1`                                             |
+| `WIF_PROVIDER`        | `terraform output wif_provider`                           |
+| `WIF_SERVICE_ACCOUNT` | `terraform output github_deploy_service_account`          |
+| `API_URL`             | from `terraform output cloud_run_urls` → `api`            |
+| `SUPPORT_HUB_URL`     | from `terraform output cloud_run_urls` → `support_hub`    |
+| `REVIEW_CONSOLE_URL`  | from `terraform output cloud_run_urls` → `review_console` |
 
 ### 4. Push deployment code to GitHub
 

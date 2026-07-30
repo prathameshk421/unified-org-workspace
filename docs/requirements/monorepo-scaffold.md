@@ -13,25 +13,25 @@ This branch is verified against:
 
 ## Locked Decisions
 
-| Area | Choice |
-|---|---|
-| Package manager | **pnpm** workspaces (`pnpm-workspace.yaml`) |
-| Orchestrator | **Turborepo** (`turbo.json`) |
-| Package scope | **`@unified/*`** |
-| Node | **22** (Alpine in Docker) |
-| Express | **v4** + `cors`, `helmet`, `express.json()`; health at `GET /health` |
-| Next.js | **15** App Router for both dashboards; `transpilePackages` for workspace packages |
-| Ports | API **4000**, Support Hub **3000**, Review & Audit Console **3001** |
-| TypeScript | Shared `strict: true` + `noUncheckedIndexedAccess`; API **ESM** (`NodeNext`); Next apps extend base |
-| Package consumption | Workspace protocol + raw TS; Next `transpilePackages`; API via `tsx` in dev / `tsc` build |
-| UI exports | Barrel `packages/ui/src/index.ts` |
-| ESLint | Flat config (ESLint 9) via `@unified/config` |
-| Prettier | Root config; **no husky/lint-staged in this branch** |
-| Tailwind | **v4** with shared theme tokens in `@unified/config` |
-| Fonts | **Geist** via `geist` npm package (no network fetch at build time) |
-| Docker Compose | Postgres **16**, Redis **7**; DB `unified_org`, user/pass `postgres`/`postgres` |
-| Next deploy | `output: "standalone"` multi-stage Dockerfiles |
-| CI | GitHub Actions on PRs to `main`: install → lint → typecheck → build |
+| Area                | Choice                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| Package manager     | **pnpm** workspaces (`pnpm-workspace.yaml`)                                                         |
+| Orchestrator        | **Turborepo** (`turbo.json`)                                                                        |
+| Package scope       | **`@unified/*`**                                                                                    |
+| Node                | **22** (Alpine in Docker)                                                                           |
+| Express             | **v4** + `cors`, `helmet`, `express.json()`; health at `GET /health`                                |
+| Next.js             | **15** App Router for both dashboards; `transpilePackages` for workspace packages                   |
+| Ports               | API **4000**, Support Hub **3000**, Review & Audit Console **3001**                                 |
+| TypeScript          | Shared `strict: true` + `noUncheckedIndexedAccess`; API **ESM** (`NodeNext`); Next apps extend base |
+| Package consumption | Workspace protocol + raw TS; Next `transpilePackages`; API via `tsx` in dev / `tsc` build           |
+| UI exports          | Barrel `packages/ui/src/index.ts`                                                                   |
+| ESLint              | Flat config (ESLint 9) via `@unified/config`                                                        |
+| Prettier            | Root config; **no husky/lint-staged in this branch**                                                |
+| Tailwind            | **v4** with shared theme tokens in `@unified/config`                                                |
+| Fonts               | **Geist** via `geist` npm package (no network fetch at build time)                                  |
+| Docker Compose      | Postgres **16**, Redis **7**; DB `unified_org`, user/pass `postgres`/`postgres`                     |
+| Next deploy         | `output: "standalone"` multi-stage Dockerfiles                                                      |
+| CI                  | GitHub Actions on PRs to `main`: install → lint → typecheck → build                                 |
 
 ---
 
@@ -45,11 +45,11 @@ This branch is verified against:
 
 ### 2. App Shells
 
-| App | Package | Role | Port |
-|---|---|---|---|
-| **API server** | `@unified/api` | Express.js backend with `GET /health` | 4000 |
-| **Support Hub** | `@unified/support-hub` | Next.js Dashboard 1 placeholder | 3000 |
-| **Review & Audit Console** | `@unified/review-console` | Next.js Dashboard 2 placeholder | 3001 |
+| App                        | Package                   | Role                                  | Port |
+| -------------------------- | ------------------------- | ------------------------------------- | ---- |
+| **API server**             | `@unified/api`            | Express.js backend with `GET /health` | 4000 |
+| **Support Hub**            | `@unified/support-hub`    | Next.js Dashboard 1 placeholder       | 3000 |
+| **Review & Audit Console** | `@unified/review-console` | Next.js Dashboard 2 placeholder       | 3001 |
 
 API middleware out of the box: `cors`, `helmet`, `express.json()`.
 
@@ -57,13 +57,13 @@ Empty route folders for future module boundaries: `identity`, `tickets`, `prs`, 
 
 ### 3. Shared Packages
 
-| Package | Purpose |
-|---|---|
-| `@unified/ui` | Shared React components across both dashboards |
-| `@unified/types` | TypeScript types, enums, DTOs for frontend and backend |
-| `@unified/auth-client` | Frontend auth utilities (empty shell) |
-| `@unified/db` | Prisma schema and client (minimal setup, no models) |
-| `@unified/config` | TypeScript, ESLint, Tailwind, and Prettier configs |
+| Package                | Purpose                                                |
+| ---------------------- | ------------------------------------------------------ |
+| `@unified/ui`          | Shared React components across both dashboards         |
+| `@unified/types`       | TypeScript types, enums, DTOs for frontend and backend |
+| `@unified/auth-client` | Frontend auth utilities (empty shell)                  |
+| `@unified/db`          | Prisma schema and client (minimal setup, no models)    |
+| `@unified/config`      | TypeScript, ESLint, Tailwind, and Prettier configs     |
 
 ### 4. TypeScript Configuration
 

@@ -20,8 +20,7 @@ export function queueAudit(
 ): void {
   ensureAuditLocals(res);
 
-  const orgId =
-    partial.orgId ?? req.orgId ?? req.auth?.activeOrgId ?? null;
+  const orgId = partial.orgId ?? req.orgId ?? req.auth?.activeOrgId ?? null;
   const userId = partial.userId ?? req.auth?.userId ?? null;
 
   res.locals.auditEvents!.push({
@@ -56,9 +55,7 @@ async function flushAuditEvents(req: Request, res: Response): Promise<void> {
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.error(
-      `[audit] missing audit event for successful mutation ${req.method} ${path}`,
-    );
+    console.error(`[audit] missing audit event for successful mutation ${req.method} ${path}`);
   }
 
   const orgId = req.orgId ?? req.auth?.activeOrgId ?? null;
@@ -74,11 +71,7 @@ async function flushAuditEvents(req: Request, res: Response): Promise<void> {
   });
 }
 
-export function auditMutations(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function auditMutations(req: Request, res: Response, next: NextFunction): void {
   if (!MUTATION_METHODS.has(req.method)) {
     next();
     return;
