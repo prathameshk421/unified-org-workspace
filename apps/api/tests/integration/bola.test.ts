@@ -88,7 +88,7 @@ describe("BOLA", () => {
       ],
     });
 
-    const client = await loginAgent(user.email);
+    await loginAgent(user.email);
     const session = await ownerDb.session.findFirstOrThrow({
       where: { userId: user.id, revokedAt: null },
       orderBy: { createdAt: "desc" },
@@ -120,7 +120,7 @@ describe("BOLA", () => {
       orgs: [{ org, role: OrgRole.SUPPORT_AGENT }],
     });
 
-    const aliceClient = await loginAgent(alice.email);
+    await loginAgent(alice.email);
     const aliceSession = await ownerDb.session.findFirstOrThrow({
       where: { userId: alice.id, revokedAt: null },
       orderBy: { createdAt: "desc" },

@@ -67,8 +67,10 @@ describe("token lifecycle", () => {
       .send({ email: user.email, password: "password123" })
       .expect(200);
 
-    const oldRefresh = parseSetCookie(loginRes).unified_refresh?.value!;
-    const oldAccess = parseSetCookie(loginRes).unified_access?.value!;
+    const oldRefresh = parseSetCookie(loginRes).unified_refresh?.value;
+    const oldAccess = parseSetCookie(loginRes).unified_access?.value;
+    expect(oldRefresh).toBeTruthy();
+    expect(oldAccess).toBeTruthy();
 
     const rotated = await agent()
       .post("/auth/refresh")
@@ -80,7 +82,8 @@ describe("token lifecycle", () => {
       .send({})
       .expect(200);
 
-    const newRefresh = parseSetCookie(rotated).unified_refresh?.value!;
+    const newRefresh = parseSetCookie(rotated).unified_refresh?.value;
+    expect(newRefresh).toBeTruthy();
 
     const reuse = await agent()
       .post("/auth/refresh")
@@ -175,7 +178,7 @@ describe("token lifecycle", () => {
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
 
-    const client = await loginAgent(user.email);
+    await loginAgent(user.email);
     const session = await ownerDb.session.findFirstOrThrow({
       where: { userId: user.id, revokedAt: null },
       orderBy: { createdAt: "desc" },
@@ -209,7 +212,8 @@ describe("token lifecycle", () => {
       .send({ email: user.email, password: "password123" })
       .expect(200);
 
-    const access = parseSetCookie(loginRes).unified_access?.value!;
+    const access = parseSetCookie(loginRes).unified_access?.value;
+    expect(access).toBeTruthy();
 
     await ownerDb.session.updateMany({
       where: { userId: user.id },
@@ -237,7 +241,8 @@ describe("token lifecycle", () => {
       .send({ email: user.email, password: "password123" })
       .expect(200);
 
-    const refresh = parseSetCookie(loginRes).unified_refresh?.value!;
+    const refresh = parseSetCookie(loginRes).unified_refresh?.value;
+    expect(refresh).toBeTruthy();
 
     await ownerDb.refreshToken.updateMany({
       where: { session: { userId: user.id } },
@@ -293,8 +298,10 @@ describe("token lifecycle", () => {
       .send({ email: user.email, password: "password123" })
       .expect(200);
 
-    const refresh = parseSetCookie(loginRes).unified_refresh?.value!;
-    const access = parseSetCookie(loginRes).unified_access?.value!;
+    const refresh = parseSetCookie(loginRes).unified_refresh?.value;
+    const access = parseSetCookie(loginRes).unified_access?.value;
+    expect(refresh).toBeTruthy();
+    expect(access).toBeTruthy();
     const cookie = [
       `${env.refreshCookieName}=${refresh}`,
       `${env.accessCookieName}=${access}`,

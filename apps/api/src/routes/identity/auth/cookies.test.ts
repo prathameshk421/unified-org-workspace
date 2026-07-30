@@ -1,10 +1,5 @@
 import type { Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  clearAuthCookies,
-  setAccessCookie,
-  setAuthCookies,
-} from "./cookies.js";
 
 function mockResponse() {
   const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> =
