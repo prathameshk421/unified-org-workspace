@@ -193,6 +193,7 @@ jobs:
 
       # Cloud Run speaks plain HTTP to the container, so an nginx redirect that
       # leaks an absolute origin is blocked as mixed content on the HTTPS page.
+      # Also catch hub/console trailing-slash loops (nginx 301 ↔ Next 308).
       - name: Assert gateway redirects are not insecure
         run: |
           failed=0
@@ -211,5 +212,24 @@ jobs:
           done
           if [ "${failed}" -ne 0 ]; then
             echo "Gateway emitted absolute http:// redirects"
+            exit 1
+          fi
+
+      - name: Smoke test hub and console via gateway
+        run: |
+          failed=0
+          # Slash and slashless forms must resolve (no infinite nginx↔Next loop).
+          for path in /support-hub /support-hub/ /console /console/; do
+            code=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --max-redirs 5 --location "${{ env.GATEWAY_ORIGIN }}${path}" || true)
+            if [ "${code}" != "200" ]; then
+              echo "Expected HTTP 200 for ${path} (got ${code:-curl-error})"
+              failed=1
+            else
+              echo "OK ${path} -> 200"
+            fi
+          done
+          if [ "${failed}" -ne 0 ]; then
+            echo "Gateway hub/console smoke failed (redirect loop or upstream error)"
             exit 1
           fi

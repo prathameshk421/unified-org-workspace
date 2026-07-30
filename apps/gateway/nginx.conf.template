@@ -70,8 +70,10 @@ http {
       return 301 /api/;
     }
 
-    # KEEP /console (Next basePath). Do NOT strip.
-    location /console/ {
+    # KEEP /console (Next basePath). Do NOT strip, and do NOT force a trailing
+    # slash: Next.js default trailingSlash:false 308s /console/ → /console, which
+    # would loop forever against a slash-adding gateway redirect.
+    location /console {
       proxy_http_version 1.1;
       proxy_set_header Host              $proxy_host;
       proxy_set_header X-Real-IP         $remote_addr;
@@ -84,12 +86,8 @@ http {
       proxy_pass ${CONSOLE_UPSTREAM};
     }
 
-    location = /console {
-      return 301 /console/;
-    }
-
-    # KEEP /support-hub (Next basePath). Do NOT strip.
-    location /support-hub/ {
+    # KEEP /support-hub (Next basePath). Same trailing-slash rule as /console.
+    location /support-hub {
       proxy_http_version 1.1;
       proxy_set_header Host              $proxy_host;
       proxy_set_header X-Real-IP         $remote_addr;
@@ -100,10 +98,6 @@ http {
       proxy_set_header Connection        $connection_upgrade;
       proxy_ssl_server_name on;
       proxy_pass ${HUB_UPSTREAM};
-    }
-
-    location = /support-hub {
-      return 301 /support-hub/;
     }
 
     # Unknown paths → landing (do not proxy to Hub)

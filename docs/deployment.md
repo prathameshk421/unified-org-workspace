@@ -243,6 +243,8 @@ curl "$(terraform output -raw gateway_url)/api/health"
 
 Open the **gateway** URL in a browser (landing at `/`, Hub at `/support-hub`, Console at `/console`).
 
+Do **not** force trailing slashes on Hub/Console in the gateway: Next.js (`trailingSlash: false`) redirects `/support-hub/` → `/support-hub`, so an nginx `301` the other way creates an infinite loop. `/api` → `/api/` is fine (prefix strip only).
+
 ---
 
 ## One-time bootstrap (custom domain — optional)
