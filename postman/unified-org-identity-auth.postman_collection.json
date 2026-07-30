@@ -1,13 +1,17 @@
 {
   "info": {
     "name": "Unified Org — Identity Auth",
-    "description": "Identity auth + session-sync + RBAC API checks. Set baseUrl to your API origin (local: http://localhost:4000). Run with: pnpm test:auth",
+    "description": "Identity auth + session-sync + RBAC + tickets BOLA/RBAC API checks. Set baseUrl to your API origin (local: http://localhost:4000). Run with: pnpm test:auth",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:4000" },
     { "key": "globexOrgId", "value": "" },
-    { "key": "acmeOrgId", "value": "" }
+    { "key": "acmeOrgId", "value": "" },
+    { "key": "globexTicketId", "value": "" },
+    { "key": "acmeTicketId", "value": "" },
+    { "key": "bobTicketId", "value": "" },
+    { "key": "daveTicketId", "value": "" }
   ],
   "item": [
     {
@@ -299,6 +303,307 @@
             "pm.test('no active org', () => pm.response.to.have.status(403));",
             "pm.test('code no_active_org', () => pm.expect(pm.response.json().code).to.eql('no_active_org'));"
           ] } }]
+        }
+      ]
+    },
+    {
+      "name": "Tickets BOLA + RBAC",
+      "item": [
+        {
+          "name": "Logout before tickets BOLA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/auth/logout"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('logout 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "36. Anon GET /tickets (401)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }]
+        },
+        {
+          "name": "37. Login Carol (Globex)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"carol@globex.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "38. GET /tickets (Carol) — save globexTicketId",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('tickets 200', () => pm.response.to.have.status(200));",
+            "const tickets = pm.response.json().tickets || [];",
+            "const vpn = tickets.find(t => t.title === 'VPN access');",
+            "const chosen = vpn || tickets[0];",
+            "pm.test('globex ticket present', () => pm.expect(chosen).to.be.an('object'));",
+            "pm.collectionVariables.set('globexTicketId', chosen.id);",
+            "pm.test('globexTicketId saved', () => pm.expect(chosen.id).to.be.a('string').and.not.empty);"
+          ] } }]
+        },
+        {
+          "name": "39. Login Alice (Acme)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"alice@acme.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "40. BOLA GET /tickets/{{globexTicketId}} (404)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{globexTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('bola 404', () => pm.response.to.have.status(404));",
+            "pm.test('Ticket not found', () => pm.expect(pm.response.json().error).to.eql('Ticket not found'));"
+          ] } }]
+        },
+        {
+          "name": "41. BOLA PATCH /tickets/{{globexTicketId}} (404)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Hijacked by Alice\"}" },
+            "url": "{{baseUrl}}/tickets/{{globexTicketId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('bola 404', () => pm.response.to.have.status(404));",
+            "pm.test('Ticket not found', () => pm.expect(pm.response.json().error).to.eql('Ticket not found'));"
+          ] } }]
+        },
+        {
+          "name": "42. BOLA DELETE /tickets/{{globexTicketId}} (404)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/tickets/{{globexTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('bola 404', () => pm.response.to.have.status(404));",
+            "pm.test('Ticket not found', () => pm.expect(pm.response.json().error).to.eql('Ticket not found'));"
+          ] } }]
+        },
+        {
+          "name": "43. Alice GET /tickets — list isolation",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('tickets 200', () => pm.response.to.have.status(200));",
+            "const tickets = pm.response.json().tickets || [];",
+            "const globexTicketId = pm.collectionVariables.get('globexTicketId');",
+            "const ids = tickets.map(t => t.id);",
+            "const titles = tickets.map(t => t.title);",
+            "pm.test('excludes globexTicketId', () => pm.expect(ids).to.not.include(globexTicketId));",
+            "pm.test('excludes Globex titles', () => {",
+            "  pm.expect(titles).to.not.include('VPN access');",
+            "  pm.expect(titles).to.not.include('Invoice export failing');",
+            "});",
+            "const billing = tickets.find(t => t.title === 'Billing discrepancy');",
+            "const chosen = billing || tickets[0];",
+            "pm.test('acme ticket present', () => pm.expect(chosen).to.be.an('object'));",
+            "pm.collectionVariables.set('acmeTicketId', chosen.id);",
+            "pm.test('acmeTicketId saved', () => pm.expect(chosen.id).to.be.a('string').and.not.empty);"
+          ] } }]
+        },
+        {
+          "name": "44. Alice GET /org/settings",
+          "request": { "method": "GET", "url": "{{baseUrl}}/org/settings" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('settings 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "45. Alice PATCH /org/settings (noop-safe)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"featureFlags\":{\"commentsEnabled\":true,\"attachmentsEnabled\":true}}" },
+            "url": "{{baseUrl}}/org/settings"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('settings 200', () => pm.response.to.have.status(200));",
+            "const flags = pm.response.json().settings.featureFlags;",
+            "pm.test('flags affirmed', () => {",
+            "  pm.expect(flags.commentsEnabled).to.eql(true);",
+            "  pm.expect(flags.attachmentsEnabled).to.eql(true);",
+            "});"
+          ] } }]
+        },
+        {
+          "name": "46. Login Bob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"bob@acme.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "47. Bob POST /tickets — save bobTicketId",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Newman Bob ticket\",\"description\":\"Created by Bob during tickets BOLA smoke\"}" },
+            "url": "{{baseUrl}}/tickets"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('create 201', () => pm.response.to.have.status(201));",
+            "const id = pm.response.json().id;",
+            "pm.collectionVariables.set('bobTicketId', id);",
+            "pm.test('bobTicketId saved', () => pm.expect(id).to.be.a('string').and.not.empty);"
+          ] } }]
+        },
+        {
+          "name": "48. Bob PATCH /tickets/{{bobTicketId}}/status → IN_PROGRESS",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"status\":\"IN_PROGRESS\"}" },
+            "url": "{{baseUrl}}/tickets/{{bobTicketId}}/status"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('IN_PROGRESS', () => pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'));"
+          ] } }]
+        },
+        {
+          "name": "49. Bob PATCH /org/settings (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"featureFlags\":{\"attachmentsEnabled\":false}}" },
+            "url": "{{baseUrl}}/org/settings"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('forbidden', () => pm.response.to.have.status(403));",
+            "pm.test('code insufficient_role', () => pm.expect(pm.response.json().code).to.eql('insufficient_role'));"
+          ] } }]
+        },
+        {
+          "name": "50. Login Dave (reviewer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "50b. Dave switch-org Acme (for cleanup)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"orgId\":\"{{acmeOrgId}}\"}" },
+            "url": "{{baseUrl}}/auth/switch-org"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('switch 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "51. Dave GET /tickets",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('tickets 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "52. Dave POST /tickets — save daveTicketId",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Newman Dave ticket\",\"description\":\"Reviewer mutator create during tickets BOLA smoke\"}" },
+            "url": "{{baseUrl}}/tickets"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('create 201', () => pm.response.to.have.status(201));",
+            "const id = pm.response.json().id;",
+            "pm.collectionVariables.set('daveTicketId', id);",
+            "pm.test('daveTicketId saved', () => pm.expect(id).to.be.a('string').and.not.empty);"
+          ] } }]
+        },
+        {
+          "name": "53. Login Eve (guest)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"eve@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "54. Eve GET /tickets",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('tickets 200', () => pm.response.to.have.status(200));",
+            "const ids = (pm.response.json().tickets || []).map(t => t.id);",
+            "pm.test('includes acmeTicketId', () => pm.expect(ids).to.include(pm.collectionVariables.get('acmeTicketId')));"
+          ] } }]
+        },
+        {
+          "name": "54b. Eve GET /tickets/{{acmeTicketId}}",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{acmeTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('ticket 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "55. Eve POST /tickets (403)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Guest create attempt\"}" },
+            "url": "{{baseUrl}}/tickets"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('forbidden', () => pm.response.to.have.status(403));",
+            "pm.test('code insufficient_role', () => pm.expect(pm.response.json().code).to.eql('insufficient_role'));"
+          ] } }]
+        },
+        {
+          "name": "56. Eve POST /tickets/{{acmeTicketId}}/comments (201)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"body\":\"Guest comment from Newman tickets BOLA smoke\"}" },
+            "url": "{{baseUrl}}/tickets/{{acmeTicketId}}/comments"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('comment 201', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "57. Eve POST /tickets/{{acmeTicketId}}/attachments (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "text", "value": "guest-upload-blocked", "contentType": "text/plain" }
+              ]
+            },
+            "url": "{{baseUrl}}/tickets/{{acmeTicketId}}/attachments"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('forbidden', () => pm.response.to.have.status(403));",
+            "pm.test('code insufficient_role', () => pm.expect(pm.response.json().code).to.eql('insufficient_role'));"
+          ] } }]
+        },
+        {
+          "name": "Cleanup: Login Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"alice@acme.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Cleanup: DELETE Bob ticket",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/tickets/{{bobTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('delete 204', () => pm.response.to.have.status(204));"] } }]
+        },
+        {
+          "name": "Cleanup: DELETE Dave ticket",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/tickets/{{daveTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('delete 204', () => pm.response.to.have.status(204));"] } }]
         }
       ]
     }

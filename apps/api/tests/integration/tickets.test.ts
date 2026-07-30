@@ -8,6 +8,7 @@ import { ownerDb } from "../support/db.js";
 import {
   cleanupRunFixtures,
   createOrg,
+  createTicket,
   createUser,
 } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
@@ -27,27 +28,140 @@ describe("tickets", () => {
       orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
     });
 
-    const foreignTicket = await ownerDb.ticket.create({
-      data: {
-        orgId: orgB.id,
-        title: "Foreign ticket",
-        createdById: bob.id,
-      },
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign ticket",
+      createdById: bob.id,
     });
 
     const client = await loginAgent(alice.email);
 
     await client.get(`/tickets/${foreignTicket.id}`).expect(404).expect((res) => {
       expect(res.body.error).toBe("Ticket not found");
+      expect(JSON.stringify(res.body)).not.toContain("Foreign ticket");
+      expect(JSON.stringify(res.body)).not.toContain(orgB.id);
     });
 
     await client
       .patch(`/tickets/${foreignTicket.id}`)
       .set("Content-Type", "application/json")
       .send({ title: "Hijacked" })
-      .expect(404);
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("Foreign ticket");
+      });
 
-    await client.delete(`/tickets/${foreignTicket.id}`).expect(404);
+    await client
+      .delete(`/tickets/${foreignTicket.id}`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+      });
+  });
+
+  it("lists only tickets for the active org", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const ticketA = await createTicket({
+      orgId: orgA.id,
+      title: "Org A list ticket",
+      createdById: alice.id,
+    });
+    const ticketB = await createTicket({
+      orgId: orgB.id,
+      title: "Org B secret ticket",
+      createdById: bob.id,
+    });
+
+    const client = await loginAgent(alice.email);
+    const res = await client.get("/tickets").expect(200);
+
+    const ids = (res.body.tickets as Array<{ id: string }>).map((t) => t.id);
+    expect(ids).toContain(ticketA.id);
+    expect(ids).not.toContain(ticketB.id);
+    expect(JSON.stringify(res.body)).not.toContain("Org B secret ticket");
+  });
+
+  it("returns 404 for cross-org status PATCH (BOLA)", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign status ticket",
+      createdById: bob.id,
+      status: TicketStatus.OPEN,
+    });
+
+    const client = await loginAgent(alice.email);
+    await client
+      .patch(`/tickets/${foreignTicket.id}/status`)
+      .set("Content-Type", "application/json")
+      .send({ status: TicketStatus.IN_PROGRESS })
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("Foreign status ticket");
+      });
+  });
+
+  it("scopes tickets to session org after multi-org switch", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const dave = await createUser({
+      orgs: [
+        { org: orgA, role: OrgRole.ORG_ADMIN },
+        { org: orgB, role: OrgRole.ORG_ADMIN },
+      ],
+    });
+
+    const ticketA = await createTicket({
+      orgId: orgA.id,
+      title: "Dave org A ticket",
+      createdById: dave.id,
+    });
+    const ticketB = await createTicket({
+      orgId: orgB.id,
+      title: "Dave org B ticket",
+      createdById: dave.id,
+    });
+
+    const client = await loginAgent(dave.email);
+
+    await client
+      .post("/auth/switch-org")
+      .set("Content-Type", "application/json")
+      .send({ orgId: orgB.id })
+      .expect(200);
+
+    await client
+      .get(`/tickets/${ticketA.id}`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("Dave org A ticket");
+      });
+
+    const listRes = await client.get("/tickets").expect(200);
+    const ids = (listRes.body.tickets as Array<{ id: string }>).map(
+      (t) => t.id,
+    );
+    expect(ids).toContain(ticketB.id);
+    expect(ids).not.toContain(ticketA.id);
   });
 
   it("allows guests to read but not mutate tickets", async () => {
@@ -59,12 +173,10 @@ describe("tickets", () => {
       orgs: [{ org, role: OrgRole.CROSS_ORG_GUEST }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Guest readable ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Guest readable ticket",
+      createdById: admin.id,
     });
 
     const guestClient = await loginAgent(guest.email);
@@ -145,13 +257,11 @@ describe("tickets", () => {
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Closed ticket",
-        status: TicketStatus.CLOSED,
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Closed ticket",
+      status: TicketStatus.CLOSED,
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);

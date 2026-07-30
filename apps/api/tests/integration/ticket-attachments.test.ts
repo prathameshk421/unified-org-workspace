@@ -7,6 +7,7 @@ import { ownerDb } from "../support/db.js";
 import {
   cleanupRunFixtures,
   createOrg,
+  createTicket,
   createUser,
 } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
@@ -35,12 +36,10 @@ describe("ticket attachments", () => {
       orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
     });
 
-    const foreignTicket = await ownerDb.ticket.create({
-      data: {
-        orgId: orgB.id,
-        title: "Foreign ticket",
-        createdById: bob.id,
-      },
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign ticket",
+      createdById: bob.id,
     });
 
     const client = await loginAgent(alice.email);
@@ -55,7 +54,71 @@ describe("ticket attachments", () => {
     await client
       .post(`/tickets/${foreignTicket.id}/attachments`)
       .attach("file", Buffer.from("hello"), "note.txt")
-      .expect(404);
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+      });
+  });
+
+  it("returns 404 when uploading under a foreign ticketId", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign upload ticket",
+      createdById: bob.id,
+    });
+
+    const client = await loginAgent(alice.email);
+    await client
+      .post(`/tickets/${foreignTicket.id}/attachments`)
+      .attach("file", Buffer.from("hijack"), "hijack.txt")
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(res.body.code).toBeUndefined();
+      });
+  });
+
+  it("returns 404 when downloading under a foreign ticketId", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign download ticket",
+      createdById: bob.id,
+    });
+
+    const bobClient = await loginAgent(bob.email);
+    const uploaded = await bobClient
+      .post(`/tickets/${foreignTicket.id}/attachments`)
+      .attach("file", Buffer.from("secret-bytes"), "secret.txt")
+      .expect(201);
+
+    const client = await loginAgent(alice.email);
+    await client
+      .get(
+        `/tickets/${foreignTicket.id}/attachments/${uploaded.body.id}/download`,
+      )
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("secret-bytes");
+      });
   });
 
   it("returns 404 for child-ID BOLA on foreign attachment", async () => {
@@ -68,19 +131,15 @@ describe("ticket attachments", () => {
       orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
     });
 
-    const ticketA = await ownerDb.ticket.create({
-      data: {
-        orgId: orgA.id,
-        title: "Org A ticket",
-        createdById: alice.id,
-      },
+    const ticketA = await createTicket({
+      orgId: orgA.id,
+      title: "Org A ticket",
+      createdById: alice.id,
     });
-    const ticketB = await ownerDb.ticket.create({
-      data: {
-        orgId: orgB.id,
-        title: "Org B ticket",
-        createdById: bob.id,
-      },
+    const ticketB = await createTicket({
+      orgId: orgB.id,
+      title: "Org B ticket",
+      createdById: bob.id,
     });
     const foreignAttachment = await ownerDb.ticketAttachment.create({
       data: {
@@ -117,12 +176,10 @@ describe("ticket attachments", () => {
       orgs: [{ org, role: OrgRole.CROSS_ORG_GUEST }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Guest attachment ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Guest attachment ticket",
+      createdById: admin.id,
     });
 
     const adminClient = await loginAgent(admin.email);
@@ -155,12 +212,10 @@ describe("ticket attachments", () => {
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "MIME ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "MIME ticket",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);
@@ -190,12 +245,10 @@ describe("ticket attachments", () => {
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Limit ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Limit ticket",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);
@@ -240,12 +293,10 @@ describe("ticket attachments", () => {
       orgs: [{ org, role: OrgRole.SUPPORT_AGENT }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Round trip ticket",
-        createdById: uploader.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Round trip ticket",
+      createdById: uploader.id,
     });
 
     const uploaderClient = await loginAgent(uploader.email);
@@ -289,18 +340,43 @@ describe("ticket attachments", () => {
     );
   });
 
+  it("allows org admin to delete another user's attachment", async () => {
+    const org = await createOrg();
+    const admin = await createUser({
+      orgs: [{ org, role: OrgRole.ORG_ADMIN }],
+    });
+    const agent = await createUser({
+      orgs: [{ org, role: OrgRole.SUPPORT_AGENT }],
+    });
+
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Admin override delete",
+      createdById: agent.id,
+    });
+
+    const agentClient = await loginAgent(agent.email);
+    const uploaded = await agentClient
+      .post(`/tickets/${ticket.id}/attachments`)
+      .attach("file", Buffer.from("agent-owned"), "owned.txt")
+      .expect(201);
+
+    const adminClient = await loginAgent(admin.email);
+    await adminClient
+      .delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`)
+      .expect(204);
+  });
+
   it("blocks upload when attachments disabled but allows list and DELETE", async () => {
     const org = await createOrg();
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Flagged attachments",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Flagged attachments",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);
@@ -338,12 +414,10 @@ describe("ticket attachments", () => {
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Delete with files",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Delete with files",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);
@@ -367,12 +441,10 @@ describe("ticket attachments", () => {
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Audit attachment",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Audit attachment",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);

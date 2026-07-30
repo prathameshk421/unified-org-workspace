@@ -4,6 +4,7 @@ import { ownerDb } from "../support/db.js";
 import {
   cleanupRunFixtures,
   createOrg,
+  createTicket,
   createUser,
 } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
@@ -23,12 +24,10 @@ describe("ticket comments", () => {
       orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
     });
 
-    const foreignTicket = await ownerDb.ticket.create({
-      data: {
-        orgId: orgB.id,
-        title: "Foreign ticket",
-        createdById: bob.id,
-      },
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign ticket",
+      createdById: bob.id,
     });
 
     const client = await loginAgent(alice.email);
@@ -44,7 +43,73 @@ describe("ticket comments", () => {
       .post(`/tickets/${foreignTicket.id}/comments`)
       .set("Content-Type", "application/json")
       .send({ body: "Hijack" })
-      .expect(404);
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+      });
+  });
+
+  it("returns 404 when creating a comment under a foreign ticketId", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign create-comment ticket",
+      createdById: bob.id,
+    });
+
+    const client = await loginAgent(alice.email);
+    await client
+      .post(`/tickets/${foreignTicket.id}/comments`)
+      .set("Content-Type", "application/json")
+      .send({ body: "Should not land" })
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(res.body.code).toBeUndefined();
+      });
+  });
+
+  it("returns 404 when listing comments under a foreign ticket", async () => {
+    const orgA = await createOrg("Org A");
+    const orgB = await createOrg("Org B");
+    const alice = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const bob = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+
+    const foreignTicket = await createTicket({
+      orgId: orgB.id,
+      title: "Foreign list-comment ticket",
+      createdById: bob.id,
+    });
+
+    await ownerDb.ticketComment.create({
+      data: {
+        ticketId: foreignTicket.id,
+        orgId: orgB.id,
+        authorId: bob.id,
+        body: "Secret comment",
+      },
+    });
+
+    const client = await loginAgent(alice.email);
+    await client
+      .get(`/tickets/${foreignTicket.id}/comments`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("Secret comment");
+      });
   });
 
   it("returns 404 for child-ID BOLA on foreign comment", async () => {
@@ -57,19 +122,15 @@ describe("ticket comments", () => {
       orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
     });
 
-    const ticketA = await ownerDb.ticket.create({
-      data: {
-        orgId: orgA.id,
-        title: "Org A ticket",
-        createdById: alice.id,
-      },
+    const ticketA = await createTicket({
+      orgId: orgA.id,
+      title: "Org A ticket",
+      createdById: alice.id,
     });
-    const ticketB = await ownerDb.ticket.create({
-      data: {
-        orgId: orgB.id,
-        title: "Org B ticket",
-        createdById: bob.id,
-      },
+    const ticketB = await createTicket({
+      orgId: orgB.id,
+      title: "Org B ticket",
+      createdById: bob.id,
     });
     const foreignComment = await ownerDb.ticketComment.create({
       data: {
@@ -108,12 +169,10 @@ describe("ticket comments", () => {
       orgs: [{ org, role: OrgRole.CROSS_ORG_GUEST }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Guest comment ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Guest comment ticket",
+      createdById: admin.id,
     });
 
     const guestClient = await loginAgent(guest.email);
@@ -149,12 +208,10 @@ describe("ticket comments", () => {
       orgs: [{ org, role: OrgRole.SUPPORT_AGENT }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Author edit ticket",
-        createdById: agentA.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Author edit ticket",
+      createdById: agentA.id,
     });
 
     const clientA = await loginAgent(agentA.email);
@@ -193,12 +250,10 @@ describe("ticket comments", () => {
       orgs: [{ org, role: OrgRole.SUPPORT_AGENT }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Admin delete comment",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Admin delete comment",
+      createdById: admin.id,
     });
 
     const agentClient = await loginAgent(agent.email);
@@ -229,12 +284,10 @@ describe("ticket comments", () => {
       },
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Flagged comments ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Flagged comments ticket",
+      createdById: admin.id,
     });
 
     const comment = await ownerDb.ticketComment.create({
@@ -270,12 +323,10 @@ describe("ticket comments", () => {
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
 
-    const ticket = await ownerDb.ticket.create({
-      data: {
-        orgId: org.id,
-        title: "Audit comment ticket",
-        createdById: admin.id,
-      },
+    const ticket = await createTicket({
+      orgId: org.id,
+      title: "Audit comment ticket",
+      createdById: admin.id,
     });
 
     const client = await loginAgent(admin.email);
