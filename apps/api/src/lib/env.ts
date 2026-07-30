@@ -50,6 +50,29 @@ export const env = {
   attachmentsDir:
     process.env.ATTACHMENTS_DIR ??
     path.join(process.cwd(), "data", "attachments"),
+  attachmentsBackend: resolveAttachmentsBackend(),
+  attachmentsGcsBucket: process.env.ATTACHMENTS_GCS_BUCKET ?? "",
   attachmentMaxBytes: ATTACHMENT_MAX_BYTES,
   attachmentMaxPerTicket: ATTACHMENT_MAX_PER_TICKET,
 } as const;
+
+function resolveAttachmentsBackend(): "fs" | "gcs" {
+  const explicit = process.env.ATTACHMENTS_BACKEND?.trim().toLowerCase();
+  if (explicit === "gcs") {
+    return "gcs";
+  }
+  if (explicit === "fs" || explicit === "filesystem") {
+    return "fs";
+  }
+  // Auto-select GCS when a bucket is configured (Cloud Run).
+  if (process.env.ATTACHMENTS_GCS_BUCKET?.trim()) {
+    return "gcs";
+  }
+  return "fs";
+}
+
+if (env.attachmentsBackend === "gcs" && !env.attachmentsGcsBucket) {
+  throw new Error(
+    "ATTACHMENTS_GCS_BUCKET is required when ATTACHMENTS_BACKEND=gcs",
+  );
+}

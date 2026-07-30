@@ -104,6 +104,11 @@ output "domain_mapping_records" {
   } : {}
 }
 
+output "attachments_bucket" {
+  description = "GCS bucket for ticket attachment bytes (API ATTACHMENTS_GCS_BUCKET)"
+  value       = google_storage_bucket.attachments.name
+}
+
 output "secret_ids" {
   description = "Secret Manager secret IDs (values populated by Terraform)"
   value = [

@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Deployment Readiness Score** | **72 / 100** |
+| **Deployment Readiness Score** | **73 / 100** |
 | **Verdict** | **RISKY** |
 | **Confirmed blockers** | 0 |
 | **Pending blockers (user Docker)** | 0 |
@@ -19,7 +19,7 @@
 | **Warnings** | 20 |
 | **Passed checks** | 32 |
 
-Infrastructure is already provisioned in GCP project `unified-org-workspace`. `terraform validate` and `terraform plan` succeed. CI/CD is WIF-based with migrate-before-service ordering. Docker smoke (Appendix A) passed: all four images build, migrate exit 0, API `/health` 200, hub/console HTTP 200 on `PORT=8080`. Remaining gaps (no graceful shutdown, liveness-only `/health`, ephemeral attachments, unused Redis, local TF state, public `allUsers`) keep deploy **risky** until the 7 GitHub Variables and WIF are confirmed.
+Infrastructure is already provisioned in GCP project `unified-org-workspace`. `terraform validate` and `terraform plan` succeed. CI/CD is WIF-based with migrate-before-service ordering. Docker smoke (Appendix A) passed: all four images build, migrate exit 0, API `/health` 200, hub/console HTTP 200 on `PORT=8080`. **W6 attachments:** GCS backend + Terraform bucket/IAM are implemented in-repo; durable storage is active on Cloud Run only after `terraform apply` and API redeploy. Remaining gaps (no graceful shutdown, liveness-only `/health`, unused Redis, local TF state, public `allUsers`) keep deploy **risky** until the 7 GitHub Variables and WIF are confirmed.
 
 | Gate | Result |
 |------|--------|
@@ -187,7 +187,7 @@ None that unconditionally block GCP bootstrap **if** Docker builds/start succeed
 
 | ID | Severity | Location | Root cause | Fix | Confidence |
 |----|----------|----------|------------|-----|------------|
-| R1 | **warning** (runtime OK) | `apps/api/Dockerfile:37-39`, `apps/api/src/index.ts:7`, `env.ts:50-52` | Static analysis: non-root `mkdir` under `cwd/data/attachments` could EACCES. **Appendix A:** container `unified-org/api:audit` without `ATTACHMENTS_DIR` returned `/health` **200** and log `API server listening on port 8080`. | Still set `ATTACHMENTS_DIR=/tmp/attachments` (or GCS) on Cloud Run for W6 ephemeral disk; optional Dockerfile `chown` for defense in depth. | High (static) / verified pass (local Docker) |
+| R1 | **warning** (runtime OK) | `apps/api/Dockerfile:37-39`, `apps/api/src/index.ts:7`, `env.ts` | Static analysis: non-root `mkdir` under `cwd/data/attachments` could EACCES. **Appendix A:** container `unified-org/api:audit` without `ATTACHMENTS_DIR` returned `/health` **200**. | Mitigated for Cloud Run by GCS backend (`ATTACHMENTS_BACKEND=gcs`); local/dev still uses filesystem. Optional Dockerfile `chown` for defense in depth. | High (static) / verified pass (local Docker) |
 
 ### Docker verification (Appendix A — complete)
 
@@ -216,7 +216,7 @@ None that unconditionally block GCP bootstrap **if** Docker builds/start succeed
 | W3 | No TF startup/liveness HTTP probes | `infra/cloud_run.tf` | Platform TCP default only | HTTP probe on `/health` | High |
 | W4 | Redis provisioned, unused by app | `infra/redis.tf`, `secrets.tf:50-52` | Memorystore + secret injected; no client | Wire rate limits or remove (~$30+/mo) | High |
 | W5 | In-memory rate limit + `min_instance=0` / max 10 | `rateLimit.ts`, `cloud_run.tf:11-12` | Per-process Map resets / uneven | Redis-backed limiter | High |
-| W6 | Attachments on ephemeral local disk | `env.ts:50-52`, `attachments-storage.ts` | Lost on scale-to-zero / multi-instance | GCS (or pin max instances=1 for demo) | High |
+| W6 | Attachments on ephemeral local disk | ~~`env.ts` / `attachments-storage.ts`~~ | Was lost on scale-to-zero / multi-instance | **Code + TF implemented:** `ATTACHMENTS_BACKEND=gcs` + bucket `infra/gcs.tf`; runtime SA `roles/storage.objectAdmin`. **Pending:** `terraform apply` + redeploy API image so Cloud Run picks up env/IAM | High (fix pending apply) |
 | W7 | No remote Terraform state | `infra/versions.tf` | Local `terraform.tfstate` only | GCS backend + locking | High |
 | W8 | Placeholder hello images until CD | `variables.tf:56-59`, `locals.tf:13-16` | Bootstrap pattern | Run Deploy after vars set | High |
 | W9 | `allUsers` invoker on 3 services | `cloud_run.tf:358-377` | Public `*.run.app` demo | IAP / Armor for real prod | High |
@@ -388,7 +388,7 @@ hub:200 / console:200
 ### Must complete before treating deploy as ready
 
 1. [x] Run **Appendix A**; confirm builds, `/health`, migrate exit 0
-2. [ ] (Recommended) Set `ATTACHMENTS_DIR=/tmp/attachments` in Cloud Run for ephemeral disk — R1 mkdir OK locally but W6 still applies
+2. [ ] Apply TF GCS attachments (`infra/gcs.tf`) + redeploy API — W6/R1 code ready; pending `terraform apply`
 3. [ ] Confirm all **7 GitHub Variables** match live Terraform outputs above
 4. [ ] Confirm WIF `github_repo` matches actual GitHub `owner/repo`
 5. [ ] CI green on `main` → Deploy workflow (or `workflow_dispatch`)
@@ -404,7 +404,7 @@ hub:200 / console:200
 
 ### Before real production
 
-- [ ] GCS (or equivalent) for attachments
+- [x] GCS for attachments (code + Terraform; apply + redeploy still required)
 - [ ] Remote TF state; `deletion_protection`
 - [ ] Replace `allUsers` with IAP/authenticated ingress
 - [ ] Distributed rate limiting; consider `min_instance >= 1`
@@ -418,13 +418,13 @@ hub:200 / console:200
 | Infrastructure (TF) | 25 | 22/25 | Plan clean; local state; cosmetic scaling drift |
 | CI/CD | 20 | 16/20 | Strong pipeline; var/WIF ops risk; Turbo undocumented |
 | Container config | 20 | 17/20 | Dockerfiles + local smoke pass; R1 not reproduced |
-| Runtime hardening | 20 | 8/20 | No shutdown; liveness-only; ephemeral attachments |
+| Runtime hardening | 20 | 9/20 | No shutdown; liveness-only; GCS attachments code ready (pending TF apply) |
 | Security | 15 | 10/15 | Good secrets/WIF; public invoker; open register |
-| **Total** | 100 | **72/100** | **RISKY** |
+| **Total** | 100 | **73/100** | **RISKY** |
 
 **Verdict thresholds:** ≥80 SAFE · 60–79 RISKY · &lt;60 NOT READY
 
-Docker smoke restored +10 vs pending baseline (62→72). Verdict stays **RISKY** until GitHub Variables/WIF confirmed and runtime hardening gaps (W1–W6) addressed; failed B1–B3 would be **NOT READY**.
+Docker smoke restored +10 vs pending baseline (62→72); GCS attachments code +1 (72→73). Verdict stays **RISKY** until GitHub Variables/WIF confirmed and remaining runtime hardening gaps addressed; failed B1–B3 would be **NOT READY**.
 
 ---
 

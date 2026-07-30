@@ -1,8 +1,8 @@
 resource "google_cloud_run_v2_service" "api" {
-  name                 = "${local.name_prefix}-api"
-  location             = var.region
-  ingress              = "INGRESS_TRAFFIC_ALL"
-  deletion_protection  = false
+  name                = "${local.name_prefix}-api"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
 
   template {
     service_account = google_service_account.cloud_run_runtime.email
@@ -44,6 +44,16 @@ resource "google_cloud_run_v2_service" "api" {
         value = "production"
       }
 
+      env {
+        name  = "ATTACHMENTS_BACKEND"
+        value = "gcs"
+      }
+
+      env {
+        name  = "ATTACHMENTS_GCS_BUCKET"
+        value = google_storage_bucket.attachments.name
+      }
+
       dynamic "env" {
         for_each = var.enable_custom_domain ? [1] : []
         content {
@@ -61,7 +71,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name = "CORS_ORIGINS"
+        name  = "CORS_ORIGINS"
         value = var.enable_custom_domain ? "https://${local.hub_hostname},https://${local.console_hostname}" : "${google_cloud_run_v2_service.support_hub.uri},${google_cloud_run_v2_service.review_console.uri}"
       }
 
@@ -103,6 +113,7 @@ resource "google_cloud_run_v2_service" "api" {
     google_secret_manager_secret_version.redis_url,
     google_project_iam_member.runtime_secret_accessor,
     google_project_iam_member.runtime_sql_client,
+    google_storage_bucket_iam_member.runtime_attachments_object_admin,
   ]
 }
 

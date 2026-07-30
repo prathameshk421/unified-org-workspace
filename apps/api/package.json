@@ -13,18 +13,19 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.21.0",
     "@prisma/client": "^6.9.0",
     "@unified/db": "workspace:*",
     "@unified/types": "workspace:*",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "file-type": "^22.0.1",
     "helmet": "^8.1.0",
     "jose": "^6.0.11",
     "multer": "^2.2.0",
-    "dotenv": "^16.6.1",
     "zod": "^3.25.51"
   },
   "devDependencies": {

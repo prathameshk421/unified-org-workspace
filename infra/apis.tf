@@ -9,6 +9,7 @@ resource "google_project_service" "required" {
     "servicenetworking.googleapis.com",
     "sqladmin.googleapis.com",
     "redis.googleapis.com",
+    "storage.googleapis.com",
     "vpcaccess.googleapis.com",
   ])
 

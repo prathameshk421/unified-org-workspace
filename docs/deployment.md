@@ -88,12 +88,16 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 
 ### Cloud Run API env (set by Terraform)
 
-| Variable              | Example                   | Notes                                                                          |
-| --------------------- | ------------------------- | ------------------------------------------------------------------------------ |
-| `COOKIE_DOMAIN`       | `.example.com`            | **Only** when `enable_custom_domain=true`. Omit on default `*.run.app` deploy. |
-| `API_URL`             | `https://api.example.com` | Set when custom domain enabled                                                 |
-| `ACCESS_COOKIE_NAME`  | `unified_access`          | Optional; default shown                                                        |
-| `REFRESH_COOKIE_NAME` | `unified_refresh`         | Optional; default shown                                                        |
+| Variable                 | Example                                      | Notes                                                                          |
+| ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `COOKIE_DOMAIN`          | `.example.com`                               | **Only** when `enable_custom_domain=true`. Omit on default `*.run.app` deploy. |
+| `API_URL`                | `https://api.example.com`                    | Set when custom domain enabled                                                 |
+| `ATTACHMENTS_BACKEND`    | `gcs`                                        | Local/dev defaults to filesystem when unset                                    |
+| `ATTACHMENTS_GCS_BUCKET` | `unified-org-attachments-<project-id>`       | Ticket file bytes; Postgres still stores metadata/`storageKey`                 |
+| `ACCESS_COOKIE_NAME`     | `unified_access`                             | Optional; default shown                                                        |
+| `REFRESH_COOKIE_NAME`    | `unified_refresh`                            | Optional; default shown                                                        |
+
+Local/dev: omit GCS vars (or set `ATTACHMENTS_BACKEND=fs`) and optionally `ATTACHMENTS_DIR`. Cloud Run uses the runtime SA + ADC — no JSON key.
 
 Cookie SameSite policy (application code): custom domain → `Strict`; default `*.run.app` (secure, no domain) → `None`; local → `Strict`. Session sync uses API-origin cookies + credentialed fetches from both dashboards — see [session-sync.md](./requirements/session-sync.md).
 
