@@ -14,7 +14,10 @@ import { Button } from "@unified/ui";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ForbiddenMessage } from "@/components/forbidden-message";
+import { PrCommentsSection } from "@/components/prs/pr-comments";
+import { PrSharePanel } from "@/components/prs/share-panel";
 import { apiFetch } from "@/lib/api";
+import { canMutatePrs } from "@/lib/roles";
 import type { OrgMember } from "@/lib/types";
 import { PrStatusBadge } from "./pr-status-badge";
 
@@ -50,6 +53,9 @@ export function PrDetailPage({ prId }: { prId: string }) {
   const [editApprovals, setEditApprovals] = useState(1);
   const [editReviewerIds, setEditReviewerIds] = useState<string[]>([]);
   const [reviewComment, setReviewComment] = useState("");
+
+  const isShared = pr?.access === "shared";
+  const canMutate = !isShared && canMutatePrs(activeOrg?.role);
 
   const loadPr = useCallback(async () => {
     setError(null);
@@ -104,7 +110,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
   }, [loadPr, loadMembers, activeOrg?.orgId]);
 
   useEffect(() => {
-    if (selectedVersion === null) {
+    if (selectedVersion === null || isShared) {
       setDiff(null);
       return;
     }
@@ -130,7 +136,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [prId, selectedVersion]);
+  }, [prId, selectedVersion, isShared]);
 
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -163,12 +169,15 @@ export function PrDetailPage({ prId }: { prId: string }) {
   ).length;
 
   const canReview =
+    canMutate &&
     pr?.status === PrStatus.IN_REVIEW &&
     user &&
     (activeOrg?.role === OrgRole.ORG_ADMIN ||
       pr.reviewers.some((reviewer) => reviewer.userId === user.id));
 
-  const canEdit = pr?.status !== PrStatus.MERGED;
+  const canEdit = canMutate && pr?.status !== PrStatus.MERGED;
+  const backHref = isShared ? "/shared/prs" : "/prs";
+  const backLabel = isShared ? "Shared with me" : "Pull requests";
 
   async function runAction(action: () => Promise<void>) {
     setBusy(true);
@@ -184,7 +193,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
   }
 
   async function handleSave() {
-    if (!pr) return;
+    if (!pr || !canMutate) return;
     const body: UpdatePrRequest = {
       title: editTitle.trim(),
       description: editDescription.trim(),
@@ -197,24 +206,32 @@ export function PrDetailPage({ prId }: { prId: string }) {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      setPr(updated);
+      setPr({
+        ...updated,
+        access: pr.access,
+        sharedFromOrg: pr.sharedFromOrg,
+      });
       setSelectedVersion(updated.currentVersion);
     });
   }
 
   async function handleTransition(to: PrStatus) {
-    if (!pr) return;
+    if (!pr || !canMutate) return;
     await runAction(async () => {
       const updated = await apiFetch<PullRequestDetail>(`/prs/${pr.id}/transition`, {
         method: "POST",
         body: JSON.stringify({ to }),
       });
-      setPr(updated);
+      setPr({
+        ...updated,
+        access: pr.access,
+        sharedFromOrg: pr.sharedFromOrg,
+      });
     });
   }
 
   async function handleReview(decision: PrReviewDecision) {
-    if (!pr) return;
+    if (!pr || !canMutate) return;
     await runAction(async () => {
       const updated = await apiFetch<PullRequestDetail>(`/prs/${pr.id}/reviews`, {
         method: "POST",
@@ -223,7 +240,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
           comment: reviewComment.trim() || undefined,
         }),
       });
-      setPr(updated);
+      setPr({
+        ...updated,
+        access: pr.access,
+        sharedFromOrg: pr.sharedFromOrg,
+      });
       setReviewComment("");
     });
   }
@@ -257,8 +278,8 @@ export function PrDetailPage({ prId }: { prId: string }) {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/prs" className="text-sm text-brand-600 underline">
-            ← Pull requests
+          <Link href={backHref} className="text-sm text-brand-600 underline">
+            ← {backLabel}
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-foreground" data-testid="pr-title">
             {pr.title}
@@ -270,6 +291,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
               {approveCount}/{pr.requiresApprovals} approvals on current version
             </span>
           </div>
+          {isShared && pr.sharedFromOrg ? (
+            <p className="mt-2 inline-flex rounded-full bg-brand-600/10 px-2.5 py-0.5 text-xs font-medium text-brand-600">
+              Shared from {pr.sharedFromOrg.orgName} · view & comment only
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -366,7 +392,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
         </section>
       ) : null}
 
-      {TRANSITIONS[pr.status].length > 0 ? (
+      {canMutate && TRANSITIONS[pr.status].length > 0 ? (
         <section className="rounded-lg border border-border bg-surface p-6">
           <h2 className="text-lg font-medium text-foreground">Status transitions</h2>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -418,6 +444,10 @@ export function PrDetailPage({ prId }: { prId: string }) {
           </div>
         </section>
       ) : null}
+
+      <PrCommentsSection prId={pr.id} />
+
+      {canMutate ? <PrSharePanel prId={pr.id} /> : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="text-lg font-medium text-foreground">Reviewers</h2>
@@ -483,7 +513,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
             <h3 className="text-sm font-medium text-foreground">
               Diff for version {selectedVersion}
             </h3>
-            {!diff ? (
+            {isShared ? (
+              <p className="mt-2 text-sm text-muted">
+                Version diffs are not available on shared access.
+              </p>
+            ) : !diff ? (
               <p className="mt-2 text-sm text-muted">Loading diff…</p>
             ) : diff.changes.length === 0 ? (
               <p className="mt-2 text-sm text-muted">No changes from previous version.</p>

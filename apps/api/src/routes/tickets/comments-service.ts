@@ -1,5 +1,9 @@
 import type { TicketComment } from "@prisma/client";
 import { OrgRole, type TicketCommentResponse } from "@unified/types";
+import {
+  ResourceAccessError,
+  resolveTicketAccess,
+} from "../../lib/resource-access.js";
 import { prisma } from "../../lib/prisma.js";
 import { assertCommentsEnabled } from "../org-settings/service.js";
 import { TicketError, getOrgTicketOrThrow } from "./service.js";
@@ -72,14 +76,21 @@ export function assertCanDeleteComment(
   );
 }
 
-export async function listComments(
-  ticketId: string,
-  orgId: string,
-): Promise<TicketCommentResponse[]> {
-  await getOrgTicketOrThrow(ticketId, orgId);
+export async function listComments(input: {
+  ticketId: string;
+  userId: string;
+  role: string | null;
+  sessionOrgId: string;
+}): Promise<TicketCommentResponse[]> {
+  const { ticket } = await resolveTicketAccess({
+    userId: input.userId,
+    role: input.role as OrgRole | null,
+    sessionOrgId: input.sessionOrgId,
+    ticketId: input.ticketId,
+  });
 
   const comments = await prisma.ticketComment.findMany({
-    where: { ticketId, orgId },
+    where: { ticketId: ticket.id, orgId: ticket.orgId },
     orderBy: { createdAt: "asc" },
   });
 
@@ -88,18 +99,26 @@ export async function listComments(
 
 export async function createComment(input: {
   ticketId: string;
-  orgId: string;
-  authorId: string;
+  userId: string;
+  role: string | null;
+  sessionOrgId: string;
   body: string;
 }): Promise<TicketCommentResponse> {
-  const ticket = await getOrgTicketOrThrow(input.ticketId, input.orgId);
-  await assertCommentsEnabled(input.orgId);
+  const { ticket } = await resolveTicketAccess({
+    userId: input.userId,
+    role: input.role as OrgRole | null,
+    sessionOrgId: input.sessionOrgId,
+    ticketId: input.ticketId,
+  });
+
+  // Owner-org feature flag on shared path
+  await assertCommentsEnabled(ticket.orgId);
 
   const comment = await prisma.ticketComment.create({
     data: {
       ticketId: ticket.id,
       orgId: ticket.orgId,
-      authorId: input.authorId,
+      authorId: input.userId,
       body: input.body,
     },
   });
@@ -155,3 +174,5 @@ export async function deleteComment(input: {
 
   return existing;
 }
+
+export { ResourceAccessError };

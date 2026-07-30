@@ -160,7 +160,7 @@ describe("ticket comments", () => {
       });
   });
 
-  it("allows guests to create comments but not mutate them", async () => {
+  it("allows guests to comment on assigned tickets but not mutate comments", async () => {
     const org = await createOrg();
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
@@ -173,6 +173,13 @@ describe("ticket comments", () => {
       orgId: org.id,
       title: "Guest comment ticket",
       createdById: admin.id,
+      assigneeId: guest.id,
+    });
+    const unassigned = await createTicket({
+      orgId: org.id,
+      title: "Guest unassigned comment ticket",
+      createdById: admin.id,
+      assigneeId: null,
     });
 
     const guestClient = await loginAgent(guest.email);
@@ -181,6 +188,14 @@ describe("ticket comments", () => {
       .set("Content-Type", "application/json")
       .send({ body: "Guest note" })
       .expect(201);
+
+    expect(created.body.orgId).toBe(org.id);
+
+    await guestClient
+      .post(`/tickets/${unassigned.id}/comments`)
+      .set("Content-Type", "application/json")
+      .send({ body: "Should 404" })
+      .expect(404);
 
     await guestClient
       .patch(`/tickets/${ticket.id}/comments/${created.body.id}`)
@@ -198,7 +213,6 @@ describe("ticket comments", () => {
         expect(res.body.code).toBe("insufficient_role");
       });
   });
-
   it("allows author edit and blocks non-author mutator edit", async () => {
     const org = await createOrg();
     const agentA = await createUser({

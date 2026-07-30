@@ -58,8 +58,9 @@ Shared constants for Tier 2 route guards:
 | `TICKET_READER_ROLES`  | above + CROSS_ORG_GUEST            |
 | `PR_MUTATOR_ROLES`     | ORG_ADMIN, REVIEWER                |
 | `AUDIT_VIEWER_ROLES`   | ORG_ADMIN, REVIEWER                |
+| `ORG_SETTINGS_READER_ROLES` | Same as `TICKET_MUTATOR_ROLES` (no `CROSS_ORG_GUEST`) |
 
-## Permissions matrix (future product routes)
+## Permissions matrix (product routes)
 
 | Capability                             | ORG_ADMIN | SUPPORT_AGENT | REVIEWER | CROSS_ORG_GUEST | Platform admin              |
 | -------------------------------------- | --------- | ------------- | -------- | --------------- | --------------------------- |
@@ -67,10 +68,22 @@ Shared constants for Tier 2 route guards:
 | Ticket mutate                          | yes       | yes           | yes      | no              | n/a                         |
 | PR mutate / approve                    | yes       | no            | yes      | no              | n/a                         |
 | Audit viewer                           | yes       | no            | yes      | no              | n/a                         |
-| Platform orgs / connections / settings | no        | no            | no       | no              | **yes**                     |
+| Org settings read                      | yes       | yes           | yes      | **no**          | n/a                         |
+| Org connections (request/accept/reject/revoke) | **yes** (self-service for own org) | no | no | no | no† |
+| Connection recipients picker           | yes (mutator/admin of a side) | yes (ticket mutator) | yes (ticket mutator) | no | n/a |
+| Create ticket/PR share                 | yes (owner mutator) | ticket yes / PR no | yes | no | n/a |
+| Share inbound/outbound lists           | outbound: admin; inbound: admin sees org, others see own | inbound: own grants | inbound: own grants | inbound: own (rare) | n/a |
+| Revoke share                           | owner or grantee side‡ | owner mutator / grantee self | owner mutator / grantee self | grantee self if granted | n/a |
+| Shared ticket/PR GET + comment         | via member path | via member or share path | via member or share path | assignee-only (member path); no same-org share | n/a |
+| Platform connections list-all          | no        | no            | no       | no              | **yes** (`GET /platform/connections`) |
+| Platform connection force-revoke       | no        | no            | no       | no              | **yes** (`POST /platform/connections/:id/force-revoke`) |
+| Platform orgs / global settings        | no        | no            | no       | no              | **yes**                     |
 
-\*Guest needs org membership for in-org guest role; cross-org **share** access is item-level (Tier 2), not workspace-wide.
+\*Guest needs org membership for the in-org `CROSS_ORG_GUEST` role (**assignee-only** ticket visibility). Cross-org **share** access is **item-level via `ShareGrant`** — not `CROSS_ORG_GUEST` membership in the owner org. See [cross-org-collaboration.md](./cross-org-collaboration.md).
 
+†Platform Super Admin does **not** replace org-admin self-service for day-to-day connections; override is force-revoke + list-all only (cascades soft-revoke of ACTIVE grants).
+
+‡Share revoke: grantee user, grantee `ORG_ADMIN`, or owner mutator/`ORG_ADMIN`. Audit `revokedBy: owner|grantee`.
 ## Composition for future endpoints
 
 ```ts
@@ -103,8 +116,11 @@ Safe echo endpoints under `/rbac` (no product data):
 | `bob@acme.com`         | Acme          | SUPPORT_AGENT        | `password123` |
 | `carol@globex.com`     | Globex        | ORG_ADMIN            | `password123` |
 | `dave@example.com`     | Acme + Globex | REVIEWER             | `password123` |
-| `eve@example.com`      | Acme          | CROSS_ORG_GUEST      | `password123` |
+| `eve@example.com`      | Globex        | SUPPORT_AGENT (receives Acme ticket share) | `password123` |
+| `frank@example.com`    | Acme          | CROSS_ORG_GUEST (assignee-only) | `password123` |
 | `platform@example.com` | none          | Platform Super Admin | `password123` |
+
+Seed also creates Acme↔Globex `ACCEPTED` connection, Alice→Eve share on “Billing discrepancy” (`granteeOrgId=Globex`), and Carol→Dave share on a Globex PR (`granteeOrgId=Acme`). See [cross-org-collaboration.md](./cross-org-collaboration.md).
 
 ## Verification
 

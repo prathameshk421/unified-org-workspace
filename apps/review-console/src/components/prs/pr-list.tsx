@@ -77,6 +77,12 @@ export function PrListPage() {
         </Link>
       </div>
 
+      <p className="text-sm">
+        <Link href="/shared/prs" className="text-brand-600 underline">
+          Shared with me
+        </Link>
+      </p>
+
       {prs.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-8 text-center">
           <p className="text-muted">No pull requests yet.</p>

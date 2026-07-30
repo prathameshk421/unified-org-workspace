@@ -1,5 +1,11 @@
 import type { Ticket } from "@prisma/client";
-import type { TicketResponse, TicketStatus } from "@unified/types";
+import {
+  OrgRole,
+  type OrgRole as OrgRoleType,
+  type TicketResponse,
+  type TicketStatus,
+} from "@unified/types";
+import { listInboundSharedTicketIds } from "../../lib/resource-access.js";
 import { prisma } from "../../lib/prisma.js";
 import { isValidStatusTransition } from "./transitions.js";
 
@@ -68,18 +74,82 @@ async function validateAssignee(
 
 export async function listTickets(
   orgId: string,
-  status?: TicketStatus,
+  options: {
+    userId: string;
+    role: OrgRoleType;
+    status?: TicketStatus;
+  },
 ): Promise<TicketResponse[]> {
-  const tickets = await prisma.ticket.findMany({
-    where: {
-      orgId,
-      ...(status ? { status } : {}),
-    },
+  const statusFilter = options.status ? { status: options.status } : {};
+
+  // CROSS_ORG_GUEST: assignee-only within session org (no share union).
+  if (options.role === OrgRole.CROSS_ORG_GUEST) {
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        orgId,
+        assigneeId: options.userId,
+        ...statusFilter,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+    });
+    return tickets.map((t) => ({ ...toTicketResponse(t), access: "member" }));
+  }
+
+  const ownTickets = await prisma.ticket.findMany({
+    where: { orgId, ...statusFilter },
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
 
-  return tickets.map(toTicketResponse);
+  const sharedIds = await listInboundSharedTicketIds(options.userId, orgId);
+  const ownIdSet = new Set(ownTickets.map((t) => t.id));
+  const extraIds = sharedIds.filter((id) => !ownIdSet.has(id));
+
+  const sharedTickets =
+    extraIds.length > 0
+      ? await prisma.ticket.findMany({
+          where: {
+            id: { in: extraIds },
+            ...statusFilter,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 100,
+        })
+      : [];
+
+  const orgIds = [...new Set(sharedTickets.map((t) => t.orgId))];
+  const orgs =
+    orgIds.length > 0
+      ? await prisma.organization.findMany({
+          where: { id: { in: orgIds } },
+          select: { id: true, name: true, slug: true },
+        })
+      : [];
+  const orgById = new Map(orgs.map((o) => [o.id, o]));
+
+  const memberRows: TicketResponse[] = ownTickets.map((t) => ({
+    ...toTicketResponse(t),
+    access: "member",
+  }));
+
+  const sharedRows: TicketResponse[] = sharedTickets.map((t) => {
+    const org = orgById.get(t.orgId);
+    return {
+      ...toTicketResponse(t),
+      access: "shared" as const,
+      sharedFromOrg: org
+        ? { orgId: org.id, orgName: org.name, orgSlug: org.slug }
+        : undefined,
+    };
+  });
+
+  return [...memberRows, ...sharedRows]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+    .slice(0, 100);
 }
 
 export async function createTicket(input: {

@@ -10,11 +10,16 @@ import {
   TICKET_MUTATOR_ROLES,
   TICKET_READER_ROLES,
 } from "@unified/types";
+import {
+  ResourceAccessError,
+  resolveTicketAccess,
+} from "../../lib/resource-access.js";
 import { queueAudit } from "../../middleware/audit-mutations.js";
 import {
   requireAuth,
   requireJsonContentType,
   requireOrgAccess,
+  requireOrgAccessForResource,
   requireRole,
 } from "../identity/auth/middleware.js";
 import {
@@ -29,7 +34,6 @@ import {
   TicketError,
   createTicket,
   deleteTicket,
-  getOrgTicketOrThrow,
   listTickets,
   toTicketResponse,
   truncateForAudit,
@@ -48,6 +52,11 @@ function handleTicketError(res: Response, error: unknown): void {
       error: "Validation failed",
       details: error.flatten().fieldErrors,
     });
+    return;
+  }
+
+  if (error instanceof ResourceAccessError) {
+    res.status(error.statusCode).json({ error: error.message });
     return;
   }
 
@@ -72,7 +81,11 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const query = listTicketsQuerySchema.parse(req.query);
-      const tickets = await listTickets(req.orgId!, query.status);
+      const tickets = await listTickets(req.orgId!, {
+        userId: req.auth!.userId,
+        role: req.auth!.role!,
+        status: query.status,
+      });
       res.json({ tickets });
     } catch (error) {
       handleTicketError(res, error);
@@ -83,12 +96,23 @@ router.get(
 router.get(
   "/tickets/:id",
   requireAuth,
-  requireOrgAccess,
-  requireRole(...TICKET_READER_ROLES),
+  requireOrgAccessForResource,
   async (req: Request, res: Response) => {
     try {
-      const ticket = await getOrgTicketOrThrow(req.params.id!, req.orgId!);
-      res.json(toTicketResponse(ticket));
+      const resolved = await resolveTicketAccess({
+        userId: req.auth!.userId,
+        role: req.auth!.role,
+        sessionOrgId: req.orgId!,
+        ticketId: req.params.id!,
+      });
+
+      res.json({
+        ...toTicketResponse(resolved.ticket),
+        access: resolved.access,
+        ...(resolved.sharedFromOrg
+          ? { sharedFromOrg: resolved.sharedFromOrg }
+          : {}),
+      });
     } catch (error) {
       handleTicketError(res, error);
     }

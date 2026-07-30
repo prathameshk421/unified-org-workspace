@@ -569,7 +569,16 @@ export async function resolveAuthContext(claims: {
       if (!(error instanceof AuthError) || error.statusCode !== 403) {
         throw error;
       }
-      // Membership lost — fall through to no active org.
+      // Membership lost — clear active org, but retain stale id for
+      // resource-by-id routes (share resolvers return 404, not no_active_org).
+      return {
+        userId: claims.sub,
+        sessionId: claims.sid,
+        activeOrgId: null,
+        role: null,
+        isPlatformAdmin,
+        staleActiveOrgId: candidateOrgId,
+      };
     }
   }
 

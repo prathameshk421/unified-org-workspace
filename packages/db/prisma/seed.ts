@@ -93,10 +93,20 @@ async function main() {
 
   const eve = await prisma.user.upsert({
     where: { email: "eve@example.com" },
-    update: { name: "Eve Guest", passwordHash },
+    update: { name: "Eve Agent", passwordHash },
     create: {
       email: "eve@example.com",
-      name: "Eve Guest",
+      name: "Eve Agent",
+      passwordHash,
+    },
+  });
+
+  const frank = await prisma.user.upsert({
+    where: { email: "frank@example.com" },
+    update: { name: "Frank Guest", passwordHash },
+    create: {
+      email: "frank@example.com",
+      name: "Frank Guest",
       passwordHash,
     },
   });
@@ -167,11 +177,27 @@ async function main() {
     },
   });
 
+  // Eve: Globex SUPPORT_AGENT only (receives Acme shares). Remove legacy Acme guest seat.
+  await prisma.orgMembership.deleteMany({
+    where: { userId: eve.id, orgId: acme.id },
+  });
   await prisma.orgMembership.upsert({
-    where: { userId_orgId: { userId: eve.id, orgId: acme.id } },
-    update: { role: "CROSS_ORG_GUEST", acceptedAt: new Date() },
+    where: { userId_orgId: { userId: eve.id, orgId: globex.id } },
+    update: { role: "SUPPORT_AGENT", acceptedAt: new Date() },
     create: {
       userId: eve.id,
+      orgId: globex.id,
+      role: "SUPPORT_AGENT",
+      acceptedAt: new Date(),
+    },
+  });
+
+  // Frank: Acme CROSS_ORG_GUEST — assignee-only visibility (no same-org ShareGrant).
+  await prisma.orgMembership.upsert({
+    where: { userId_orgId: { userId: frank.id, orgId: acme.id } },
+    update: { role: "CROSS_ORG_GUEST", acceptedAt: new Date() },
+    create: {
+      userId: frank.id,
       orgId: acme.id,
       role: "CROSS_ORG_GUEST",
       acceptedAt: new Date(),
@@ -194,6 +220,16 @@ async function main() {
       requestedById: alice.id,
       respondedById: carol.id,
     },
+  });
+
+  await prisma.shareGrant.deleteMany({
+    where: {
+      OR: [{ ownerOrgId: { in: [acme.id, globex.id] } }, { granteeOrgId: { in: [acme.id, globex.id] } }],
+    },
+  });
+
+  await prisma.prComment.deleteMany({
+    where: { orgId: { in: [acme.id, globex.id] } },
   });
 
   await prisma.pullRequest.deleteMany({
@@ -249,23 +285,47 @@ async function main() {
     },
   });
 
-  const globexTitle = "Globex data retention policy";
-  const globexDescription = "Update retention windows for customer audit exports.";
+  const globexSharedTitle = "Globex data retention policy";
+  const globexSharedDescription = "Update retention windows for customer audit exports.";
 
-  await prisma.pullRequest.create({
+  const sharedGlobexPr = await prisma.pullRequest.create({
     data: {
       orgId: globex.id,
       authorId: carol.id,
-      title: globexTitle,
-      description: globexDescription,
+      title: globexSharedTitle,
+      description: globexSharedDescription,
       status: "DRAFT",
       requiresApprovals: 1,
       currentVersion: 1,
       versions: {
         create: {
           versionNumber: 1,
-          title: globexTitle,
-          description: globexDescription,
+          title: globexSharedTitle,
+          description: globexSharedDescription,
+          createdById: carol.id,
+        },
+      },
+    },
+  });
+
+  // Unshared Globex sibling for BOLA (Dave must not see this via share path).
+  const globexSiblingTitle = "Globex billing API cleanup";
+  const globexSiblingDescription = "Internal refactor of invoice export endpoints.";
+
+  await prisma.pullRequest.create({
+    data: {
+      orgId: globex.id,
+      authorId: carol.id,
+      title: globexSiblingTitle,
+      description: globexSiblingDescription,
+      status: "DRAFT",
+      requiresApprovals: 1,
+      currentVersion: 1,
+      versions: {
+        create: {
+          versionNumber: 1,
+          title: globexSiblingTitle,
+          description: globexSiblingDescription,
           createdById: carol.id,
         },
       },
@@ -293,6 +353,13 @@ async function main() {
       status: "RESOLVED" as const,
       createdById: alice.id,
       assigneeId: null,
+    },
+    {
+      orgId: acme.id,
+      title: "Guest onboarding help",
+      status: "OPEN" as const,
+      createdById: alice.id,
+      assigneeId: frank.id,
     },
     {
       orgId: globex.id,
@@ -380,6 +447,34 @@ async function main() {
   });
   await writeFile(path.join(attachmentsRoot, storageKey), attachmentContent);
 
+  // Cross-org shares (no same-org grants). Eve sees Billing via Globex session;
+  // Dave sees shared Globex PR only when activeOrg=Acme.
+  const billingShare = await prisma.shareGrant.create({
+    data: {
+      resourceType: "TICKET",
+      resourceId: billingTicket.id,
+      ownerOrgId: acme.id,
+      granteeOrgId: globex.id,
+      grantedToUserId: eve.id,
+      grantedByUserId: alice.id,
+      orgConnectionId: connection.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const prShare = await prisma.shareGrant.create({
+    data: {
+      resourceType: "PULL_REQUEST",
+      resourceId: sharedGlobexPr.id,
+      ownerOrgId: globex.id,
+      granteeOrgId: acme.id,
+      grantedToUserId: dave.id,
+      grantedByUserId: carol.id,
+      orgConnectionId: connection.id,
+      status: "ACTIVE",
+    },
+  });
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -399,12 +494,38 @@ async function main() {
         metadata: { slug: globex.slug },
       },
       {
-        orgId: acme.id,
-        userId: alice.id,
-        action: "CONNECTION_ACCEPTED",
+        orgId: globex.id,
+        userId: carol.id,
+        action: "connection.accept",
         entityType: "OrgConnection",
         entityId: connection.id,
-        metadata: { partnerOrgId: globex.id, status: "ACCEPTED" },
+        metadata: { partnerOrgId: acme.id, status: "ACCEPTED" },
+      },
+      {
+        orgId: acme.id,
+        userId: alice.id,
+        action: "share.create",
+        entityType: "ShareGrant",
+        entityId: billingShare.id,
+        metadata: {
+          resourceType: "TICKET",
+          resourceId: billingTicket.id,
+          granteeOrgId: globex.id,
+          grantedToUserId: eve.id,
+        },
+      },
+      {
+        orgId: globex.id,
+        userId: carol.id,
+        action: "share.create",
+        entityType: "ShareGrant",
+        entityId: prShare.id,
+        metadata: {
+          resourceType: "PULL_REQUEST",
+          resourceId: sharedGlobexPr.id,
+          granteeOrgId: acme.id,
+          grantedToUserId: dave.id,
+        },
       },
     ],
     skipDuplicates: true,
@@ -415,19 +536,25 @@ async function main() {
   console.log(`  - ${acme.name} (${acme.slug})`);
   console.log(`  - ${globex.name} (${globex.slug})`);
   console.log("\nUsers (password: password123):");
-  console.log(`  - alice@acme.com   (ORG_ADMIN on Acme)`);
-  console.log(`  - bob@acme.com     (SUPPORT_AGENT on Acme)`);
-  console.log(`  - carol@globex.com (ORG_ADMIN on Globex)`);
-  console.log(`  - dave@example.com (REVIEWER on Acme + Globex)`);
-  console.log(`  - eve@example.com    (CROSS_ORG_GUEST on Acme)`);
-  console.log(`  - platform@example.com (Platform Super Admin, no org memberships)`);
+  console.log(`  - alice@acme.com        (ORG_ADMIN on Acme)`);
+  console.log(`  - bob@acme.com          (SUPPORT_AGENT on Acme)`);
+  console.log(`  - carol@globex.com      (ORG_ADMIN on Globex)`);
+  console.log(`  - dave@example.com      (REVIEWER on Acme + Globex)`);
+  console.log(`  - eve@example.com       (SUPPORT_AGENT on Globex; receives Acme ticket share)`);
+  console.log(`  - frank@example.com     (CROSS_ORG_GUEST on Acme; assignee-only)`);
+  console.log(`  - platform@example.com  (Platform Super Admin, no org memberships)`);
   console.log("\nCross-org connection:");
   console.log(`  - Acme <-> Globex (ACCEPTED)`);
+  console.log("\nCross-org shares:");
+  console.log(`  - Alice → Eve: Acme ticket "Billing discrepancy" (granteeOrg=Globex)`);
+  console.log(
+    `  - Carol → Dave: Globex PR "Globex data retention policy" (granteeOrg=Acme; Dave must use activeOrg=Acme)`,
+  );
   console.log("\nSample pull requests:");
   console.log(
     `  - Acme: 1 DRAFT (alice), 1 IN_REVIEW with 2 reviewers (alice, requiresApprovals: 2)`,
   );
-  console.log(`  - Globex: 1 DRAFT (carol)`);
+  console.log(`  - Globex: 1 shared DRAFT (carol), 1 unshared sibling DRAFT (carol)`);
   console.log("\nSample tickets:");
   for (const ticket of ticketSeeds) {
     const orgName = ticket.orgId === acme.id ? "Acme" : "Globex";

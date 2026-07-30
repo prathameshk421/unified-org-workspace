@@ -6,9 +6,14 @@ import type { HealthCheckResponse } from "@unified/types";
 import { env } from "./lib/env.js";
 import { auditMutations } from "./middleware/audit-mutations.js";
 import { auditRouter } from "./routes/audit/index.js";
+import {
+  connectionsRouter,
+  platformConnectionsRouter,
+} from "./routes/connections/index.js";
 import { identityRouter } from "./routes/identity/index.js";
 import { orgSettingsRouter } from "./routes/org-settings/index.js";
 import { orgRouter, prsRouter } from "./routes/prs/index.js";
+import { sharesRouter } from "./routes/shares/index.js";
 import { ticketsRouter } from "./routes/tickets/index.js";
 
 export function createApp(): Express {
@@ -38,6 +43,9 @@ export function createApp(): Express {
   });
 
   app.use(identityRouter);
+  app.use(connectionsRouter);
+  app.use(platformConnectionsRouter);
+  app.use(sharesRouter);
   app.use(prsRouter);
   app.use(orgRouter);
   app.use("/audit", auditRouter);

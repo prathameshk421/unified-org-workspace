@@ -53,6 +53,15 @@ export function AuthDashboard({
                 </Button>
               </Link>
             ) : null}
+            <Link href="/shared/prs">
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid="nav-shared-prs"
+              >
+                Shared with me
+              </Button>
+            </Link>
             {showAudit ? (
               <Link href="/audit">
                 <Button type="button" variant="secondary" data-testid="nav-audit">
@@ -60,8 +69,38 @@ export function AuthDashboard({
                 </Button>
               </Link>
             ) : null}
+            <Link href="/settings/connections">
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid="nav-connections"
+              >
+                Connections
+              </Button>
+            </Link>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/shared/prs">
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid="nav-shared-prs"
+              >
+                Shared with me
+              </Button>
+            </Link>
+            <Link href="/settings/connections">
+              <Button
+                type="button"
+                variant="secondary"
+                data-testid="nav-connections"
+              >
+                Connections
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button type="button" data-testid="logout" onClick={() => void logout()}>

@@ -164,7 +164,7 @@ describe("tickets", () => {
     expect(ids).not.toContain(ticketA.id);
   });
 
-  it("allows guests to read but not mutate tickets", async () => {
+  it("allows guests assignee-only read but not mutate tickets", async () => {
     const org = await createOrg();
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
@@ -173,16 +173,28 @@ describe("tickets", () => {
       orgs: [{ org, role: OrgRole.CROSS_ORG_GUEST }],
     });
 
-    const ticket = await createTicket({
+    const assigned = await createTicket({
       orgId: org.id,
-      title: "Guest readable ticket",
+      title: "Guest assigned ticket",
       createdById: admin.id,
+      assigneeId: guest.id,
+    });
+    const unassigned = await createTicket({
+      orgId: org.id,
+      title: "Guest unassigned ticket",
+      createdById: admin.id,
+      assigneeId: null,
     });
 
     const guestClient = await loginAgent(guest.email);
 
-    await guestClient.get("/tickets").expect(200);
-    await guestClient.get(`/tickets/${ticket.id}`).expect(200);
+    const list = await guestClient.get("/tickets").expect(200);
+    const ids = (list.body.tickets as Array<{ id: string }>).map((t) => t.id);
+    expect(ids).toContain(assigned.id);
+    expect(ids).not.toContain(unassigned.id);
+
+    await guestClient.get(`/tickets/${assigned.id}`).expect(200);
+    await guestClient.get(`/tickets/${unassigned.id}`).expect(404);
 
     await guestClient
       .post("/tickets")
@@ -194,7 +206,7 @@ describe("tickets", () => {
       });
 
     await guestClient
-      .patch(`/tickets/${ticket.id}`)
+      .patch(`/tickets/${assigned.id}`)
       .set("Content-Type", "application/json")
       .send({ title: "Guest update attempt" })
       .expect(403)
@@ -202,11 +214,10 @@ describe("tickets", () => {
         expect(res.body.code).toBe("insufficient_role");
       });
 
-    await guestClient.delete(`/tickets/${ticket.id}`).expect(403).expect((res) => {
+    await guestClient.delete(`/tickets/${assigned.id}`).expect(403).expect((res) => {
       expect(res.body.code).toBe("insufficient_role");
     });
   });
-
   it("allows support agents and reviewers to create and change status", async () => {
     const org = await createOrg();
     const agent = await createUser({

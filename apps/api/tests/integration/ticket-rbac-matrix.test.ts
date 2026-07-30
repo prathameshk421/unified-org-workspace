@@ -142,7 +142,7 @@ const cases: Array<{
   { principal: "org_admin", operation: "get_settings", status: 200 },
   { principal: "support_agent", operation: "get_settings", status: 200 },
   { principal: "reviewer", operation: "get_settings", status: 200 },
-  { principal: "cross_org_guest", operation: "get_settings", status: 200 },
+  { principal: "cross_org_guest", operation: "get_settings", status: 403, code: "insufficient_role" },
   {
     principal: "platform_admin",
     operation: "get_settings",
@@ -238,9 +238,10 @@ const cases: Array<{
   },
 ];
 
-describe("ticket RBAC matrix", () => {
+  describe("ticket RBAC matrix", () => {
   let org: FixtureOrg;
   let supportAgent: FixtureUser;
+  let guest: FixtureUser;
 
   let orgAdminClient: Awaited<ReturnType<typeof loginAgent>>;
   let agentClient: Awaited<ReturnType<typeof loginAgent>>;
@@ -264,7 +265,7 @@ describe("ticket RBAC matrix", () => {
     const reviewer = await createUser({
       orgs: [{ org, role: OrgRole.REVIEWER }],
     });
-    const guest = await createUser({
+    guest = await createUser({
       orgs: [{ org, role: OrgRole.CROSS_ORG_GUEST }],
     });
     const platform = await createUser({ isPlatformAdmin: true });
@@ -280,6 +281,7 @@ describe("ticket RBAC matrix", () => {
       createdById: supportAgent.id,
       title: "RBAC matrix seed ticket",
       status: TicketStatus.OPEN,
+      assigneeId: guest.id,
     });
     seedTicketId = seedTicket.id;
 

@@ -4,8 +4,10 @@ import {
   requireAuth,
   requireJsonContentType,
   requireOrgAccess,
+  requireOrgAccessForResource,
   requireRole,
 } from "../identity/auth/middleware.js";
+import { registerPrCommentRoutes } from "./comments-routes.js";
 import {
   createPrHandler,
   getPrHandler,
@@ -24,11 +26,20 @@ const prMutatorMiddleware = [
   requireRole(...PR_MUTATOR_ROLES),
 ] as const;
 
+/** Share-capable reads: any org member + resolvePrAccess in handler. */
+const prShareCapableRead = [requireAuth, requireOrgAccessForResource] as const;
+
 const prsRoutes: RouterType = Router();
+
+registerPrCommentRoutes(prsRoutes);
 
 prsRoutes.post("/", requireJsonContentType, ...prMutatorMiddleware, createPrHandler);
 prsRoutes.get("/", ...prMutatorMiddleware, listPrsHandler);
-prsRoutes.get("/:id/versions/:versionNumber/diff", ...prMutatorMiddleware, getVersionDiffHandler);
+prsRoutes.get(
+  "/:id/versions/:versionNumber/diff",
+  ...prMutatorMiddleware,
+  getVersionDiffHandler,
+);
 prsRoutes.get("/:id/versions", ...prMutatorMiddleware, listVersionsHandler);
 prsRoutes.post(
   "/:id/transition",
@@ -36,8 +47,13 @@ prsRoutes.post(
   ...prMutatorMiddleware,
   transitionPrHandler,
 );
-prsRoutes.post("/:id/reviews", requireJsonContentType, ...prMutatorMiddleware, submitReviewHandler);
-prsRoutes.get("/:id", ...prMutatorMiddleware, getPrHandler);
+prsRoutes.post(
+  "/:id/reviews",
+  requireJsonContentType,
+  ...prMutatorMiddleware,
+  submitReviewHandler,
+);
+prsRoutes.get("/:id", ...prShareCapableRead, getPrHandler);
 prsRoutes.patch("/:id", requireJsonContentType, ...prMutatorMiddleware, updatePrHandler);
 
 const orgRoutes: RouterType = Router();

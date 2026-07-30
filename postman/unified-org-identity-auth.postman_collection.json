@@ -510,7 +510,7 @@
           ]
         },
         {
-          "name": "29. Login Eve (guest)",
+          "name": "29. Login Eve (Globex SUPPORT_AGENT)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -544,14 +544,14 @@
           ]
         },
         {
-          "name": "31. GET /rbac/agent (Eve — 403)",
+          "name": "31. GET /rbac/agent (Eve — 200)",
           "request": { "method": "GET", "url": "{{baseUrl}}/rbac/agent" },
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('agent forbidden', () => pm.response.to.have.status(403));"]
+                "exec": ["pm.test('agent allowed', () => pm.response.to.have.status(200));"]
               }
             }
           ]
@@ -565,6 +565,66 @@
               "script": {
                 "type": "text/javascript",
                 "exec": ["pm.test('reviewer forbidden', () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "32b. Login Frank (CROSS_ORG_GUEST)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"frank@example.com\",\"password\":\"password123\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "32c. GET /rbac/admin (Frank — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/admin" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('admin forbidden', () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "32d. GET /rbac/agent (Frank — 403)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/agent" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('agent forbidden', () => pm.response.to.have.status(403));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "32e. GET /rbac/org (Frank — 200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rbac/org" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('org access 200', () => pm.response.to.have.status(200));"]
               }
             }
           ]
@@ -716,10 +776,14 @@
             "  pm.expect(titles).to.not.include('Invoice export failing');",
             "});",
             "const billing = tickets.find(t => t.title === 'Billing discrepancy');",
+            "const unshared = tickets.find(t => t.title === 'Password reset stuck');",
             "const chosen = billing || tickets[0];",
             "pm.test('acme ticket present', () => pm.expect(chosen).to.be.an('object'));",
             "pm.collectionVariables.set('acmeTicketId', chosen.id);",
-            "pm.test('acmeTicketId saved', () => pm.expect(chosen.id).to.be.a('string').and.not.empty);"
+            "pm.collectionVariables.set('sharedBillingTicketId', billing ? billing.id : chosen.id);",
+            "pm.test('acmeTicketId saved', () => pm.expect(chosen.id).to.be.a('string').and.not.empty);",
+            "if (unshared) { pm.collectionVariables.set('unsharedAcmeTicketId', unshared.id); }",
+            "pm.test('unshared sibling saved', () => pm.expect(pm.collectionVariables.get('unsharedAcmeTicketId')).to.be.a('string').and.not.empty);"
           ] } }]
         },
         {
@@ -836,7 +900,7 @@
           ] } }]
         },
         {
-          "name": "53. Login Eve (guest)",
+          "name": "53. Login Eve (Globex — shared ticket recipient)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -846,44 +910,61 @@
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
         },
         {
-          "name": "54. Eve GET /tickets",
-          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "name": "54. Eve GET /shared/tickets — includes Billing",
+          "request": { "method": "GET", "url": "{{baseUrl}}/shared/tickets" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('tickets 200', () => pm.response.to.have.status(200));",
+            "pm.test('shared tickets 200', () => pm.response.to.have.status(200));",
             "const ids = (pm.response.json().tickets || []).map(t => t.id);",
-            "pm.test('includes acmeTicketId', () => pm.expect(ids).to.include(pm.collectionVariables.get('acmeTicketId')));"
+            "pm.test('includes sharedBillingTicketId', () => pm.expect(ids).to.include(pm.collectionVariables.get('sharedBillingTicketId')));",
+            "pm.test('excludes unsharedAcmeTicketId', () => pm.expect(ids).to.not.include(pm.collectionVariables.get('unsharedAcmeTicketId')));"
           ] } }]
         },
         {
-          "name": "54b. Eve GET /tickets/{{acmeTicketId}}",
-          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{acmeTicketId}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('ticket 200', () => pm.response.to.have.status(200));"] } }]
+          "name": "54b. Eve GET /tickets/{{sharedBillingTicketId}} (shared 200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{sharedBillingTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('shared ticket 200', () => pm.response.to.have.status(200));",
+            "pm.test('access shared', () => pm.expect(pm.response.json().access).to.eql('shared'));"
+          ] } }]
         },
         {
-          "name": "55. Eve POST /tickets (403)",
+          "name": "54c. Eve GET /tickets/{{unsharedAcmeTicketId}} (unshared 404)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{unsharedAcmeTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('unshared 404', () => pm.response.to.have.status(404));"
+          ] } }]
+        },
+        {
+          "name": "55. Eve PATCH /tickets/{{sharedBillingTicketId}} (404 — no mutate)",
           "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\"title\":\"Guest create attempt\"}" },
-            "url": "{{baseUrl}}/tickets"
+            "body": { "mode": "raw", "raw": "{\"title\":\"Share-path mutate attempt\"}" },
+            "url": "{{baseUrl}}/tickets/{{sharedBillingTicketId}}"
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('forbidden', () => pm.response.to.have.status(403));",
-            "pm.test('code insufficient_role', () => pm.expect(pm.response.json().code).to.eql('insufficient_role'));"
+            "pm.test('mutate denied 404', () => pm.response.to.have.status(404));"
           ] } }]
         },
         {
-          "name": "56. Eve POST /tickets/{{acmeTicketId}}/comments (201)",
+          "name": "56. Eve POST /tickets/{{sharedBillingTicketId}}/comments (201)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\"body\":\"Guest comment from Newman tickets BOLA smoke\"}" },
-            "url": "{{baseUrl}}/tickets/{{acmeTicketId}}/comments"
+            "body": { "mode": "raw", "raw": "{\"body\":\"Shared-path comment from Newman tickets BOLA smoke\"}" },
+            "url": "{{baseUrl}}/tickets/{{sharedBillingTicketId}}/comments"
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('comment 201', () => pm.response.to.have.status(201));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('comment 201', () => pm.response.to.have.status(201));",
+            "pm.test('comment orgId is Acme owner', () => {",
+            "  const orgId = pm.response.json().orgId;",
+            "  pm.expect(orgId).to.be.a('string').and.not.empty;",
+            "  pm.expect(orgId).to.not.eql(pm.collectionVariables.get('globexTicketId'));",
+            "});"
+          ] } }]
         },
         {
-          "name": "57. Eve POST /tickets/{{acmeTicketId}}/attachments (403)",
+          "name": "57. Eve POST /tickets/{{sharedBillingTicketId}}/attachments (404)",
           "request": {
             "method": "POST",
             "header": [],
@@ -893,7 +974,58 @@
                 { "key": "file", "type": "text", "value": "guest-upload-blocked", "contentType": "text/plain" }
               ]
             },
-            "url": "{{baseUrl}}/tickets/{{acmeTicketId}}/attachments"
+            "url": "{{baseUrl}}/tickets/{{sharedBillingTicketId}}/attachments"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('upload denied 404', () => pm.response.to.have.status(404));"
+          ] } }]
+        },
+        {
+          "name": "58. Login Frank (assignee-only guest)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"frank@example.com\",\"password\":\"password123\"}" },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "59. Frank GET /tickets — assignee only",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('tickets 200', () => pm.response.to.have.status(200));",
+            "const tickets = pm.response.json().tickets || [];",
+            "const titles = tickets.map(t => t.title);",
+            "pm.test('includes Guest onboarding help', () => pm.expect(titles).to.include('Guest onboarding help'));",
+            "pm.test('excludes unassigned Billing', () => pm.expect(titles).to.not.include('Billing discrepancy'));",
+            "pm.test('excludes Password reset stuck', () => pm.expect(titles).to.not.include('Password reset stuck'));",
+            "const assigned = tickets.find(t => t.title === 'Guest onboarding help');",
+            "pm.test('assigned present', () => pm.expect(assigned).to.be.an('object'));",
+            "if (assigned) pm.collectionVariables.set('frankAssignedTicketId', assigned.id);"
+          ] } }]
+        },
+        {
+          "name": "60. Frank GET /tickets/{{unsharedAcmeTicketId}} (404)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{unsharedAcmeTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('unassigned 404', () => pm.response.to.have.status(404));"
+          ] } }]
+        },
+        {
+          "name": "61. Frank GET /tickets/{{frankAssignedTicketId}} (200)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/tickets/{{frankAssignedTicketId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('assigned ticket 200', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "62. Frank POST /tickets (403)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Guest create attempt\"}" },
+            "url": "{{baseUrl}}/tickets"
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "pm.test('forbidden', () => pm.response.to.have.status(403));",

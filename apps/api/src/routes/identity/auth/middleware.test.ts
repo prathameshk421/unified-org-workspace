@@ -22,6 +22,7 @@ import {
   requireAuth,
   requireJsonContentType,
   requireOrgAccess,
+  requireOrgAccessForResource,
   requirePlatformAdmin,
   requireRole,
 } from "./middleware.js";
@@ -69,6 +70,49 @@ describe("auth middleware", () => {
     const next = vi.fn() as NextFunction;
 
     requireOrgAccess(req, res, next);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "No active organization",
+      code: "no_active_org",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("requireOrgAccessForResource uses staleActiveOrgId after membership loss", () => {
+    const req = mockReq({
+      auth: {
+        userId: "u",
+        sessionId: "s",
+        activeOrgId: null,
+        role: null,
+        isPlatformAdmin: false,
+        staleActiveOrgId: "stale-org",
+      },
+    });
+    const res = mockRes();
+    const next = vi.fn() as NextFunction;
+
+    requireOrgAccessForResource(req, res, next);
+
+    expect(req.orgId).toBe("stale-org");
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("requireOrgAccessForResource returns no_active_org when never had org", () => {
+    const req = mockReq({
+      auth: {
+        userId: "u",
+        sessionId: "s",
+        activeOrgId: null,
+        role: null,
+        isPlatformAdmin: true,
+      },
+    });
+    const res = mockRes();
+    const next = vi.fn() as NextFunction;
+
+    requireOrgAccessForResource(req, res, next);
 
     expect(res.statusCode).toBe(403);
     expect(res.json).toHaveBeenCalledWith({

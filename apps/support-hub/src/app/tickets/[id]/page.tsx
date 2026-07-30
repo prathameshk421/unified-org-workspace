@@ -19,6 +19,7 @@ import { AttachmentList } from "../../../components/tickets/attachment-list";
 import { AttachmentUpload } from "../../../components/tickets/attachment-upload";
 import { CommentForm } from "../../../components/tickets/comment-form";
 import { CommentList } from "../../../components/tickets/comment-list";
+import { TicketSharePanel } from "../../../components/tickets/share-panel";
 import {
   deleteAttachment,
   downloadAttachment,
@@ -75,11 +76,20 @@ function TicketDetailContent() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const canMutate = activeOrg?.role !== OrgRole.CROSS_ORG_GUEST;
-  const isOrgAdmin = activeOrg?.role === OrgRole.ORG_ADMIN;
+  const isShared = ticket?.access === "shared";
+  const canMutate =
+    !isShared && activeOrg?.role !== OrgRole.CROSS_ORG_GUEST;
+  const isOrgAdmin = !isShared && activeOrg?.role === OrgRole.ORG_ADMIN;
   const ticketId = params.id;
-  const commentsEnabled = settings?.featureFlags.commentsEnabled ?? true;
-  const attachmentsEnabled = settings?.featureFlags.attachmentsEnabled ?? true;
+  // Owner-org flags are enforced by the API on shared path; home settings are a UX hint for members.
+  const commentsEnabled = isShared
+    ? true
+    : (settings?.featureFlags.commentsEnabled ?? true);
+  const attachmentsEnabled = isShared
+    ? true
+    : (settings?.featureFlags.attachmentsEnabled ?? true);
+  const backHref = isShared ? "/shared/tickets" : "/tickets";
+  const backLabel = isShared ? "Shared with me" : "Tickets";
 
   useEffect(() => {
     let cancelled = false;
@@ -88,18 +98,27 @@ function TicketDetailContent() {
       setLoading(true);
       setError(null);
       try {
-        const [ticketData, settingsData, commentsData, attachmentsData] =
+        const ticketData = await getTicket(ticketId);
+        if (cancelled) return;
+
+        setTicket(ticketData);
+        setTitle(ticketData.title);
+        setDescription(ticketData.description);
+
+        const shared = ticketData.access === "shared";
+        const [settingsResult, commentsData, attachmentsData] =
           await Promise.all([
-            getTicket(ticketId),
-            getOrgSettings(),
+            shared
+              ? Promise.resolve(null)
+              : getOrgSettings().catch(() => null),
             listComments(ticketId),
             listAttachments(ticketId),
           ]);
+
         if (!cancelled) {
-          setTicket(ticketData);
-          setTitle(ticketData.title);
-          setDescription(ticketData.description);
-          setSettings(settingsData.settings);
+          if (settingsResult) {
+            setSettings(settingsResult.settings);
+          }
           setComments(commentsData.comments);
           setAttachments(attachmentsData.attachments);
         }
@@ -143,7 +162,7 @@ function TicketDetailContent() {
         title: title.trim(),
         description: description.trim(),
       });
-      setTicket(updated);
+      setTicket({ ...updated, access: ticket.access, sharedFromOrg: ticket.sharedFromOrg });
       setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update ticket");
@@ -160,7 +179,7 @@ function TicketDetailContent() {
 
     try {
       const updated = await updateTicketStatus(ticket.id, { status: nextStatus });
-      setTicket(updated);
+      setTicket({ ...updated, access: ticket.access, sharedFromOrg: ticket.sharedFromOrg });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
@@ -214,8 +233,8 @@ function TicketDetailContent() {
   return (
     <main className="min-h-screen bg-surface-muted px-6 py-10">
       <div className="mx-auto max-w-2xl">
-        <Link href="/tickets" className="text-sm text-brand-600 underline">
-          ← Tickets
+        <Link href={backHref} className="text-sm text-brand-600 underline">
+          ← {backLabel}
         </Link>
 
         <div className="mt-4 flex items-start justify-between gap-4">
@@ -224,6 +243,11 @@ function TicketDetailContent() {
             <p className="mt-1 text-sm text-muted">
               Updated {new Date(ticket.updatedAt).toLocaleString()}
             </p>
+            {isShared && ticket.sharedFromOrg ? (
+              <p className="mt-2 inline-flex rounded-full bg-brand-600/10 px-2.5 py-0.5 text-xs font-medium text-brand-600">
+                Shared from {ticket.sharedFromOrg.orgName} · view & comment only
+              </p>
+            ) : null}
           </div>
           <StatusBadge status={ticket.status} />
         </div>
@@ -359,6 +383,11 @@ function TicketDetailContent() {
               Attachments are disabled for this organization
             </p>
           ) : null}
+          {isShared ? (
+            <p className="mt-2 text-sm text-muted">
+              Shared access allows download only.
+            </p>
+          ) : null}
           <div className="mt-4">
             <AttachmentList
               attachments={attachments}
@@ -389,6 +418,12 @@ function TicketDetailContent() {
             </div>
           ) : null}
         </section>
+
+        {canMutate ? (
+          <div className="mt-6">
+            <TicketSharePanel ticketId={ticket.id} />
+          </div>
+        ) : null}
 
         {canMutate ? (
           <div className="mt-6">

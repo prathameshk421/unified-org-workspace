@@ -167,7 +167,7 @@ describe("ticket attachments", () => {
       .expect(404);
   });
 
-  it("allows guests to download but not upload", async () => {
+  it("allows guests to download on assigned tickets but not upload", async () => {
     const org = await createOrg();
     const admin = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
@@ -180,12 +180,23 @@ describe("ticket attachments", () => {
       orgId: org.id,
       title: "Guest attachment ticket",
       createdById: admin.id,
+      assigneeId: guest.id,
+    });
+    const unassigned = await createTicket({
+      orgId: org.id,
+      title: "Guest unassigned attachment ticket",
+      createdById: admin.id,
+      assigneeId: null,
     });
 
     const adminClient = await loginAgent(admin.email);
     const uploaded = await adminClient
       .post(`/tickets/${ticket.id}/attachments`)
       .attach("file", Buffer.from("guest-readable"), "note.txt")
+      .expect(201);
+    const unassignedUpload = await adminClient
+      .post(`/tickets/${unassigned.id}/attachments`)
+      .attach("file", Buffer.from("hidden"), "hidden.txt")
       .expect(201);
 
     const guestClient = await loginAgent(guest.email);
@@ -205,8 +216,13 @@ describe("ticket attachments", () => {
       .expect(200);
 
     expect(download.text).toBe("guest-readable");
-  });
 
+    await guestClient
+      .get(
+        `/tickets/${unassigned.id}/attachments/${unassignedUpload.body.id}/download`,
+      )
+      .expect(404);
+  });
   it("rejects invalid MIME and oversized files", async () => {
     const org = await createOrg();
     const admin = await createUser({

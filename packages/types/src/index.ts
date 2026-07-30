@@ -60,13 +60,21 @@ export const AuditAction = {
   ATTACHMENT_UPLOAD: "attachment.upload",
   ATTACHMENT_DELETE: "attachment.delete",
   ORG_SETTINGS_UPDATE: "org.settings_update",
+  CONNECTION_REQUEST: "connection.request",
+  CONNECTION_ACCEPT: "connection.accept",
+  CONNECTION_REJECT: "connection.reject",
+  CONNECTION_REVOKE: "connection.revoke",
+  CONNECTION_FORCE_REVOKE: "connection.force_revoke",
+  SHARE_CREATE: "share.create",
+  SHARE_REVOKE: "share.revoke",
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 
 export const TICKET_READER_ROLES = [...TICKET_MUTATOR_ROLES, OrgRole.CROSS_ORG_GUEST] as const;
 
-export const ORG_SETTINGS_READER_ROLES = TICKET_READER_ROLES;
+/** Guests cannot read org settings (assignee-only ticket visibility only). */
+export const ORG_SETTINGS_READER_ROLES = TICKET_MUTATOR_ROLES;
 export const ORG_SETTINGS_MUTATOR_ROLES = [OrgRole.ORG_ADMIN] as const;
 
 export const COMMENT_CREATE_ROLES = TICKET_READER_ROLES;
@@ -139,6 +147,69 @@ export const OrgConnectionStatus = {
 } as const;
 
 export type OrgConnectionStatus = (typeof OrgConnectionStatus)[keyof typeof OrgConnectionStatus];
+
+export const ShareResourceType = {
+  TICKET: "TICKET",
+  PULL_REQUEST: "PULL_REQUEST",
+} as const;
+
+export type ShareResourceType =
+  (typeof ShareResourceType)[keyof typeof ShareResourceType];
+
+export const ShareGrantStatus = {
+  ACTIVE: "ACTIVE",
+  REVOKED: "REVOKED",
+} as const;
+
+export type ShareGrantStatus =
+  (typeof ShareGrantStatus)[keyof typeof ShareGrantStatus];
+
+export type ResourceAccess = "member" | "shared";
+
+export interface SharedFromOrgSummary {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+}
+
+export interface ConnectionPartnerOrg {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+}
+
+export interface ConnectionDto {
+  id: string;
+  status: OrgConnectionStatus;
+  partnerOrg: ConnectionPartnerOrg;
+  direction: "incoming" | "outgoing";
+  requestedById: string;
+  respondedById: string | null;
+  createdAt: string;
+}
+
+export interface ShareGrantDto {
+  id: string;
+  resourceType: ShareResourceType;
+  resourceId: string;
+  ownerOrgId: string;
+  granteeOrgId: string;
+  grantedToUserId: string;
+  grantedByUserId: string;
+  orgConnectionId: string;
+  status: ShareGrantStatus;
+  revokedAt: string | null;
+  revokedById: string | null;
+  revokeReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConnectionRecipientDto {
+  userId: string;
+  name: string;
+  initials: string;
+}
 
 export type HealthStatus = "ok" | "degraded" | "down";
 
@@ -221,6 +292,8 @@ export interface PullRequestSummary {
   currentVersion: number;
   createdAt: string;
   updatedAt: string;
+  access?: ResourceAccess;
+  sharedFromOrg?: SharedFromOrgSummary;
 }
 
 export interface TicketResponse {
@@ -233,6 +306,8 @@ export interface TicketResponse {
   assigneeId: string | null;
   createdAt: string;
   updatedAt: string;
+  access?: ResourceAccess;
+  sharedFromOrg?: SharedFromOrgSummary;
 }
 
 export interface PrReviewerSummary {
@@ -261,6 +336,25 @@ export interface PullRequestDetail extends PullRequestSummary {
   reviewers: PrReviewerSummary[];
   reviews: PrReviewDto[];
   versions: PrVersionDto[];
+}
+
+export interface PrCommentResponse {
+  id: string;
+  pullRequestId: string;
+  orgId: string;
+  authorOrgId: string | null;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrCommentListResponse {
+  comments: PrCommentResponse[];
+}
+
+export interface CreatePrCommentRequest {
+  body: string;
 }
 
 export interface PrDiffChange {

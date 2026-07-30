@@ -41,6 +41,16 @@ enum TicketStatus {
   CLOSED
 }
 
+enum ShareResourceType {
+  TICKET
+  PULL_REQUEST
+}
+
+enum ShareGrantStatus {
+  ACTIVE
+  REVOKED
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -54,34 +64,42 @@ model Organization {
   tickets             Ticket[]
   ticketComments      TicketComment[]
   ticketAttachments   TicketAttachment[]
-  connectionsAsA      OrgConnection[] @relation("OrgConnectionOrgA")
-  connectionsAsB      OrgConnection[] @relation("OrgConnectionOrgB")
+  prComments          PrComment[]        @relation("PrCommentOrg")
+  prCommentsAuthored  PrComment[]        @relation("PrCommentAuthorOrg")
+  shareGrantsOwned    ShareGrant[]       @relation("ShareGrantOwnerOrg")
+  shareGrantsReceived ShareGrant[]       @relation("ShareGrantGranteeOrg")
+  connectionsAsA      OrgConnection[]    @relation("OrgConnectionOrgA")
+  connectionsAsB      OrgConnection[]    @relation("OrgConnectionOrgB")
 
   @@index([slug])
   @@map("organizations")
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  passwordHash     String
-  name             String
-  isPlatformAdmin  Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  name            String
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
 
   memberships               OrgMembership[]
   auditLogs                 AuditLog[]
   sessions                  Session[]
-  authoredPullRequests      PullRequest[]        @relation("PullRequestAuthor")
+  authoredPullRequests      PullRequest[]      @relation("PullRequestAuthor")
   createdPrVersions         PrVersion[]
   prReviewerAssignments     PrReviewer[]
   prReviewsSubmitted        PrReview[]
-  ticketsCreated            Ticket[]             @relation("TicketCreatedBy")
-  ticketsAssigned           Ticket[]             @relation("TicketAssignee")
-  ticketCommentsAuthored    TicketComment[]      @relation("TicketCommentAuthor")
-  ticketAttachmentsUploaded TicketAttachment[]   @relation("TicketAttachmentUploader")
-  requestedConnections      OrgConnection[]      @relation("OrgConnectionRequestedBy")
-  respondedConnections      OrgConnection[]      @relation("OrgConnectionRespondedBy")
+  prCommentsAuthored        PrComment[]        @relation("PrCommentAuthor")
+  ticketsCreated            Ticket[]           @relation("TicketCreatedBy")
+  ticketsAssigned           Ticket[]           @relation("TicketAssignee")
+  ticketCommentsAuthored    TicketComment[]    @relation("TicketCommentAuthor")
+  ticketAttachmentsUploaded TicketAttachment[] @relation("TicketAttachmentUploader")
+  shareGrantsReceived       ShareGrant[]       @relation("ShareGrantGrantedTo")
+  shareGrantsGranted        ShareGrant[]       @relation("ShareGrantGrantedBy")
+  shareGrantsRevoked        ShareGrant[]       @relation("ShareGrantRevokedBy")
+  requestedConnections      OrgConnection[]    @relation("OrgConnectionRequestedBy")
+  respondedConnections      OrgConnection[]    @relation("OrgConnectionRespondedBy")
 
   @@map("users")
 }
@@ -169,6 +187,7 @@ model OrgConnection {
   orgB        Organization @relation("OrgConnectionOrgB", fields: [orgBId], references: [id], onDelete: Cascade)
   requestedBy User         @relation("OrgConnectionRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   respondedBy User?        @relation("OrgConnectionRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+  shareGrants ShareGrant[]
 
   @@unique([orgAId, orgBId])
   @@index([status])
@@ -192,6 +211,7 @@ model PullRequest {
   versions  PrVersion[]
   reviewers PrReviewer[]
   reviews   PrReview[]
+  comments  PrComment[]
 
   @@index([orgId])
   @@index([orgId, status])
@@ -307,4 +327,58 @@ model TicketAttachment {
   @@index([ticketId])
   @@index([orgId, ticketId])
   @@map("ticket_attachments")
+}
+
+/// Cross-org item share. Partial unique ACTIVE index + CHECK
+/// (ownerOrgId <> granteeOrgId AND orgConnectionId IS NOT NULL) live in SQL migration.
+model ShareGrant {
+  id              String            @id @default(cuid())
+  resourceType    ShareResourceType
+  resourceId      String
+  ownerOrgId      String
+  granteeOrgId    String
+  grantedToUserId String
+  grantedByUserId String
+  orgConnectionId String
+  status          ShareGrantStatus  @default(ACTIVE)
+  revokedAt       DateTime?
+  revokedById     String?
+  revokeReason    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  ownerOrg      Organization  @relation("ShareGrantOwnerOrg", fields: [ownerOrgId], references: [id], onDelete: Cascade)
+  granteeOrg    Organization  @relation("ShareGrantGranteeOrg", fields: [granteeOrgId], references: [id], onDelete: Cascade)
+  grantedToUser User          @relation("ShareGrantGrantedTo", fields: [grantedToUserId], references: [id], onDelete: Cascade)
+  grantedByUser User          @relation("ShareGrantGrantedBy", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  orgConnection OrgConnection @relation(fields: [orgConnectionId], references: [id], onDelete: Cascade)
+  revokedBy     User?         @relation("ShareGrantRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([grantedToUserId, status])
+  @@index([granteeOrgId, status])
+  @@index([ownerOrgId, resourceType, status])
+  @@index([resourceType, resourceId, status])
+  @@index([orgConnectionId, status])
+  @@map("share_grants")
+}
+
+/// PR comments always tenancy-scoped to pullRequest.orgId (owner).
+model PrComment {
+  id            String   @id @default(cuid())
+  pullRequestId String
+  orgId         String
+  authorOrgId   String?
+  authorId      String
+  body          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pullRequest PullRequest   @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  org         Organization  @relation("PrCommentOrg", fields: [orgId], references: [id], onDelete: Cascade)
+  authorOrg   Organization? @relation("PrCommentAuthorOrg", fields: [authorOrgId], references: [id], onDelete: SetNull)
+  author      User          @relation("PrCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([pullRequestId])
+  @@index([orgId, pullRequestId])
+  @@map("pr_comments")
 }

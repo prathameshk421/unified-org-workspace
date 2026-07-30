@@ -149,13 +149,90 @@ export async function createTicket(input: {
   };
 }
 
+export async function createPullRequest(input: {
+  orgId: string;
+  authorId: string;
+  title?: string;
+  description?: string;
+}): Promise<{ id: string; orgId: string; title: string; authorId: string }> {
+  const title = input.title ?? `PR ${randomUUID().slice(0, 8)}`;
+  const description = input.description ?? "";
+  const pr = await ownerDb.pullRequest.create({
+    data: {
+      orgId: input.orgId,
+      authorId: input.authorId,
+      title,
+      description,
+      status: "DRAFT",
+      requiresApprovals: 1,
+      currentVersion: 1,
+      versions: {
+        create: {
+          versionNumber: 1,
+          title,
+          description,
+          createdById: input.authorId,
+        },
+      },
+    },
+  });
+  return {
+    id: pr.id,
+    orgId: pr.orgId,
+    title: pr.title,
+    authorId: pr.authorId,
+  };
+}
+
 export async function cleanupRunFixtures(): Promise<void> {
   const userIds = [...trackedUserIds];
   const orgIds = [...trackedOrgIds];
 
+  // HIGH-RISK: grantedByUserId/requestedById are Restrict — must delete
+  // share_grants + connections before orgs/users.
+  if (orgIds.length > 0 || userIds.length > 0) {
+    await ownerDb.shareGrant.deleteMany({
+      where: {
+        OR: [
+          ...(orgIds.length > 0
+            ? [
+                { ownerOrgId: { in: orgIds } },
+                { granteeOrgId: { in: orgIds } },
+              ]
+            : []),
+          ...(userIds.length > 0
+            ? [
+                { grantedToUserId: { in: userIds } },
+                { grantedByUserId: { in: userIds } },
+              ]
+            : []),
+        ],
+      },
+    });
+  }
+
+  if (orgIds.length > 0) {
+    await ownerDb.prComment.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.orgConnection.deleteMany({
+      where: {
+        OR: [{ orgAId: { in: orgIds } }, { orgBId: { in: orgIds } }],
+      },
+    });
+  }
+
+  if (userIds.length > 0) {
+    await ownerDb.prComment.deleteMany({
+      where: { authorId: { in: userIds } },
+    });
+  }
+
   // HIGH-RISK: authorId/reviewerId are Restrict — must delete PRs before users
   if (orgIds.length > 0) {
     await ownerDb.pullRequest.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.ticketComment.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.ticketAttachment.deleteMany({
+      where: { orgId: { in: orgIds } },
+    });
     await ownerDb.ticket.deleteMany({ where: { orgId: { in: orgIds } } });
   }
 

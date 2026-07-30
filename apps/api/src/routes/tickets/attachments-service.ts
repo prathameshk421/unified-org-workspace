@@ -15,6 +15,7 @@ import {
 } from "../../lib/attachments-storage.js";
 import { env } from "../../lib/env.js";
 import { prisma } from "../../lib/prisma.js";
+import { resolveTicketAccess } from "../../lib/resource-access.js";
 import { assertAttachmentsEnabled } from "../org-settings/service.js";
 import { TicketError, getOrgTicketOrThrow } from "./service.js";
 
@@ -112,14 +113,21 @@ export function assertCanDeleteAttachment(
   );
 }
 
-export async function listAttachments(
-  ticketId: string,
-  orgId: string,
-): Promise<TicketAttachmentResponse[]> {
-  await getOrgTicketOrThrow(ticketId, orgId);
+export async function listAttachments(input: {
+  ticketId: string;
+  userId: string;
+  role: string | null;
+  sessionOrgId: string;
+}): Promise<TicketAttachmentResponse[]> {
+  const { ticket } = await resolveTicketAccess({
+    userId: input.userId,
+    role: input.role as OrgRole | null,
+    sessionOrgId: input.sessionOrgId,
+    ticketId: input.ticketId,
+  });
 
   const attachments = await prisma.ticketAttachment.findMany({
-    where: { ticketId, orgId },
+    where: { ticketId: ticket.id, orgId: ticket.orgId },
     orderBy: { createdAt: "asc" },
   });
 
@@ -201,19 +209,52 @@ export async function createAttachment(input: {
   return toAttachmentResponse(attachment);
 }
 
+/**
+ * Download via resolveTicketAccess, then load attachment by owner orgId
+ * and read storageKey verbatim (never rebuild from session org).
+ */
 export async function getAttachmentFile(input: {
   attachmentId: string;
   ticketId: string;
-  orgId: string;
+  userId: string;
+  role: string | null;
+  sessionOrgId: string;
 }): Promise<{ attachment: TicketAttachment; buffer: Buffer }> {
-  await getOrgTicketOrThrow(input.ticketId, input.orgId);
+  const { ticket } = await resolveTicketAccess({
+    userId: input.userId,
+    role: input.role as OrgRole | null,
+    sessionOrgId: input.sessionOrgId,
+    ticketId: input.ticketId,
+  });
+
   const attachment = await getOrgAttachmentOrThrow(
     input.attachmentId,
     input.ticketId,
-    input.orgId,
+    ticket.orgId,
   );
   const buffer = await readAttachmentFile(attachment.storageKey);
   return { attachment, buffer };
+}
+
+export async function getAttachmentMeta(input: {
+  attachmentId: string;
+  ticketId: string;
+  userId: string;
+  role: string | null;
+  sessionOrgId: string;
+}): Promise<TicketAttachment> {
+  const { ticket } = await resolveTicketAccess({
+    userId: input.userId,
+    role: input.role as OrgRole | null,
+    sessionOrgId: input.sessionOrgId,
+    ticketId: input.ticketId,
+  });
+
+  return getOrgAttachmentOrThrow(
+    input.attachmentId,
+    input.ticketId,
+    ticket.orgId,
+  );
 }
 
 export async function deleteAttachment(input: {

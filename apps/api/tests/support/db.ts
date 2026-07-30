@@ -72,13 +72,90 @@ export async function cleanupStaleFixtures(): Promise<void> {
     select: { id: true },
   });
 
-  if (staleUsers.length === 0) {
+  const staleOrgs = await ownerDb.organization.findMany({
+    where: {
+      slug: { startsWith: "vtest-" },
+      createdAt: { lt: oneHourAgo },
+    },
+    select: { id: true },
+  });
+
+  const userIds = staleUsers.map((user) => user.id);
+  const orgIds = staleOrgs.map((org) => org.id);
+
+  if (userIds.length === 0 && orgIds.length === 0) {
     return;
   }
 
-  const userIds = staleUsers.map((user) => user.id);
-  await ownerDb.auditLog.deleteMany({ where: { userId: { in: userIds } } });
-  await ownerDb.user.deleteMany({ where: { id: { in: userIds } } });
+  // share_grants / pr_comments may be absent until the Tier-2 migration is applied.
+  const tables = await ownerDb.$queryRaw<Array<{ tablename: string }>>`
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN ('share_grants', 'pr_comments', 'org_connections')
+  `;
+  const have = new Set(tables.map((t) => t.tablename));
+
+  if (have.has("share_grants") && (orgIds.length > 0 || userIds.length > 0)) {
+    await ownerDb.shareGrant.deleteMany({
+      where: {
+        OR: [
+          ...(orgIds.length > 0
+            ? [
+                { ownerOrgId: { in: orgIds } },
+                { granteeOrgId: { in: orgIds } },
+              ]
+            : []),
+          ...(userIds.length > 0
+            ? [
+                { grantedToUserId: { in: userIds } },
+                { grantedByUserId: { in: userIds } },
+              ]
+            : []),
+        ],
+      },
+    });
+  }
+
+  if (orgIds.length > 0) {
+    if (have.has("pr_comments")) {
+      await ownerDb.prComment.deleteMany({ where: { orgId: { in: orgIds } } });
+    }
+    if (have.has("org_connections")) {
+      await ownerDb.orgConnection.deleteMany({
+        where: {
+          OR: [{ orgAId: { in: orgIds } }, { orgBId: { in: orgIds } }],
+        },
+      });
+    }
+    await ownerDb.pullRequest.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.ticketComment.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.ticketAttachment.deleteMany({
+      where: { orgId: { in: orgIds } },
+    });
+    await ownerDb.ticket.deleteMany({ where: { orgId: { in: orgIds } } });
+  }
+
+  if (userIds.length > 0) {
+    if (have.has("pr_comments")) {
+      await ownerDb.prComment.deleteMany({
+        where: { authorId: { in: userIds } },
+      });
+    }
+    await ownerDb.ticket.deleteMany({
+      where: {
+        OR: [
+          { createdById: { in: userIds } },
+          { assigneeId: { in: userIds } },
+        ],
+      },
+    });
+    await ownerDb.auditLog.deleteMany({ where: { userId: { in: userIds } } });
+    await ownerDb.user.deleteMany({ where: { id: { in: userIds } } });
+  }
+
+  if (orgIds.length > 0) {
+    await ownerDb.organization.deleteMany({ where: { id: { in: orgIds } } });
+  }
 }
 
 export async function disconnectDatabases(): Promise<void> {

@@ -75,6 +75,11 @@ function TicketsListContent() {
             <p className="mt-1 text-sm text-muted">
               Organization: {activeOrg?.orgName ?? activeOrg?.orgId}
             </p>
+            <p className="mt-2 text-sm">
+              <Link href="/shared/tickets" className="text-brand-600 underline">
+                Shared with me
+              </Link>
+            </p>
           </div>
           {canMutate ? (
             <Link href="/tickets/new">
@@ -103,6 +108,11 @@ function TicketsListContent() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium text-foreground">{ticket.title}</p>
+                      {ticket.access === "shared" && ticket.sharedFromOrg ? (
+                        <p className="mt-1 text-xs font-medium text-brand-600">
+                          Shared from {ticket.sharedFromOrg.orgName}
+                        </p>
+                      ) : null}
                       <p className="mt-1 line-clamp-2 text-sm text-muted">
                         {ticket.description || "No description"}
                       </p>

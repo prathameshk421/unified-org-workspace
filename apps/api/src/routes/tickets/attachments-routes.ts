@@ -4,7 +4,6 @@ import multer from "multer";
 import { z } from "zod";
 import {
   ATTACHMENT_DELETE_ROLES,
-  ATTACHMENT_READER_ROLES,
   ATTACHMENT_UPLOAD_ROLES,
   AuditAction,
 } from "@unified/types";
@@ -12,6 +11,7 @@ import {
   AttachmentStorageError,
   sanitizeFileName,
 } from "../../lib/attachments-storage.js";
+import { ResourceAccessError } from "../../lib/resource-access.js";
 import { queueAudit } from "../../middleware/audit-mutations.js";
 import { singleFileUpload } from "../../middleware/upload.js";
 import {
@@ -23,11 +23,15 @@ import {
   createAttachment,
   deleteAttachment,
   getAttachmentFile,
-  getOrgAttachmentOrThrow,
+  getAttachmentMeta,
   listAttachments,
   toAttachmentResponse,
 } from "./attachments-service.js";
-import { TicketError, getOrgTicketOrThrow, truncateForAudit } from "./service.js";
+import {
+  TicketError,
+  getOrgTicketOrThrow,
+  truncateForAudit,
+} from "./service.js";
 
 const ticketIdParamSchema = z.object({
   ticketId: z.string().min(1),
@@ -85,6 +89,11 @@ export function registerAttachmentRoutes(router: RouterType): void {
       return;
     }
 
+    if (error instanceof ResourceAccessError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+
     if (error instanceof TicketError) {
       const body: { error: string; code?: string } = { error: error.message };
       if (error.code) {
@@ -98,15 +107,20 @@ export function registerAttachmentRoutes(router: RouterType): void {
     res.status(500).json({ error: "Internal server error" });
   }
 
+  // List / meta / download: share-capable via resolveTicketAccess
   router.get(
     "/tickets/:ticketId/attachments",
     requireAuth,
     requireOrgAccess,
-    requireRole(...ATTACHMENT_READER_ROLES),
     async (req: Request, res: Response) => {
       try {
         const { ticketId } = ticketIdParamSchema.parse(req.params);
-        const attachments = await listAttachments(ticketId, req.orgId!);
+        const attachments = await listAttachments({
+          ticketId,
+          userId: req.auth!.userId,
+          role: req.auth!.role,
+          sessionOrgId: req.orgId!,
+        });
         res.json({ attachments });
       } catch (error) {
         handleError(res, error);
@@ -119,6 +133,17 @@ export function registerAttachmentRoutes(router: RouterType): void {
     requireAuth,
     requireOrgAccess,
     requireRole(...ATTACHMENT_UPLOAD_ROLES),
+    // Strict owner-org check before multipart parse / missing-file 400 so
+    // share-only holders get 404 (not 400) on upload attempts.
+    async (req: Request, res: Response, next) => {
+      try {
+        const { ticketId } = ticketIdParamSchema.parse(req.params);
+        await getOrgTicketOrThrow(ticketId, req.orgId!);
+        next();
+      } catch (error) {
+        handleError(res, error);
+      }
+    },
     (req: Request, res: Response, next) => {
       singleFileUpload(req, res, (error) => {
         if (error) {
@@ -168,16 +193,16 @@ export function registerAttachmentRoutes(router: RouterType): void {
     "/tickets/:ticketId/attachments/:attachmentId",
     requireAuth,
     requireOrgAccess,
-    requireRole(...ATTACHMENT_READER_ROLES),
     async (req: Request, res: Response) => {
       try {
         const params = attachmentIdParamSchema.parse(req.params);
-        await getOrgTicketOrThrow(params.ticketId, req.orgId!);
-        const attachment = await getOrgAttachmentOrThrow(
-          params.attachmentId,
-          params.ticketId,
-          req.orgId!,
-        );
+        const attachment = await getAttachmentMeta({
+          attachmentId: params.attachmentId,
+          ticketId: params.ticketId,
+          userId: req.auth!.userId,
+          role: req.auth!.role,
+          sessionOrgId: req.orgId!,
+        });
         res.json(toAttachmentResponse(attachment));
       } catch (error) {
         handleError(res, error);
@@ -189,14 +214,15 @@ export function registerAttachmentRoutes(router: RouterType): void {
     "/tickets/:ticketId/attachments/:attachmentId/download",
     requireAuth,
     requireOrgAccess,
-    requireRole(...ATTACHMENT_READER_ROLES),
     async (req: Request, res: Response) => {
       try {
         const params = attachmentIdParamSchema.parse(req.params);
         const { attachment, buffer } = await getAttachmentFile({
           attachmentId: params.attachmentId,
           ticketId: params.ticketId,
-          orgId: req.orgId!,
+          userId: req.auth!.userId,
+          role: req.auth!.role,
+          sessionOrgId: req.orgId!,
         });
 
         res.setHeader("Content-Type", attachment.mimeType);

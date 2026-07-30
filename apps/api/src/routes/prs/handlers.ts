@@ -6,6 +6,10 @@ import {
   PrReviewDecision,
   PrStatus,
 } from "@unified/types";
+import {
+  ResourceAccessError,
+  resolvePrAccess,
+} from "../../lib/resource-access.js";
 import { queueAudit } from "../../middleware/audit-mutations.js";
 import { badRequest, HttpError } from "./errors.js";
 import {
@@ -14,7 +18,7 @@ import {
   transitionPrSchema,
   updatePrSchema,
 } from "./schemas.js";
-import { toPullRequestDetail } from "./mappers.js";
+import { toPullRequestDetailFromAccess } from "./mappers.js";
 import * as prService from "./service.js";
 
 function requirePrId(req: Request): string {
@@ -31,6 +35,11 @@ function handleError(res: Response, error: unknown): void {
       error: "Validation failed",
       details: error.flatten().fieldErrors,
     });
+    return;
+  }
+
+  if (error instanceof ResourceAccessError) {
+    res.status(error.statusCode).json({ error: error.message });
     return;
   }
 
@@ -79,8 +88,20 @@ export async function listPrsHandler(req: Request, res: Response): Promise<void>
 
 export async function getPrHandler(req: Request, res: Response): Promise<void> {
   try {
-    const pr = await prService.getOrgPrOrThrow(requirePrId(req), req.orgId!);
-    res.json(toPullRequestDetail(pr));
+    const resolved = await resolvePrAccess({
+      userId: req.auth!.userId,
+      role: req.auth!.role,
+      sessionOrgId: req.orgId!,
+      prId: requirePrId(req),
+    });
+
+    res.json({
+      ...toPullRequestDetailFromAccess(resolved.pr),
+      access: resolved.access,
+      ...(resolved.sharedFromOrg
+        ? { sharedFromOrg: resolved.sharedFromOrg }
+        : {}),
+    });
   } catch (error) {
     handleError(res, error);
   }

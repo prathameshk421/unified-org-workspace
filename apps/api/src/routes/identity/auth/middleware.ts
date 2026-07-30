@@ -63,6 +63,35 @@ export function requireOrgAccess(req: Request, res: Response, next: NextFunction
   next();
 }
 
+/**
+ * Like requireOrgAccess for share-capable resource-by-id routes.
+ * If live membership was lost but Session still points at an org, pass that
+ * stale org id through so resolve*Access can return 404 (plan: membership
+ * drop → 404, not no_active_org 403). Never-had-org (e.g. platform admin)
+ * still gets 403 no_active_org.
+ */
+export function requireOrgAccessForResource(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!requireAuthenticated(req, res)) {
+    return;
+  }
+
+  const orgId = req.auth.activeOrgId ?? req.auth.staleActiveOrgId ?? null;
+  if (!orgId) {
+    res.status(403).json({
+      error: "No active organization",
+      code: "no_active_org",
+    });
+    return;
+  }
+
+  req.orgId = orgId;
+  next();
+}
+
 /** Alias of `requireOrgAccess` (session-sync doc compatibility). */
 export const requireActiveOrg = requireOrgAccess;
 

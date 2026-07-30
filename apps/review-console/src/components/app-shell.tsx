@@ -4,6 +4,7 @@ import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { OrgRole } from "@unified/types";
 import { canMutatePrs, canViewAudit } from "@/lib/roles";
 
 function NavLink({
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const showPrs = canMutatePrs(activeOrg?.role);
   const showAudit = canViewAudit(activeOrg?.role);
+  const isOrgAdmin = activeOrg?.role === OrgRole.ORG_ADMIN;
 
   return (
     <div className="min-h-screen bg-surface-muted">
@@ -47,10 +49,32 @@ export function AppShell({ children }: { children: ReactNode }) {
                   Pull requests
                 </NavLink>
               ) : null}
+              <NavLink
+                href="/shared/prs"
+                active={pathname.startsWith("/shared")}
+              >
+                Shared with me
+              </NavLink>
               {showAudit ? (
                 <NavLink href="/audit" active={pathname.startsWith("/audit")}>
                   Audit log
                 </NavLink>
+              ) : null}
+              {isOrgAdmin ? (
+                <>
+                  <NavLink
+                    href="/settings/connections"
+                    active={pathname.startsWith("/settings/connections")}
+                  >
+                    Connections
+                  </NavLink>
+                  <NavLink
+                    href="/settings/shares"
+                    active={pathname.startsWith("/settings/shares")}
+                  >
+                    Shares
+                  </NavLink>
+                </>
               ) : null}
             </nav>
           </div>

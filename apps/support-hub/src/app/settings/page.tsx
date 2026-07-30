@@ -104,6 +104,17 @@ function SettingsContent() {
         <p className="mt-2 text-sm text-muted">
           {activeOrg?.orgName ?? "Active organization"}
         </p>
+        <p className="mt-3 flex flex-wrap gap-4 text-sm">
+          <Link
+            href="/settings/connections"
+            className="text-brand-600 underline"
+          >
+            Org connections
+          </Link>
+          <Link href="/settings/shares" className="text-brand-600 underline">
+            Share grants
+          </Link>
+        </p>
 
         {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
         {message ? <p className="mt-4 text-sm text-green-700">{message}</p> : null}

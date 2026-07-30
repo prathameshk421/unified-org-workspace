@@ -6,11 +6,10 @@ import {
 import { ZodError } from "zod";
 import {
   AuditAction,
-  COMMENT_CREATE_ROLES,
   COMMENT_DELETE_ROLES,
   COMMENT_UPDATE_ROLES,
-  TICKET_READER_ROLES,
 } from "@unified/types";
+import { ResourceAccessError } from "../../lib/resource-access.js";
 import { queueAudit } from "../../middleware/audit-mutations.js";
 import {
   requireAuth,
@@ -42,6 +41,11 @@ export function registerCommentRoutes(router: RouterType): void {
       return;
     }
 
+    if (error instanceof ResourceAccessError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+
     if (error instanceof TicketError) {
       const body: { error: string; code?: string } = { error: error.message };
       if (error.code) {
@@ -55,15 +59,20 @@ export function registerCommentRoutes(router: RouterType): void {
     res.status(500).json({ error: "Internal server error" });
   }
 
+  // Read + create: any org member + resolveTicketAccess (share-capable)
   router.get(
     "/tickets/:ticketId/comments",
     requireAuth,
     requireOrgAccess,
-    requireRole(...TICKET_READER_ROLES),
     async (req: Request, res: Response) => {
       try {
         const { ticketId } = ticketIdParamSchema.parse(req.params);
-        const comments = await listComments(ticketId, req.orgId!);
+        const comments = await listComments({
+          ticketId,
+          userId: req.auth!.userId,
+          role: req.auth!.role,
+          sessionOrgId: req.orgId!,
+        });
         res.json({ comments });
       } catch (error) {
         handleError(res, error);
@@ -75,7 +84,6 @@ export function registerCommentRoutes(router: RouterType): void {
     "/tickets/:ticketId/comments",
     requireAuth,
     requireOrgAccess,
-    requireRole(...COMMENT_CREATE_ROLES),
     requireJsonContentType,
     async (req: Request, res: Response) => {
       try {
@@ -83,8 +91,9 @@ export function registerCommentRoutes(router: RouterType): void {
         const body = createTicketCommentSchema.parse(req.body);
         const comment = await createComment({
           ticketId,
-          orgId: req.orgId!,
-          authorId: req.auth!.userId,
+          userId: req.auth!.userId,
+          role: req.auth!.role,
+          sessionOrgId: req.orgId!,
           body: body.body,
         });
 
@@ -105,6 +114,7 @@ export function registerCommentRoutes(router: RouterType): void {
     },
   );
 
+  // Update/delete: mutators + strict getOrgTicketOrThrow
   router.patch(
     "/tickets/:ticketId/comments/:commentId",
     requireAuth,
