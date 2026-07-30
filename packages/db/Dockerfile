@@ -8,6 +8,8 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/config/package.json ./packages/config/
+# Root package.json overrides serialised-error to this local path (newman dep).
+COPY scripts/vendor/serialised-error ./scripts/vendor/serialised-error/
 RUN pnpm install --frozen-lockfile --filter @unified/db...
 
 FROM deps AS builder

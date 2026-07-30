@@ -11,6 +11,8 @@ COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/auth-client/package.json ./packages/auth-client/
+# Root package.json overrides serialised-error to this local path (newman dep).
+COPY scripts/vendor/serialised-error ./scripts/vendor/serialised-error/
 RUN pnpm install --frozen-lockfile --filter @unified/review-console...
 
 FROM deps AS builder

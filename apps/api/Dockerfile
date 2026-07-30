@@ -10,6 +10,8 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 COPY packages/db/package.json ./packages/db/
+# Root package.json overrides serialised-error to this local path (newman dep).
+COPY scripts/vendor/serialised-error ./scripts/vendor/serialised-error/
 RUN pnpm install --frozen-lockfile --filter @unified/api...
 
 FROM deps AS builder
