@@ -2,7 +2,7 @@
 
 import { useAuth } from "@unified/auth-client/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 
 function safeReturnTo(raw: string | null, fallback = "/"): string {
   if (!raw) return fallback;
@@ -10,7 +10,18 @@ function safeReturnTo(raw: string | null, fallback = "/"): string {
   return raw;
 }
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+function AuthLoading({ message }: { message: string }) {
+  return (
+    <main
+      className="flex min-h-screen items-center justify-center bg-surface-muted"
+      data-testid="auth-loading"
+    >
+      <p className="text-muted">{message}</p>
+    </main>
+  );
+}
+
+function ProtectedRouteInner({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -25,31 +36,25 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [status, router, pathname, searchParams]);
 
   if (status === "loading") {
-    return (
-      <main
-        className="flex min-h-screen items-center justify-center bg-surface-muted"
-        data-testid="auth-loading"
-      >
-        <p className="text-muted">Loading session…</p>
-      </main>
-    );
+    return <AuthLoading message="Loading session…" />;
   }
 
   if (status !== "authenticated") {
-    return (
-      <main
-        className="flex min-h-screen items-center justify-center bg-surface-muted"
-        data-testid="auth-loading"
-      >
-        <p className="text-muted">Redirecting to login…</p>
-      </main>
-    );
+    return <AuthLoading message="Redirecting to login…" />;
   }
 
   return <>{children}</>;
 }
 
-export function GuestRoute({ children }: { children: ReactNode }) {
+export function ProtectedRoute({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<AuthLoading message="Loading session…" />}>
+      <ProtectedRouteInner>{children}</ProtectedRouteInner>
+    </Suspense>
+  );
+}
+
+function GuestRouteInner({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,26 +67,20 @@ export function GuestRoute({ children }: { children: ReactNode }) {
   }, [status, router, searchParams]);
 
   if (status === "loading") {
-    return (
-      <main
-        className="flex min-h-screen items-center justify-center bg-surface-muted"
-        data-testid="auth-loading"
-      >
-        <p className="text-muted">Loading session…</p>
-      </main>
-    );
+    return <AuthLoading message="Loading session…" />;
   }
 
   if (status === "authenticated") {
-    return (
-      <main
-        className="flex min-h-screen items-center justify-center bg-surface-muted"
-        data-testid="auth-loading"
-      >
-        <p className="text-muted">Redirecting…</p>
-      </main>
-    );
+    return <AuthLoading message="Redirecting…" />;
   }
 
   return <>{children}</>;
+}
+
+export function GuestRoute({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<AuthLoading message="Loading session…" />}>
+      <GuestRouteInner>{children}</GuestRouteInner>
+    </Suspense>
+  );
 }
