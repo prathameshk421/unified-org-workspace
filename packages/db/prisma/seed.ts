@@ -1,14 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { writeSeedAttachmentFile } from "./seed-attachment-write.js";
 
 const prisma = new PrismaClient();
 
 const DEMO_PASSWORD = "password123";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const attachmentsRoot = path.resolve(__dirname, "../../../data/attachments");
 
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
@@ -442,10 +438,7 @@ async function main() {
     data: { storageKey },
   });
 
-  await mkdir(path.join(attachmentsRoot, acme.id, billingTicket.id), {
-    recursive: true,
-  });
-  await writeFile(path.join(attachmentsRoot, storageKey), attachmentContent);
+  await writeSeedAttachmentFile(storageKey, attachmentContent);
 
   // Cross-org shares (no same-org grants). Eve sees Billing via Globex session;
   // Dave sees shared Globex PR only when activeOrg=Acme.

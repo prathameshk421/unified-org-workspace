@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@unified/auth-client/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 function safeReturnTo(raw: string | null, fallback = "/"): string {
@@ -13,13 +13,16 @@ function safeReturnTo(raw: string | null, fallback = "/"): string {
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      const returnTo = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+      const qs = searchParams.toString();
+      const returnTo = encodeURIComponent(qs ? `${pathname}?${qs}` : pathname);
       router.replace(`/login?returnTo=${returnTo}`);
     }
-  }, [status, router]);
+  }, [status, router, pathname, searchParams]);
 
   if (status === "loading") {
     return (

@@ -11,6 +11,14 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+# Required GitHub Variables (gateway cutover):
+#   GATEWAY_ORIGIN       — https://unified-org-gateway-….run.app (no path)
+#   BACKEND_API_URL      — raw api .run.app URI (gateway upstream)
+#   BACKEND_HUB_URL      — raw support-hub .run.app URI
+#   BACKEND_CONSOLE_URL  — raw review-console .run.app URI
+#   API_URL              — ${GATEWAY_ORIGIN}/api  (baked into Next images)
+#   SUPPORT_HUB_URL      — ${GATEWAY_ORIGIN}/support-hub  (Hub basePath; sibling links)
+#   REVIEW_CONSOLE_URL   — ${GATEWAY_ORIGIN}/console
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION }}
@@ -18,6 +26,10 @@ env:
   API_URL: ${{ vars.API_URL }}
   SUPPORT_HUB_URL: ${{ vars.SUPPORT_HUB_URL }}
   REVIEW_CONSOLE_URL: ${{ vars.REVIEW_CONSOLE_URL }}
+  GATEWAY_ORIGIN: ${{ vars.GATEWAY_ORIGIN }}
+  BACKEND_API_URL: ${{ vars.BACKEND_API_URL }}
+  BACKEND_HUB_URL: ${{ vars.BACKEND_HUB_URL }}
+  BACKEND_CONSOLE_URL: ${{ vars.BACKEND_CONSOLE_URL }}
   # workflow_run: checkout/tag the CI commit, not the Deploy workflow file SHA
   IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
@@ -69,6 +81,7 @@ jobs:
             NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
             NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
+            NEXT_PUBLIC_BASE_PATH=/support-hub
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/support-hub:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/support-hub:latest
@@ -83,9 +96,20 @@ jobs:
             NEXT_PUBLIC_REVIEW_CONSOLE_URL=${{ env.REVIEW_CONSOLE_URL }}
             NEXT_PUBLIC_SUPPORT_HUB_URL=${{ env.SUPPORT_HUB_URL }}
             NEXT_PUBLIC_API_URL=${{ env.API_URL }}
+            NEXT_PUBLIC_BASE_PATH=/console
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/review-console:${{ env.IMAGE_SHA }}
             ${{ env.ARTIFACT_REGISTRY }}/review-console:latest
+
+      - name: Build and push Gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/gateway
+          file: apps/gateway/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/gateway:${{ env.IMAGE_SHA }}
+            ${{ env.ARTIFACT_REGISTRY }}/gateway:latest
 
       - name: Build and push DB migrate image
         uses: docker/build-push-action@v6
@@ -133,10 +157,24 @@ jobs:
             --region="${{ env.GCP_REGION }}" \
             --image="${{ env.ARTIFACT_REGISTRY }}/review-console:${{ env.IMAGE_SHA }}"
 
-      - name: Smoke test API health
+      - name: Deploy Gateway
+        run: |
+          gcloud run services update unified-org-gateway \
+            --region="${{ env.GCP_REGION }}" \
+            --image="${{ env.ARTIFACT_REGISTRY }}/gateway:${{ env.IMAGE_SHA }}" \
+            --update-env-vars="API_UPSTREAM=${{ env.BACKEND_API_URL }},HUB_UPSTREAM=${{ env.BACKEND_HUB_URL }},CONSOLE_UPSTREAM=${{ env.BACKEND_CONSOLE_URL }}"
+
+      # Cutover only after Hub/Console images with gateway NEXT_PUBLIC_* are live
+      - name: Cut over API CORS to gateway origin
+        run: |
+          gcloud run services update unified-org-api \
+            --region="${{ env.GCP_REGION }}" \
+            --update-env-vars="CORS_ORIGINS=${{ env.GATEWAY_ORIGIN }}"
+
+      - name: Smoke test gateway /api/health
         run: |
           for attempt in 1 2 3 4 5; do
-            if curl --fail --silent --show-error "${{ env.API_URL }}/health"; then
+            if curl --fail --silent --show-error "${{ env.GATEWAY_ORIGIN }}/api/health"; then
               echo ""
               echo "Health check passed"
               exit 0

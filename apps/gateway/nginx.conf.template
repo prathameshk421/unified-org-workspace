@@ -1,0 +1,95 @@
+worker_processes auto;
+error_log /dev/stderr warn;
+pid /tmp/nginx.pid;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include       /etc/nginx/mime.types;
+  default_type  application/octet-stream;
+  access_log    /dev/stdout;
+  sendfile      on;
+  keepalive_timeout 65;
+  client_max_body_size 6m;
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ""      close;
+  }
+
+  server {
+    listen       ${PORT};
+    server_name  _;
+    root         /usr/share/nginx/html;
+
+    # Landing page (exact / only)
+    location = / {
+      try_files /index.html =404;
+    }
+
+    location = /index.html {
+      try_files /index.html =404;
+    }
+
+    location /api/ {
+      proxy_http_version 1.1;
+      proxy_set_header Host              $proxy_host;
+      proxy_set_header X-Real-IP         $remote_addr;
+      proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-Host  $host;
+      proxy_set_header Upgrade           $http_upgrade;
+      proxy_set_header Connection        $connection_upgrade;
+      proxy_ssl_server_name on;
+      # Trailing slash strips /api/ prefix → Express /auth/me etc.
+      proxy_pass ${API_UPSTREAM}/;
+    }
+
+    location = /api {
+      return 301 /api/;
+    }
+
+    # KEEP /console (Next basePath). Do NOT strip.
+    location /console/ {
+      proxy_http_version 1.1;
+      proxy_set_header Host              $proxy_host;
+      proxy_set_header X-Real-IP         $remote_addr;
+      proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-Host  $host;
+      proxy_set_header Upgrade           $http_upgrade;
+      proxy_set_header Connection        $connection_upgrade;
+      proxy_ssl_server_name on;
+      proxy_pass ${CONSOLE_UPSTREAM};
+    }
+
+    location = /console {
+      return 301 /console/;
+    }
+
+    # KEEP /support-hub (Next basePath). Do NOT strip.
+    location /support-hub/ {
+      proxy_http_version 1.1;
+      proxy_set_header Host              $proxy_host;
+      proxy_set_header X-Real-IP         $remote_addr;
+      proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-Host  $host;
+      proxy_set_header Upgrade           $http_upgrade;
+      proxy_set_header Connection        $connection_upgrade;
+      proxy_ssl_server_name on;
+      proxy_pass ${HUB_UPSTREAM};
+    }
+
+    location = /support-hub {
+      return 301 /support-hub/;
+    }
+
+    # Unknown paths → landing (do not proxy to Hub)
+    location / {
+      return 302 /;
+    }
+  }
+}

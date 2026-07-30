@@ -339,6 +339,16 @@ resource "google_cloud_run_v2_job" "seed" {
           }
         }
 
+        env {
+          name  = "ATTACHMENTS_BACKEND"
+          value = "gcs"
+        }
+
+        env {
+          name  = "ATTACHMENTS_GCS_BUCKET"
+          value = google_storage_bucket.attachments.name
+        }
+
         resources {
           limits = {
             cpu    = "1"
@@ -363,6 +373,69 @@ resource "google_cloud_run_v2_job" "seed" {
     google_secret_manager_secret_version.database_url,
     google_project_iam_member.runtime_secret_accessor,
     google_project_iam_member.runtime_sql_client,
+    google_storage_bucket_iam_member.runtime_attachments_object_admin,
+  ]
+}
+
+resource "google_cloud_run_v2_service" "gateway" {
+  name                = "${local.name_prefix}-gateway"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
+
+  template {
+    service_account = google_service_account.cloud_run_runtime.email
+
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 10
+    }
+
+    containers {
+      image = local.gateway_image
+
+      ports {
+        container_port = 8080
+      }
+
+      env {
+        name  = "API_UPSTREAM"
+        value = google_cloud_run_v2_service.api.uri
+      }
+
+      env {
+        name  = "HUB_UPSTREAM"
+        value = google_cloud_run_v2_service.support_hub.uri
+      }
+
+      env {
+        name  = "CONSOLE_UPSTREAM"
+        value = google_cloud_run_v2_service.review_console.uri
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
+
+  depends_on = [
+    google_project_service.required,
+    google_artifact_registry_repository.main,
+    google_cloud_run_v2_service.api,
+    google_cloud_run_v2_service.support_hub,
+    google_cloud_run_v2_service.review_console,
   ]
 }
 
@@ -383,6 +456,13 @@ resource "google_cloud_run_v2_service_iam_member" "support_hub_public" {
 resource "google_cloud_run_v2_service_iam_member" "review_console_public" {
   location = google_cloud_run_v2_service.review_console.location
   name     = google_cloud_run_v2_service.review_console.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "gateway_public" {
+  location = google_cloud_run_v2_service.gateway.location
+  name     = google_cloud_run_v2_service.gateway.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

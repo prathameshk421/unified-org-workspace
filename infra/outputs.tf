@@ -42,12 +42,18 @@ output "review_console_url" {
   value       = var.enable_custom_domain ? "https://${local.console_hostname}" : google_cloud_run_v2_service.review_console.uri
 }
 
+output "gateway_url" {
+  description = "Public gateway URL (single hostname for Hub↔Console session sync)"
+  value       = google_cloud_run_v2_service.gateway.uri
+}
+
 output "cloud_run_urls" {
   description = "Default Cloud Run URLs (use these for GitHub Actions when enable_custom_domain = false)"
   value = {
     api            = google_cloud_run_v2_service.api.uri
     support_hub    = google_cloud_run_v2_service.support_hub.uri
     review_console = google_cloud_run_v2_service.review_console.uri
+    gateway        = google_cloud_run_v2_service.gateway.uri
   }
 }
 
@@ -76,6 +82,7 @@ output "cloud_run_services" {
     api            = google_cloud_run_v2_service.api.name
     support_hub    = google_cloud_run_v2_service.support_hub.name
     review_console = google_cloud_run_v2_service.review_console.name
+    gateway        = google_cloud_run_v2_service.gateway.name
   }
 }
 

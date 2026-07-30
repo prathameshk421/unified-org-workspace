@@ -12,13 +12,15 @@ Shared Identity/Org session across Support Hub and Review Console via **API-orig
 
 ## Cookie SameSite matrix
 
-| Environment                     | `COOKIE_DOMAIN` | Secure | SameSite | Notes                                                                                                |
-| ------------------------------- | --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------- |
-| Local                           | unset           | false  | `strict` | Host-only cookies on `localhost:4000`; hub `:3000` / console `:3001` sync via credentialed API calls |
-| Cloud Run default (`*.run.app`) | unset           | true   | `none`   | Cross-site hub/console → api; requires CORS allowlist                                                |
-| Custom parent domain            | `.example.com`  | true   | `strict` | `hub.` / `console.` / `api.` same-site                                                               |
+| Environment                          | `COOKIE_DOMAIN` | Secure | SameSite | Notes                                                                                                      |
+| ------------------------------------ | --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------- |
+| Local (three ports)                  | unset           | false  | `strict` | Host-only cookies on `localhost:4000`; hub `:3000` / console `:3001` sync via credentialed API calls       |
+| Cloud Run **gateway** (one hostname) | unset           | true   | `none`   | Landing `/`, Hub `/support-hub`, Console `/console`, API `/api` share one site — **required** for Hub↔Console sync without a custom domain |
+| Custom parent domain                 | `.example.com`  | true   | `strict` | `hub.` / `console.` / `api.` same-site                                                                     |
 
-`COOKIE_DOMAIN` stays **optional** (Terraform sets it only when `enable_custom_domain=true`). Do not force it on default deploy.
+**Production Hub↔Console sync requires a shared site:** Cloud Run nginx gateway (single hostname) **or** a custom parent domain. Three default `*.run.app` hosts (api / hub / console) do **not** sync under Chrome third-party cookie partitioning — `SameSite=None` alone is not enough. Localhost three-port remains valid for local/e2e.
+
+`COOKIE_DOMAIN` stays **optional** (Terraform sets it only when `enable_custom_domain=true`). Do not force it on default / gateway deploy.
 
 CSRF with `SameSite=None`: mutating `/auth/*` routes reject non-`application/json` Content-Type (415).
 
@@ -51,7 +53,8 @@ Per-app adapters: `ProtectedRoute` / `GuestRoute` (redirect only when `authStatu
 4. Multi-org user (`dave@example.com`) can switch org via OrgSwitcher; active org updates from server.
 5. Alice cannot `switch-org` to Globex (403) — Newman.
 6. Non-JSON `POST /auth/login` → 415 — Newman.
-7. Default Cloud Run path unchanged (no Terraform / forced `COOKIE_DOMAIN`).
+7. No forced `COOKIE_DOMAIN` on gateway / default deploy (set only with custom parent domain).
+8. Demo/submit uses the **gateway** URL when gateway mode is on (not the three separate `*.run.app` hosts).
 
 ## Tests
 

@@ -53,9 +53,11 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 - `requireAuth` re-checks `Session.revokedAt` and live `OrgMembership` on every protected route.
 - Org-scoped routes: `requireAuth` → `requireOrgAccess` (sets `req.orgId` from session only) → `requireRole(...)` as needed. Platform routes: `requirePlatformAdmin`. See [rbac-middleware.md](docs/requirements/rbac-middleware.md).
 - Logout-everywhere must invalidate prior tokens across both dashboards.
-- Do **not** relax Helmet CORP for session sync. Do **not** force `COOKIE_DOMAIN` on default Cloud Run deploy.
+- **Production Hub↔Console sync** requires a shared site: Cloud Run gateway (single hostname) **or** custom parent domain. Three default `*.run.app` hosts do **not** sync under Chrome third-party cookie partitioning. Localhost three-port remains valid. Demo/submit should use the gateway URL when gateway mode is on. Gateway paths: landing `/`, Hub `/support-hub`, Console `/console`, API `/api`.
+- Do **not** relax Helmet CORP for session sync. Do **not** force `COOKIE_DOMAIN` on gateway / default Cloud Run deploy.
 - `ProtectedRoute` / `GuestRoute`: redirect only when `authStatus === "unauthenticated"`, never while `loading`.
 - Hydrate via `GET /auth/me` with `Cache-Control: no-store`. `@unified/auth-client` does single-flight `401 → refresh → retry once`.
+- Seed attachments: the seed job uploads demo files to GCS when `ATTACHMENTS_*` is set (same as API runtime).
 
 ## Tier gating & audit
 

@@ -23,15 +23,15 @@ Cookie-based JWT authentication for the unified org workspace API.
 
 **Flags:** `httpOnly`, dynamic `sameSite` (see matrix below), `secure` in production (or `COOKIE_SECURE=true`).
 
-| Env                             | `COOKIE_DOMAIN`   | SameSite |
-| ------------------------------- | ----------------- | -------- |
-| Local                           | omit              | `strict` |
-| `*.run.app` (secure, no domain) | omit              | `none`   |
-| Custom parent domain            | `.yourparent.com` | `strict` |
+| Env                                      | `COOKIE_DOMAIN`   | SameSite |
+| ---------------------------------------- | ----------------- | -------- |
+| Local                                    | omit              | `strict` |
+| Gateway / `*.run.app` (secure, no domain)| omit              | `none`   |
+| Custom parent domain                     | `.yourparent.com` | `strict` |
 
-**Local / client-only sync:** omit `COOKIE_DOMAIN` — cookies are host-only on the **API** origin (`localhost:4000`). Dashboards on `:3000` / `:3001` do not host session cookies; they call the API with `credentials: "include"`, so the browser sends the API cookies and both dashboards share one session. (Older wording that “ports cannot share cookies” referred to dashboard-to-dashboard cookie jars, not this API-origin model.)
+**Local / client-only sync:** omit `COOKIE_DOMAIN` — cookies are host-only on the **API** origin (`localhost:4000`). Dashboards on `:3000` / `:3001` do not host session cookies; they call the API with `credentials: "include"`, so the browser sends the API cookies and both dashboards share one session. Localhost three-port remains valid.
 
-**Production custom domain:** set `COOKIE_DOMAIN=.yourparent.com` so `hub.` / `console.` / `api.` are same-site with `SameSite=Strict` (also enables future SSR/middleware cookie reads on dashboard hosts).
+**Production Hub↔Console sync** requires a shared site: Cloud Run gateway (single hostname; omit `COOKIE_DOMAIN`) **or** custom parent domain with `COOKIE_DOMAIN=.yourparent.com` (`SameSite=Strict`). Three default `*.run.app` hosts do **not** sync under Chrome third-party cookie partitioning — do not rely on `SameSite=None` alone across separate run.app URLs. Demo/submit should use the gateway URL when gateway mode is on. See [session-sync.md](./session-sync.md).
 
 ## BOLA foundation
 

@@ -53,27 +53,32 @@ flowchart LR
 
 ## URLs
 
-### Default (recommended for assignment): Cloud Run `*.run.app`
+### Recommended for assignment: Cloud Run gateway (single hostname)
 
-No custom domain required. After `terraform apply`, use:
+Production Hub↔Console session sync requires a **shared site**. Use the nginx gateway (one `*.run.app` hostname) **or** a custom parent domain. Three separate default `*.run.app` hosts do **not** sync under Chrome third-party cookie partitioning.
+
+After deploy, prefer the gateway:
 
 ```bash
-terraform output cloud_run_urls
+terraform output gateway_url
+# or: terraform output cloud_run_urls
 ```
 
-Example:
+| Entry                         | URL pattern                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| Gateway (submit this)         | `https://unified-org-gateway-xxxxx-uc.a.run.app`         |
+| → Landing                     | `https://…gateway…/`                                     |
+| → Support Hub                 | `https://…gateway…/support-hub`                          |
+| → Review Console              | `https://…gateway…/console`                              |
+| → API                         | `https://…gateway…/api`                                  |
 
-| Service        | URL                                                     |
-| -------------- | ------------------------------------------------------- |
-| API            | `https://unified-org-api-xxxxx-uc.a.run.app`            |
-| Support Hub    | `https://unified-org-support-hub-xxxxx-uc.a.run.app`    |
-| Review Console | `https://unified-org-review-console-xxxxx-uc.a.run.app` |
+Backend services (`unified-org-api`, `support-hub`, `review-console`) stay public for ops/Newman; demos and assignment submit should use the **gateway** URL when gateway mode is on.
 
-Submit these public URLs + demo credentials for the assignment deliverable.
+Localhost three-port (`:3000` / `:3001` / `:4000`) remains valid — no gateway required locally.
 
 ### Optional: custom domain
 
-Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `api.` / `hub.` / `console.` subdomains. Optional — default `*.run.app` deploy supports session sync via API-origin cookies (`SameSite=None`). Custom domain enables `SameSite=Strict` on a shared parent cookie domain.
+Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `api.` / `hub.` / `console.` subdomains. Custom domain enables `SameSite=Strict` on a shared parent cookie domain (`COOKIE_DOMAIN=.yourparent.com`).
 
 ## Environment and secrets
 
@@ -90,16 +95,16 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 
 | Variable                 | Example                                      | Notes                                                                          |
 | ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------ |
-| `COOKIE_DOMAIN`          | `.example.com`                               | **Only** when `enable_custom_domain=true`. Omit on default `*.run.app` deploy. |
+| `COOKIE_DOMAIN`          | `.example.com`                               | **Only** when `enable_custom_domain=true`. Omit on gateway / default deploy.   |
 | `API_URL`                | `https://api.example.com`                    | Set when custom domain enabled                                                 |
 | `ATTACHMENTS_BACKEND`    | `gcs`                                        | Local/dev defaults to filesystem when unset                                    |
 | `ATTACHMENTS_GCS_BUCKET` | `unified-org-attachments-<project-id>`       | Ticket file bytes; Postgres still stores metadata/`storageKey`                 |
 | `ACCESS_COOKIE_NAME`     | `unified_access`                             | Optional; default shown                                                        |
 | `REFRESH_COOKIE_NAME`    | `unified_refresh`                            | Optional; default shown                                                        |
 
-Local/dev: omit GCS vars (or set `ATTACHMENTS_BACKEND=fs`) and optionally `ATTACHMENTS_DIR`. Cloud Run uses the runtime SA + ADC — no JSON key.
+Local/dev: omit GCS vars (or set `ATTACHMENTS_BACKEND=fs`) and optionally `ATTACHMENTS_DIR`. Cloud Run uses the runtime SA + ADC — no JSON key. The seed job uploads demo attachment bytes to GCS when `ATTACHMENTS_*` is set (same backend as API runtime).
 
-Cookie SameSite policy (application code): custom domain → `Strict`; default `*.run.app` (secure, no domain) → `None`; local → `Strict`. Session sync uses API-origin cookies + credentialed fetches from both dashboards — see [session-sync.md](./requirements/session-sync.md).
+Cookie SameSite policy (application code): custom domain → `Strict`; gateway / secure no-domain → `None`; local → `Strict`. Hub↔Console sync needs a shared site (gateway or custom domain) — see [session-sync.md](./requirements/session-sync.md).
 
 ### Next.js build-time vars (set in CD)
 
@@ -110,6 +115,7 @@ Both dashboards need all three URLs baked at image build time (sibling navigatio
 | `NEXT_PUBLIC_API_URL`            | yes         | yes            | `API_URL`             |
 | `NEXT_PUBLIC_SUPPORT_HUB_URL`    | yes         | yes            | `SUPPORT_HUB_URL`     |
 | `NEXT_PUBLIC_REVIEW_CONSOLE_URL` | yes         | yes            | `REVIEW_CONSOLE_URL`  |
+| `NEXT_PUBLIC_BASE_PATH`          | `/support-hub` | `/console`  | CD build-arg          |
 
 Docker builds fail if `NEXT_PUBLIC_API_URL` is empty.
 
@@ -168,9 +174,13 @@ Settings → Secrets and variables → Actions → **Variables**:
 | `GCP_REGION`          | `us-central1`                                             |
 | `WIF_PROVIDER`        | `terraform output wif_provider`                           |
 | `WIF_SERVICE_ACCOUNT` | `terraform output github_deploy_service_account`          |
-| `API_URL`             | from `terraform output cloud_run_urls` → `api`            |
-| `SUPPORT_HUB_URL`     | from `terraform output cloud_run_urls` → `support_hub`    |
-| `REVIEW_CONSOLE_URL`  | from `terraform output cloud_run_urls` → `review_console` |
+| `GATEWAY_ORIGIN`      | `terraform output gateway_url` (no path)                  |
+| `BACKEND_API_URL`     | raw api `.run.app` URI (gateway upstream)                 |
+| `BACKEND_HUB_URL`     | raw support-hub `.run.app` URI                            |
+| `BACKEND_CONSOLE_URL` | raw review-console `.run.app` URI                         |
+| `API_URL`             | `${GATEWAY_ORIGIN}/api`                                   |
+| `SUPPORT_HUB_URL`     | `${GATEWAY_ORIGIN}/support-hub`                           |
+| `REVIEW_CONSOLE_URL`  | `${GATEWAY_ORIGIN}/console`                               |
 
 ### 4. Push deployment code to GitHub
 
@@ -186,21 +196,21 @@ CI runs on push; **Deploy** runs after CI succeeds. Or trigger **Deploy** manual
 
 ### 6. Seed demo data (once)
 
-GitHub Actions → **Seed Demo Data** → Run workflow.
+GitHub Actions → **Seed Demo Data** → Run workflow. When `ATTACHMENTS_*` is set on the seed job, demo attachment files are uploaded to GCS.
 
 ### 7. Verify
 
 ```bash
-curl "$(terraform output -raw api_url)/health"
+curl "$(terraform output -raw gateway_url)/api/health"
 ```
 
-Open Support Hub and Review Console URLs in a browser.
+Open the **gateway** URL in a browser (landing at `/`, Hub at `/support-hub`, Console at `/console`).
 
 ---
 
 ## One-time bootstrap (custom domain — optional)
 
-Skip DNS entirely if using `*.run.app` URLs above.
+Skip DNS entirely if using the gateway `*.run.app` URL above.
 
 ### DNS records (only when `enable_custom_domain = true`)
 

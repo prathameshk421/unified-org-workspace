@@ -13,6 +13,7 @@ locals {
   api_image     = var.placeholder_image
   hub_image     = var.placeholder_image
   console_image = var.placeholder_image
+  gateway_image = var.placeholder_image
   migrate_image = var.placeholder_image
 
   api_secret_env_vars = [

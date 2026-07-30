@@ -23,6 +23,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.21.0",
     "@prisma/client": "^6.9.0"
   },
   "devDependencies": {
