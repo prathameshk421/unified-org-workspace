@@ -15,6 +15,7 @@ import {
   requireAuth,
   requireJsonContentType,
   requireOrgAccess,
+  requireOrgAccessForResource,
   requireRole,
 } from "../identity/auth/middleware.js";
 import {
@@ -59,11 +60,11 @@ export function registerCommentRoutes(router: RouterType): void {
     res.status(500).json({ error: "Internal server error" });
   }
 
-  // Read + create: any org member + resolveTicketAccess (share-capable)
+  // Read + create: ForResource + resolveTicketAccess (share-capable; drop → 404)
   router.get(
     "/tickets/:ticketId/comments",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     async (req: Request, res: Response) => {
       try {
         const { ticketId } = ticketIdParamSchema.parse(req.params);
@@ -83,7 +84,7 @@ export function registerCommentRoutes(router: RouterType): void {
   router.post(
     "/tickets/:ticketId/comments",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     requireJsonContentType,
     async (req: Request, res: Response) => {
       try {

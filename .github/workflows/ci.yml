@@ -215,7 +215,18 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unified_org
 
-      - name: Run API integration tests
+      - name: Run product BOLA gate
+        run: pnpm test:bola
+
+      - name: Upload BOLA gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-bola-junit
+          retention-days: 7
+          path: apps/api/test-results/bola.junit.xml
+
+      - name: Run full API integration suite
         run: pnpm --filter @unified/api test:integration
 
       - name: Upload integration test report

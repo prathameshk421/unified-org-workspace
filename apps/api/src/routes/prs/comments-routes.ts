@@ -13,7 +13,7 @@ import { queueAudit } from "../../middleware/audit-mutations.js";
 import {
   requireAuth,
   requireJsonContentType,
-  requireOrgAccess,
+  requireOrgAccessForResource,
 } from "../identity/auth/middleware.js";
 import { TicketError } from "../tickets/service.js";
 import { HttpError } from "./errors.js";
@@ -65,11 +65,11 @@ export function registerPrCommentRoutes(router: RouterType): void {
     res.status(500).json({ error: "Internal server error" });
   }
 
-  // Share-capable: any org member + resolve (view + comment).
+  // Share-capable: ForResource + resolve (view + comment; drop → 404).
   router.get(
     "/:id/comments",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     async (req: Request, res: Response) => {
       try {
         const { id } = prCommentParamSchema.parse(req.params);
@@ -91,7 +91,7 @@ export function registerPrCommentRoutes(router: RouterType): void {
   router.post(
     "/:id/comments",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     requireJsonContentType,
     async (req: Request, res: Response) => {
       try {

@@ -264,8 +264,12 @@ export async function listInboundShares(input: {
   isAdmin: boolean;
 }): Promise<ShareGrantDto[]> {
   const where = input.isAdmin
-    ? { granteeOrgId: input.sessionOrgId }
-    : { granteeOrgId: input.sessionOrgId, grantedToUserId: input.userId };
+    ? { granteeOrgId: input.sessionOrgId, status: ShareGrantStatus.ACTIVE }
+    : {
+        granteeOrgId: input.sessionOrgId,
+        grantedToUserId: input.userId,
+        status: ShareGrantStatus.ACTIVE,
+      };
 
   const grants = await prisma.shareGrant.findMany({
     where,

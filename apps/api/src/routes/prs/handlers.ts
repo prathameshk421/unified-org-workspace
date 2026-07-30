@@ -192,7 +192,15 @@ export async function submitReviewHandler(req: Request, res: Response): Promise<
 
 export async function listVersionsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const versions = await prService.listVersions(requirePrId(req), req.orgId!);
+    const prId = requirePrId(req);
+    const resolved = await resolvePrAccess({
+      userId: req.auth!.userId,
+      role: req.auth!.role,
+      sessionOrgId: req.orgId!,
+      prId,
+    });
+    const ownerOrgId = resolved.pr.orgId;
+    const versions = await prService.listVersions(prId, ownerOrgId);
     res.json(versions);
   } catch (error) {
     handleError(res, error);
@@ -207,7 +215,15 @@ export async function getVersionDiffHandler(req: Request, res: Response): Promis
       return;
     }
 
-    const diff = await prService.getVersionDiff(requirePrId(req), req.orgId!, versionNumber);
+    const prId = requirePrId(req);
+    const resolved = await resolvePrAccess({
+      userId: req.auth!.userId,
+      role: req.auth!.role,
+      sessionOrgId: req.orgId!,
+      prId,
+    });
+    const ownerOrgId = resolved.pr.orgId;
+    const diff = await prService.getVersionDiff(prId, ownerOrgId, versionNumber);
     res.json(diff);
   } catch (error) {
     handleError(res, error);

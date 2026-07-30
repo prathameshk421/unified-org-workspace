@@ -23,8 +23,8 @@ Verified against:
 | 6 | Shared capability | View + comment only regardless of home role. No mutate / upload / PR review / transition. |
 | 7 | Eve / Frank | Eve → Globex `SUPPORT_AGENT` (receives Acme shares). Frank → Acme `CROSS_ORG_GUEST`; **assignee-only** visibility (no same-org `ShareGrant`). |
 | 8 | Child `orgId` | `TicketComment` / `PrComment` / attachments always use **resource owner orgId**. Optional `authorOrgId` on `PrComment` for display. |
-| 9 | Read middleware | Shared GET/comment/download use `requireAuth` + `requireOrgAccess` (any role) + resolver. Do **not** widen `PR_READER_ROLES` to add `SUPPORT_AGENT` for in-org PR listing. Own-org PR list stays `PR_MUTATOR_ROLES`. |
-| 10 | Feature flags | Owner org’s `commentsEnabled` / `attachmentsEnabled` on the shared path. |
+| 9 | Read middleware | Share-capable resource reads (ticket/PR GET, versions/diff, comments list/create, attachment list/meta/download) use `requireAuth` + `requireOrgAccessForResource` + resolver. Do **not** widen `PR_READER_ROLES` to add `SUPPORT_AGENT` for in-org PR listing. Own-org PR list stays `PR_MUTATOR_ROLES`. |
+| 10 | Feature flags | Owner `commentsEnabled` blocks shared **comments**. Owner `attachmentsEnabled` blocks shared **uploads** only; list/meta/download remain allowed when access resolves. |
 | 11 | Connection re-request | Canonical `orgAId < orgBId`; `REJECTED`/`REVOKED` → update in place to `PENDING`. |
 | 12 | Same-org share | **Forbidden** — `400 same_org_share_not_supported`. `orgConnectionId` is **NOT NULL** always. |
 
@@ -202,8 +202,8 @@ Demo password remains `password123` for `*@example.com` / seeded org emails.
 7. Partial unique allows re-share after revoke (one ACTIVE; prior REVOKED retained).
 8. `CROSS_ORG_GUEST` (Frank) lists/sees assignee-only tickets; no same-org `ShareGrant`.
 9. Recipients picker returns `{ userId, name, initials }` with **no email**; non-mutator → 403.
-10. Owner feature flags (`commentsEnabled` / `attachmentsEnabled`) apply on the shared path.
-11. BOLA matrix covered by automated tests (Dave session scoping, live membership drop, unshared siblings, etc.).
+10. Owner `commentsEnabled` blocks shared comments; owner `attachmentsEnabled` blocks shared **uploads** only (list/meta/download still allowed when access resolves). See [product-bola-gate.md](./product-bola-gate.md).
+11. BOLA matrix covered by automated tests (Dave session scoping, live membership drop, unshared siblings, product attack matrix via `pnpm test:bola`). See [bola-tests.md](./bola-tests.md).
 12. `pnpm typecheck` and `pnpm lint` pass.
 
 ### Verification commands
@@ -232,7 +232,7 @@ Covered by integration suites under `apps/api/tests/integration/`:
 | 4 | Revoke → re-share → one ACTIVE + prior REVOKED | `item-shares-tickets` |
 | 5 | Same-org share → 400; `orgConnectionId` NOT NULL (API + DB CHECK) | `item-shares-tickets` |
 | 6 | Remove grantee membership → next access 404 | `ticket-share-bola-matrix` |
-| 7 | Owner `commentsEnabled=false` blocks shared comment | `ticket-share-bola-matrix`, `pr-comments` |
+| 7 | Owner `commentsEnabled=false` blocks shared comment; `attachmentsEnabled=false` blocks shared **upload** only (download still OK) | `ticket-share-bola-matrix`, `pr-comments`, `product-bola/nested-id-confusion` |
 | 8 | Shared attachment download OK; unshared sibling 404 | `ticket-share-bola-matrix` |
 | 9 | REJECTED → re-request → one canonical connection row | `org-connections` |
 | 10 | Recipients picker: non-mutator 403; no email | `org-connections` |

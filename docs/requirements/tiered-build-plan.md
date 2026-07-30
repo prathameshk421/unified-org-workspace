@@ -21,8 +21,8 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 
 ### Required automated tests
 
-- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return 403/404 _(full resource-ID test requires Tier 2 tickets/PRs; auth-layer org scoping + switch-org BOLA covered by Newman)_
-- **RBAC:** unauthenticated → 401; wrong role / no active org → 403 — Newman `/rbac` probes ([rbac-middleware.md](./rbac-middleware.md))
+- **BOLA / isolation test:** authenticated request from Org A attempting to access an Org B resource by ID (direct API call with manipulated ID) → must return **404** for foreign resource IDs (exact; see [bola-tests.md](./bola-tests.md)). Auth-layer switch-org BOLA covered by Vitest + Newman smoke.
+- **RBAC:** unauthenticated → 401; wrong role / no active org → 403 — Vitest + Newman `/rbac` probes ([rbac-middleware.md](./rbac-middleware.md))
 - **Session sync test:** login on one dashboard is recognized as authenticated on the other
 - **Token lifecycle / revocation test:** logout-everywhere invalidates tokens issued before the logout across both dashboards
 - **Audit append-only test:** an `UPDATE` or `DELETE` attempt against the audit log table fails at the DB permission level, not just application logic
@@ -72,6 +72,7 @@ These are called out explicitly in the brief as required and tested. No Tier 2 w
 
 - Ticket/PR CRUD tests scoped per org (isolation extended to cover the cross-org share path)
 - Cross-org share test: external/shared user can access only the shared item, confirmed to be blocked from all other org data
+- **Product BOLA gate (`pnpm test:bola`):** uncheatable registry (`EXPECTED_CELL_COUNT` literal), soft-assert ban, exact 404/403 pins, ownerDb post-conditions, path-locked PR versions/diff share view — see [product-bola-gate.md](./product-bola-gate.md) and [bola-tests.md](./bola-tests.md)
 - **AI leak test:** digest generation for a user must never include data from an org they don't belong to or that wasn't explicitly shared with them
 - Approval workflow test: PR only transitions to "approved" once the configured N-approval threshold is met
 - Webhook signature verification test (rejects unsigned/invalid payloads)

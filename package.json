@@ -12,6 +12,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:integration": "pnpm --filter @unified/api test:integration",
+    "test:bola": "pnpm --filter @unified/api test:bola",
+    "test:product-security": "pnpm test:bola",
     "test:auth": "newman run postman/unified-org-identity-auth.postman_collection.json --env-var baseUrl=http://localhost:4000",
     "test:e2e": "playwright test",
     "format": "prettier --write .",

@@ -4,10 +4,6 @@ import { ownerDb } from "../support/db.js";
 import { cleanupRunFixtures, createOrg, createUser } from "../support/fixtures.js";
 import { loginAgent } from "../support/http.js";
 
-function expectIsolationDenied(status: number): void {
-  expect([403, 404]).toContain(status);
-}
-
 describe("PR isolation", () => {
   afterAll(async () => {
     await cleanupRunFixtures();
@@ -33,7 +29,8 @@ describe("PR isolation", () => {
       .expect(201);
 
     const res = await carolClient.get(`/prs/${created.body.id}`);
-    expectIsolationDenied(res.status);
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(res.body)).not.toContain("Acme-only PR");
   });
 
   it("rejects cross-org PATCH /prs/:id", async () => {
@@ -55,11 +52,32 @@ describe("PR isolation", () => {
       .send({ title: "Immutable from Globex" })
       .expect(201);
 
+    const before = await ownerDb.pullRequest.findUniqueOrThrow({
+      where: { id: created.body.id },
+      select: {
+        title: true,
+        status: true,
+        description: true,
+        currentVersion: true,
+      },
+    });
+
     const res = await carolClient
       .patch(`/prs/${created.body.id}`)
       .set("Content-Type", "application/json")
       .send({ title: "Hijacked" });
-    expectIsolationDenied(res.status);
+    expect(res.status).toBe(404);
+
+    const after = await ownerDb.pullRequest.findUniqueOrThrow({
+      where: { id: created.body.id },
+      select: {
+        title: true,
+        status: true,
+        description: true,
+        currentVersion: true,
+      },
+    });
+    expect(after).toEqual(before);
   });
 
   it("rejects cross-org POST /prs/:id/reviews", async () => {
@@ -93,11 +111,20 @@ describe("PR isolation", () => {
       .send({ to: PrStatus.IN_REVIEW })
       .expect(200);
 
+    const reviewCountBefore = await ownerDb.prReview.count({
+      where: { pullRequestId: created.body.id },
+    });
+
     const res = await carolClient
       .post(`/prs/${created.body.id}/reviews`)
       .set("Content-Type", "application/json")
       .send({ decision: PrReviewDecision.APPROVE });
-    expectIsolationDenied(res.status);
+    expect(res.status).toBe(404);
+
+    const reviewCountAfter = await ownerDb.prReview.count({
+      where: { pullRequestId: created.body.id },
+    });
+    expect(reviewCountAfter).toBe(reviewCountBefore);
   });
 
   it("lists only PRs from the active org", async () => {

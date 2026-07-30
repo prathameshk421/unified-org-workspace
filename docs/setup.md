@@ -60,7 +60,19 @@
 
 With the API running (`pnpm --filter @unified/api dev`), test auth via curl or Postman. See [requirements/identity-auth.md](./requirements/identity-auth.md).
 
-Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman, 63 requests / 87 assertions: identity, RBAC, tickets BOLA+RBAC) with API on port 4000.
+Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman complementary smoke: identity, RBAC, tickets BOLA) with API on port 4000. Newman is **not** the product BOLA gate exit criterion.
+
+## API integration / product BOLA gate
+
+Requires Postgres migrated (`pnpm --filter @unified/db exec prisma migrate deploy`) and the same local `DATABASE_URL` / `DATABASE_APP_URL` as in [AGENTS.md](../AGENTS.md).
+
+```bash
+pnpm test:bola              # Core Product Security Gate (exact allowlist)
+pnpm test:product-security  # alias for test:bola
+pnpm test:integration       # full API integration suite
+```
+
+See [requirements/bola-tests.md](./requirements/bola-tests.md) and [requirements/product-bola-gate.md](./requirements/product-bola-gate.md).
 
 ## Common commands
 
@@ -68,7 +80,8 @@ Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](..
 pnpm lint          # ESLint across workspace
 pnpm typecheck     # TypeScript across workspace
 pnpm build         # Production build for all apps/packages
-pnpm test          # Test placeholder (no tests yet)
+pnpm test          # Package unit tests (turbo)
+pnpm test:bola     # Product BOLA security gate
 ```
 
 ## Monorepo layout

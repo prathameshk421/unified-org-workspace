@@ -37,10 +37,10 @@ prsRoutes.post("/", requireJsonContentType, ...prMutatorMiddleware, createPrHand
 prsRoutes.get("/", ...prMutatorMiddleware, listPrsHandler);
 prsRoutes.get(
   "/:id/versions/:versionNumber/diff",
-  ...prMutatorMiddleware,
+  ...prShareCapableRead,
   getVersionDiffHandler,
 );
-prsRoutes.get("/:id/versions", ...prMutatorMiddleware, listVersionsHandler);
+prsRoutes.get("/:id/versions", ...prShareCapableRead, listVersionsHandler);
 prsRoutes.post(
   "/:id/transition",
   requireJsonContentType,

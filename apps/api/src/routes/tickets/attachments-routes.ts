@@ -17,6 +17,7 @@ import { singleFileUpload } from "../../middleware/upload.js";
 import {
   requireAuth,
   requireOrgAccess,
+  requireOrgAccessForResource,
   requireRole,
 } from "../identity/auth/middleware.js";
 import {
@@ -107,11 +108,11 @@ export function registerAttachmentRoutes(router: RouterType): void {
     res.status(500).json({ error: "Internal server error" });
   }
 
-  // List / meta / download: share-capable via resolveTicketAccess
+  // List / meta / download: share-capable (ForResource + resolveTicketAccess)
   router.get(
     "/tickets/:ticketId/attachments",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     async (req: Request, res: Response) => {
       try {
         const { ticketId } = ticketIdParamSchema.parse(req.params);
@@ -192,7 +193,7 @@ export function registerAttachmentRoutes(router: RouterType): void {
   router.get(
     "/tickets/:ticketId/attachments/:attachmentId",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     async (req: Request, res: Response) => {
       try {
         const params = attachmentIdParamSchema.parse(req.params);
@@ -213,7 +214,7 @@ export function registerAttachmentRoutes(router: RouterType): void {
   router.get(
     "/tickets/:ticketId/attachments/:attachmentId/download",
     requireAuth,
-    requireOrgAccess,
+    requireOrgAccessForResource,
     async (req: Request, res: Response) => {
       try {
         const params = attachmentIdParamSchema.parse(req.params);

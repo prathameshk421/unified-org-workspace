@@ -222,25 +222,44 @@ describe("ticket share BOLA matrix", () => {
       .attach("file", Buffer.from("nope"), "nope.txt")
       .expect(404);
 
-    // PR mutator role gate → 403 for SUPPORT_AGENT; strict getOrg* → 404 for reviewers.
-    // Either denies elevation above view+comment.
-    const patchPr = await eveClient
+    // Eve is SUPPORT_AGENT → PR mutator role gate → exact 403 insufficient_role.
+    const prBefore = await ownerDb.pullRequest.findUniqueOrThrow({
+      where: { id: sharedPr.prId },
+      select: { title: true, status: true, description: true, currentVersion: true },
+    });
+
+    await eveClient
       .patch(`/prs/${sharedPr.prId}`)
       .set("Content-Type", "application/json")
-      .send({ title: "Hijack PR" });
-    expect([403, 404]).toContain(patchPr.status);
+      .send({ title: "Hijack PR" })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("insufficient_role");
+      });
 
-    const transition = await eveClient
+    await eveClient
       .post(`/prs/${sharedPr.prId}/transition`)
       .set("Content-Type", "application/json")
-      .send({ to: PrStatus.IN_REVIEW });
-    expect([403, 404]).toContain(transition.status);
+      .send({ to: PrStatus.IN_REVIEW })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("insufficient_role");
+      });
 
-    const review = await eveClient
+    await eveClient
       .post(`/prs/${sharedPr.prId}/reviews`)
       .set("Content-Type", "application/json")
-      .send({ decision: PrReviewDecision.APPROVE });
-    expect([403, 404]).toContain(review.status);
+      .send({ decision: PrReviewDecision.APPROVE })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("insufficient_role");
+      });
+
+    const prAfter = await ownerDb.pullRequest.findUniqueOrThrow({
+      where: { id: sharedPr.prId },
+      select: { title: true, status: true, description: true, currentVersion: true },
+    });
+    expect(prAfter).toEqual(prBefore);
   });
 
   it("14. Guest (Frank) list = assignee only; unassigned tickets 404", async () => {
