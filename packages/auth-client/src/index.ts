@@ -38,6 +38,8 @@ export interface AuthClient {
   refresh(): Promise<void>;
   me(): Promise<MeResponse>;
   switchOrg(input: SwitchOrgRequest): Promise<SwitchOrgResponse>;
+  request<T>(path: string, init?: RequestInit): Promise<T>;
+  requestBlob(path: string): Promise<Blob>;
 }
 
 const NO_RETRY_PATHS = new Set(["/auth/refresh", "/auth/login", "/auth/register"]);
@@ -73,7 +75,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
       credentials: "include",
       cache: "no-store",
       headers: {
-        "Content-Type": "application/json",
+        ...(init?.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...init?.headers,
       },
     });
@@ -110,6 +114,44 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     }
 
     return parseJson<T>(response);
+  }
+
+  async function requestBlob(path: string): Promise<Blob> {
+    const response = await rawRequest(path);
+
+    if (response.status === 401 && !NO_RETRY_PATHS.has(path)) {
+      try {
+        await refreshSingleFlight();
+      } catch {
+        throw new AuthError("Session expired", 401, "session_expired");
+      }
+
+      const retry = await rawRequest(path);
+      if (!retry.ok) {
+        const contentType = retry.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          await parseJson(retry);
+        }
+        throw new AuthError(
+          `Request failed with status ${retry.status}`,
+          retry.status,
+        );
+      }
+      return retry.blob();
+    }
+
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        await parseJson(response);
+      }
+      throw new AuthError(
+        `Request failed with status ${response.status}`,
+        response.status,
+      );
+    }
+
+    return response.blob();
   }
 
   async function logoutWithRefresh(
@@ -177,5 +219,8 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
         body: JSON.stringify(input),
       });
     },
+
+    request,
+    requestBlob,
   };
 }

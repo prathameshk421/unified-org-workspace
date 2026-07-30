@@ -15,4 +15,4 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export { PrismaClient };
-export { OrgRole, OrgConnectionStatus } from "@prisma/client";
+export { OrgRole, OrgConnectionStatus, TicketStatus } from "@prisma/client";

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
-import type { OrgRole } from "@unified/types";
+import type { OrgRole, TicketStatus } from "@unified/types";
 import { ownerDb } from "./db.js";
 
 export const RUN_TAG = `vtest-${randomUUID()}`;
@@ -111,6 +111,44 @@ export async function createPendingMembership(input: {
   });
 }
 
+export async function createTicket(input: {
+  orgId: string;
+  createdById: string;
+  title?: string;
+  status?: TicketStatus;
+  assigneeId?: string | null;
+}): Promise<{
+  id: string;
+  orgId: string;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  createdById: string;
+  assigneeId: string | null;
+}> {
+  const ticket = await ownerDb.ticket.create({
+    data: {
+      orgId: input.orgId,
+      createdById: input.createdById,
+      title: input.title ?? `Ticket ${randomUUID().slice(0, 8)}`,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.assigneeId !== undefined
+        ? { assigneeId: input.assigneeId }
+        : {}),
+    },
+  });
+
+  return {
+    id: ticket.id,
+    orgId: ticket.orgId,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status as TicketStatus,
+    createdById: ticket.createdById,
+    assigneeId: ticket.assigneeId,
+  };
+}
+
 export async function cleanupRunFixtures(): Promise<void> {
   const userIds = [...trackedUserIds];
   const orgIds = [...trackedOrgIds];
@@ -118,9 +156,18 @@ export async function cleanupRunFixtures(): Promise<void> {
   // HIGH-RISK: authorId/reviewerId are Restrict — must delete PRs before users
   if (orgIds.length > 0) {
     await ownerDb.pullRequest.deleteMany({ where: { orgId: { in: orgIds } } });
+    await ownerDb.ticket.deleteMany({ where: { orgId: { in: orgIds } } });
   }
 
   if (userIds.length > 0) {
+    await ownerDb.ticket.deleteMany({
+      where: {
+        OR: [
+          { createdById: { in: userIds } },
+          { assigneeId: { in: userIds } },
+        ],
+      },
+    });
     await ownerDb.auditLog.deleteMany({ where: { userId: { in: userIds } } });
     await ownerDb.user.deleteMany({ where: { id: { in: userIds } } });
   }

@@ -1,30 +1,53 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const prisma = new PrismaClient();
 
 const DEMO_PASSWORD = "password123";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const attachmentsRoot = path.resolve(__dirname, "../../../data/attachments");
 
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
   const acme = await prisma.organization.upsert({
     where: { slug: "acme" },
-    update: { name: "Acme Corp" },
+    update: {
+      name: "Acme Corp",
+      settings: {
+        timezone: "America/New_York",
+        featureFlags: { commentsEnabled: true, attachmentsEnabled: true },
+      },
+    },
     create: {
       name: "Acme Corp",
       slug: "acme",
-      settings: { timezone: "America/New_York" },
+      settings: {
+        timezone: "America/New_York",
+        featureFlags: { commentsEnabled: true, attachmentsEnabled: true },
+      },
     },
   });
 
   const globex = await prisma.organization.upsert({
     where: { slug: "globex" },
-    update: { name: "Globex Inc" },
+    update: {
+      name: "Globex Inc",
+      settings: {
+        timezone: "America/Los_Angeles",
+        featureFlags: { commentsEnabled: true, attachmentsEnabled: false },
+      },
+    },
     create: {
       name: "Globex Inc",
       slug: "globex",
-      settings: { timezone: "America/Los_Angeles" },
+      settings: {
+        timezone: "America/Los_Angeles",
+        featureFlags: { commentsEnabled: true, attachmentsEnabled: false },
+      },
     },
   });
 
@@ -249,6 +272,114 @@ async function main() {
     },
   });
 
+  const ticketSeeds = [
+    {
+      orgId: acme.id,
+      title: "Billing discrepancy",
+      status: "OPEN" as const,
+      createdById: alice.id,
+      assigneeId: bob.id,
+    },
+    {
+      orgId: acme.id,
+      title: "Password reset stuck",
+      status: "IN_PROGRESS" as const,
+      createdById: bob.id,
+      assigneeId: bob.id,
+    },
+    {
+      orgId: acme.id,
+      title: "Feature request: SSO",
+      status: "RESOLVED" as const,
+      createdById: alice.id,
+      assigneeId: null,
+    },
+    {
+      orgId: globex.id,
+      title: "VPN access",
+      status: "OPEN" as const,
+      createdById: carol.id,
+      assigneeId: null,
+    },
+    {
+      orgId: globex.id,
+      title: "Invoice export failing",
+      status: "CLOSED" as const,
+      createdById: carol.id,
+      assigneeId: carol.id,
+    },
+  ];
+
+  for (const ticket of ticketSeeds) {
+    await prisma.ticket.deleteMany({
+      where: { orgId: ticket.orgId, title: ticket.title },
+    });
+  }
+
+  await prisma.ticket.createMany({ data: ticketSeeds });
+
+  const billingTicket = await prisma.ticket.findFirstOrThrow({
+    where: { orgId: acme.id, title: "Billing discrepancy" },
+  });
+
+  await prisma.ticketComment.deleteMany({
+    where: { ticketId: billingTicket.id },
+  });
+
+  await prisma.ticketComment.createMany({
+    data: [
+      {
+        ticketId: billingTicket.id,
+        orgId: acme.id,
+        authorId: alice.id,
+        body: "Customer reported double charge on invoice #4421.",
+      },
+      {
+        ticketId: billingTicket.id,
+        orgId: acme.id,
+        authorId: bob.id,
+        body: "Pulling billing logs — will update within the hour.",
+      },
+      {
+        ticketId: billingTicket.id,
+        orgId: acme.id,
+        authorId: eve.id,
+        body: "I can confirm the duplicate line item on the PDF they sent.",
+      },
+    ],
+  });
+
+  await prisma.ticketAttachment.deleteMany({
+    where: { ticketId: billingTicket.id },
+  });
+
+  const attachmentContent = Buffer.from(
+    "Invoice #4421 summary\nDouble charge detected on line item 3.\n",
+    "utf8",
+  );
+  const attachment = await prisma.ticketAttachment.create({
+    data: {
+      ticketId: billingTicket.id,
+      orgId: acme.id,
+      uploadedById: bob.id,
+      fileName: "invoice-summary.txt",
+      mimeType: "text/plain",
+      sizeBytes: attachmentContent.length,
+      storageKey: "pending",
+    },
+  });
+
+  const storageKey = `${acme.id}/${billingTicket.id}/${attachment.id}_invoice-summary.txt`;
+  await prisma.ticketAttachment.update({
+    where: { id: attachment.id },
+    data: { storageKey },
+  });
+
+  await mkdir(path.join(attachmentsRoot, acme.id, billingTicket.id), {
+    recursive: true,
+  });
+  await writeFile(path.join(attachmentsRoot, storageKey), attachmentContent);
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -297,6 +428,13 @@ async function main() {
     `  - Acme: 1 DRAFT (alice), 1 IN_REVIEW with 2 reviewers (alice, requiresApprovals: 2)`,
   );
   console.log(`  - Globex: 1 DRAFT (carol)`);
+  console.log("\nSample tickets:");
+  for (const ticket of ticketSeeds) {
+    const orgName = ticket.orgId === acme.id ? "Acme" : "Globex";
+    console.log(`  - [${orgName}] ${ticket.title} (${ticket.status})`);
+  }
+  console.log("\nSample comments: 3 on Acme 'Billing discrepancy'");
+  console.log(`Sample attachment: ${storageKey}`);
 }
 
 main()

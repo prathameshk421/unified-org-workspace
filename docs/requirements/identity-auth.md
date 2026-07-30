@@ -102,7 +102,7 @@ npx newman run postman/unified-org-identity-auth.postman_collection.json \
   --env-var baseUrl=https://unified-org-api-xxxxx-uc.a.run.app
 ```
 
-The collection has **16 requests** and **20 assertions**: health, login, `/auth/me`, BOLA `switch-org` 403, switch-org, refresh, logout (with cookie clear), post-logout 401, non-JSON login 415, logout-everywhere, and post-logout-everywhere 401 on `/auth/me` and `/auth/refresh`.
+The collection has **63 requests** and **87 assertions**: identity auth (health, login, `/auth/me`, BOLA `switch-org`, refresh, logout, logout-everywhere, non-JSON 415), RBAC role probes, and **Tickets BOLA + RBAC** (cross-org 404, list isolation, reviewer create, guest read+comment / blocked create+upload, agent settings deny, anon 401).
 
 Requires seeded demo users (`pnpm --filter @unified/db db:seed` locally, or the **Seed Demo Data** workflow in production).
 

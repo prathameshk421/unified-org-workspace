@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const envPath = resolve(import.meta.dirname, "../../../.env");
+const envPath = resolve(import.meta.dirname, "../../../../.env");
 if (existsSync(envPath)) {
   config({ path: envPath, override: false });
 }
@@ -13,6 +13,7 @@ process.env.DATABASE_APP_URL ??= "postgresql://unified_app:unified_app@localhost
 process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/unified_org";
 process.env.COOKIE_SECURE ??= "false";
 process.env.AUTH_RATE_LIMIT_MAX ??= "1000";
+process.env.ATTACHMENTS_DIR ??= `${process.env.TMPDIR ?? "/tmp"}/unified-attachments-test-${process.pid}`;
 
 function assertLocalDatabase(url: string, label: string): void {
   let host: string;
