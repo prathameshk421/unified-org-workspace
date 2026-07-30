@@ -186,6 +186,7 @@ export function AuthProvider({ apiBaseUrl, children }: AuthProviderProps) {
       if (!client) throw new Error("NEXT_PUBLIC_API_URL / apiBaseUrl is required");
       await client.login(input);
       const me = await client.me();
+      hydrateGeneration.current += 1;
       applyMe(me);
       broadcast({ type: "LOGIN" });
     },
@@ -196,6 +197,7 @@ export function AuthProvider({ apiBaseUrl, children }: AuthProviderProps) {
     try {
       if (client) await client.logout();
     } finally {
+      hydrateGeneration.current += 1;
       clearSession();
       broadcast({ type: "LOGOUT" });
     }
@@ -205,6 +207,7 @@ export function AuthProvider({ apiBaseUrl, children }: AuthProviderProps) {
     try {
       if (client) await client.logoutEverywhere();
     } finally {
+      hydrateGeneration.current += 1;
       clearSession();
       broadcast({ type: "LOGOUT" });
     }
@@ -215,6 +218,7 @@ export function AuthProvider({ apiBaseUrl, children }: AuthProviderProps) {
       if (!client) throw new Error("NEXT_PUBLIC_API_URL / apiBaseUrl is required");
       await client.switchOrg({ orgId });
       const me = await client.me();
+      hydrateGeneration.current += 1;
       applyMe(me);
       broadcast({ type: "ORG_SWITCHED" });
     },

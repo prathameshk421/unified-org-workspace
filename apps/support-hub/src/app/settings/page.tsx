@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { OrgRole, type OrgSettings } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { AppShell } from "../../components/app-shell";
 import { ProtectedRoute } from "../../components/auth-guards";
 import {
   getOrgSettings,
@@ -86,46 +86,39 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-muted">
-        <p className="text-muted">Loading settings…</p>
-      </main>
+      <AppShell>
+        <p className="font-sans text-muted">Loading settings…</p>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
-      <div className="mx-auto max-w-xl">
-        <Link href="/" className="text-sm text-brand-600 underline">
-          ← Home
-        </Link>
-        <h1 className="mt-4 text-3xl font-semibold text-foreground">
+    <AppShell>
+      <div className="mx-auto max-w-lg">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
           Organization settings
         </h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-1 font-sans text-sm text-muted">
           {activeOrg?.orgName ?? "Active organization"}
         </p>
-        <p className="mt-3 flex flex-wrap gap-4 text-sm">
-          <Link
-            href="/settings/connections"
-            className="text-brand-600 underline"
-          >
-            Org connections
-          </Link>
-          <Link href="/settings/shares" className="text-brand-600 underline">
-            Share grants
-          </Link>
-        </p>
 
-        {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-        {message ? <p className="mt-4 text-sm text-green-700">{message}</p> : null}
+        {error ? (
+          <p className="mt-4 font-sans text-sm text-brand-700">{error}</p>
+        ) : null}
+        {message ? (
+          <p className="mt-4 font-sans text-sm text-brand-600">{message}</p>
+        ) : null}
 
         {isOrgAdmin ? (
           <form
             onSubmit={(event) => void onSave(event)}
-            className="mt-6 space-y-4 rounded-lg border border-border bg-surface p-6"
+            className="mt-8 space-y-5 border-t border-border pt-8"
           >
             <div>
-              <label htmlFor="timezone" className="mb-1 block text-sm text-muted">
+              <label
+                htmlFor="timezone"
+                className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
+              >
                 Timezone
               </label>
               <input
@@ -135,54 +128,70 @@ function SettingsContent() {
                 value={timezone}
                 onChange={(event) => setTimezone(event.target.value)}
                 placeholder="America/New_York"
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-foreground">
+            <label className="flex items-center gap-2.5 font-sans text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={commentsEnabled}
                 onChange={(event) => setCommentsEnabled(event.target.checked)}
+                className="rounded border-border"
               />
               Comments enabled
             </label>
-            <label className="flex items-center gap-2 text-sm text-foreground">
+            <label className="flex items-center gap-2.5 font-sans text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={attachmentsEnabled}
                 onChange={(event) =>
                   setAttachmentsEnabled(event.target.checked)
                 }
+                className="rounded border-border"
               />
               Attachments enabled
             </label>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save settings"}
-            </Button>
+            <div className="pt-2">
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save settings"}
+              </Button>
+            </div>
           </form>
         ) : (
-          <div className="mt-6 space-y-3 rounded-lg border border-border bg-surface p-6 text-sm">
-            <p>
-              <span className="text-muted">Timezone:</span>{" "}
-              {settings?.timezone ?? "Not set"}
-            </p>
-            <p>
-              <span className="text-muted">Comments:</span>{" "}
-              {settings?.featureFlags.commentsEnabled ? "Enabled" : "Disabled"}
-            </p>
-            <p>
-              <span className="text-muted">Attachments:</span>{" "}
-              {settings?.featureFlags.attachmentsEnabled
-                ? "Enabled"
-                : "Disabled"}
-            </p>
-            <p className="text-muted">
+          <div className="mt-8 space-y-4 border-y border-border py-8 font-sans text-sm">
+            <div>
+              <p className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+                Timezone
+              </p>
+              <p className="mt-1 font-serif text-foreground">
+                {settings?.timezone ?? "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+                Comments
+              </p>
+              <p className="mt-1 font-serif text-foreground">
+                {settings?.featureFlags.commentsEnabled ? "Enabled" : "Disabled"}
+              </p>
+            </div>
+            <div>
+              <p className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+                Attachments
+              </p>
+              <p className="mt-1 font-serif text-foreground">
+                {settings?.featureFlags.attachmentsEnabled
+                  ? "Enabled"
+                  : "Disabled"}
+              </p>
+            </div>
+            <p className="pt-2 text-muted">
               Only organization admins can change these settings.
             </p>
           </div>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
 

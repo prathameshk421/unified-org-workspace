@@ -2,6 +2,7 @@
 
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { ArrowRight, GitPullRequest } from "lucide-react";
 import Link from "next/link";
 import { canMutatePrs, canViewAudit } from "@/lib/roles";
 
@@ -21,94 +22,74 @@ export function AuthDashboard({
   const showAudit = canViewAudit(activeOrg?.role);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface-muted px-6">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6 py-16">
       <div className="w-full max-w-lg text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-brand-600">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-raised px-3 py-1 font-sans text-xs font-medium text-muted">
+          <GitPullRequest className="h-3.5 w-3.5 text-brand-600" aria-hidden="true" />
           Unified Org Workspace
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold text-foreground">{title}</h1>
-        <p className="mt-3 text-muted">{subtitle}</p>
+        </div>
+        <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground">
+          {title}
+        </h1>
+        <p className="mx-auto mt-3 max-w-md font-serif text-base text-muted">{subtitle}</p>
 
-        <div className="mt-8 space-y-3 rounded-lg border border-border bg-surface p-6 text-left">
-          <p className="text-sm text-muted">Signed in as</p>
-          <p className="text-lg font-medium text-foreground" data-testid="auth-status">
+        <div className="mt-10 space-y-3 border-y border-border py-8 text-left">
+          <p className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+            Signed in as
+          </p>
+          <p className="font-serif text-lg font-semibold text-foreground" data-testid="auth-status">
             {user?.email}
           </p>
-          <p className="text-sm text-muted">Active organization</p>
-          <p className="font-medium text-foreground" data-testid="active-org">
+          <p className="pt-3 font-sans text-xs font-medium uppercase tracking-wider text-muted">
+            Active organization
+          </p>
+          <p className="font-serif font-medium text-foreground" data-testid="active-org">
             {activeOrg?.orgName ?? activeOrg?.orgId ?? "None"}
           </p>
-          <div className="pt-2">
-            <label className="mb-1 block text-sm text-muted">Organization</label>
-            <OrgSwitcher className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" />
+          <div className="pt-4">
+            <label className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted">
+              Organization
+            </label>
+            <OrgSwitcher className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200" />
           </div>
         </div>
 
-        {showPrs || showAudit ? (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            {showPrs ? (
-              <Link href="/prs">
-                <Button type="button" variant="secondary" data-testid="nav-prs">
-                  Pull requests
-                </Button>
-              </Link>
-            ) : null}
-            <Link href="/shared/prs">
-              <Button
-                type="button"
-                variant="secondary"
-                data-testid="nav-shared-prs"
-              >
-                Shared with me
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {showPrs ? (
+            <Link href="/prs">
+              <Button type="button" data-testid="nav-prs">
+                Pull requests
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </Link>
-            {showAudit ? (
-              <Link href="/audit">
-                <Button type="button" variant="secondary" data-testid="nav-audit">
-                  Audit log
-                </Button>
-              </Link>
-            ) : null}
-            <Link href="/settings/connections">
-              <Button
-                type="button"
-                variant="secondary"
-                data-testid="nav-connections"
-              >
-                Connections
+          ) : null}
+          <Link href="/shared/prs">
+            <Button type="button" variant="tertiary" data-testid="nav-shared-prs">
+              Shared with me
+            </Button>
+          </Link>
+          {showAudit ? (
+            <Link href="/audit">
+              <Button type="button" variant="tertiary" data-testid="nav-audit">
+                Audit log
               </Button>
             </Link>
-          </div>
-        ) : (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/shared/prs">
-              <Button
-                type="button"
-                variant="secondary"
-                data-testid="nav-shared-prs"
-              >
-                Shared with me
-              </Button>
-            </Link>
-            <Link href="/settings/connections">
-              <Button
-                type="button"
-                variant="secondary"
-                data-testid="nav-connections"
-              >
-                Connections
-              </Button>
-            </Link>
-          </div>
-        )}
+          ) : null}
+          <Link href="/settings/connections">
+            <Button type="button" variant="tertiary" data-testid="nav-connections">
+              Connections
+            </Button>
+          </Link>
+        </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Button type="button" data-testid="logout" onClick={() => void logout()}>
+          <Button type="button" variant="secondary" size="sm" data-testid="logout" onClick={() => void logout()}>
             Sign out
           </Button>
           <Button
             type="button"
-            variant="secondary"
+            variant="tertiary"
+            size="sm"
             data-testid="logout-everywhere"
             onClick={() => void logoutEverywhere()}
           >
@@ -117,9 +98,9 @@ export function AuthDashboard({
         </div>
 
         {siblingUrl ? (
-          <p className="mt-6 text-sm text-muted">
+          <p className="mt-8 font-sans text-sm text-muted">
             <a
-              className="text-brand-600 underline"
+              className="text-brand-600 transition-colors duration-200 hover:text-brand-700"
               href={siblingUrl}
               data-testid="sibling-dashboard-link"
             >

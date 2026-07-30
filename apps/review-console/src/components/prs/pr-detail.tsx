@@ -32,6 +32,14 @@ const TRANSITIONS: Record<PrStatus, { label: string; to: PrStatus }[]> = {
   [PrStatus.MERGED]: [],
 };
 
+const inputClassName =
+  "w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none";
+
+const labelClassName =
+  "mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted";
+
+const sectionClassName = "border-t border-border pt-8";
+
 function formatDate(value: string): string {
   return new Date(value).toLocaleString();
 }
@@ -256,7 +264,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
   }
 
   if (loading) {
-    return <p className="text-muted">Loading pull request…</p>;
+    return <p className="font-sans text-muted">Loading pull request…</p>;
   }
 
   if (forbidden) {
@@ -266,8 +274,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
   if (error || !pr) {
     return (
       <div className="space-y-4">
-        <p className="text-red-700">{error ?? "Pull request not found."}</p>
-        <Link href="/prs" className="text-sm text-brand-600 underline">
+        <p className="font-sans text-brand-700">{error ?? "Pull request not found."}</p>
+        <Link
+          href="/prs"
+          className="font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+        >
           Back to pull requests
         </Link>
       </div>
@@ -278,13 +289,19 @@ export function PrDetailPage({ prId }: { prId: string }) {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href={backHref} className="text-sm text-brand-600 underline">
+          <Link
+            href={backHref}
+            className="font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+          >
             ← {backLabel}
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground" data-testid="pr-title">
+          <h1
+            className="mt-3 font-serif text-3xl font-bold tracking-tight text-foreground"
+            data-testid="pr-title"
+          >
             {pr.title}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted">
+          <div className="mt-3 flex flex-wrap items-center gap-3 font-sans text-sm text-muted">
             <PrStatusBadge status={pr.status} />
             <span>Version {pr.currentVersion}</span>
             <span>
@@ -292,38 +309,44 @@ export function PrDetailPage({ prId }: { prId: string }) {
             </span>
           </div>
           {isShared && pr.sharedFromOrg ? (
-            <p className="mt-2 inline-flex rounded-full bg-brand-600/10 px-2.5 py-0.5 text-xs font-medium text-brand-600">
+            <p className="mt-3 inline-flex rounded-full bg-brand-600/10 px-2.5 py-0.5 font-sans text-xs font-medium text-brand-600">
               Shared from {pr.sharedFromOrg.orgName} · view & comment only
             </p>
           ) : null}
         </div>
       </div>
 
-      {actionError ? <p className="text-sm text-red-700">{actionError}</p> : null}
+      {actionError ? <p className="font-sans text-sm text-brand-700">{actionError}</p> : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Details</h2>
-        <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">
+      <section className={sectionClassName}>
+        <h2 className="font-serif text-xl font-semibold text-foreground">Details</h2>
+        <p className="mt-3 whitespace-pre-wrap font-serif text-sm text-foreground">
           {pr.description || "No description"}
         </p>
-        <dl className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-2">
+        <dl className="mt-4 grid gap-3 font-sans text-sm text-muted sm:grid-cols-2">
           <div>
-            <dt className="font-medium text-foreground">Author</dt>
-            <dd>{memberNameById.get(pr.authorId) ?? pr.authorId}</dd>
+            <dt className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+              Author
+            </dt>
+            <dd className="mt-1 text-foreground">
+              {memberNameById.get(pr.authorId) ?? pr.authorId}
+            </dd>
           </div>
           <div>
-            <dt className="font-medium text-foreground">Updated</dt>
-            <dd>{formatDate(pr.updatedAt)}</dd>
+            <dt className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+              Updated
+            </dt>
+            <dd className="mt-1 text-foreground">{formatDate(pr.updatedAt)}</dd>
           </div>
         </dl>
       </section>
 
       {canEdit ? (
-        <section className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Edit</h2>
+        <section className={sectionClassName}>
+          <h2 className="font-serif text-xl font-semibold text-foreground">Edit</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="edit-title" className="mb-1 block text-sm font-medium">
+              <label htmlFor="edit-title" className={labelClassName}>
                 Title
               </label>
               <input
@@ -331,11 +354,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 type="text"
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className={inputClassName}
               />
             </div>
             <div>
-              <label htmlFor="edit-description" className="mb-1 block text-sm font-medium">
+              <label htmlFor="edit-description" className={labelClassName}>
                 Description
               </label>
               <textarea
@@ -343,11 +366,11 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 rows={4}
                 value={editDescription}
                 onChange={(event) => setEditDescription(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
             <div>
-              <label htmlFor="edit-approvals" className="mb-1 block text-sm font-medium">
+              <label htmlFor="edit-approvals" className={labelClassName}>
                 Required approvals
               </label>
               <input
@@ -356,16 +379,16 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 min={1}
                 value={editApprovals}
                 onChange={(event) => setEditApprovals(Number(event.target.value))}
-                className="w-32 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
             {members.length > 0 ? (
               <div>
-                <p className="mb-2 text-sm font-medium">Reviewers</p>
+                <p className={labelClassName}>Reviewers</p>
                 <ul className="space-y-2">
                   {members.map((member) => (
                     <li key={member.id}>
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className="flex items-center gap-2 font-sans text-sm">
                         <input
                           type="checkbox"
                           checked={editReviewerIds.includes(member.id)}
@@ -393,8 +416,10 @@ export function PrDetailPage({ prId }: { prId: string }) {
       ) : null}
 
       {canMutate && TRANSITIONS[pr.status].length > 0 ? (
-        <section className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Status transitions</h2>
+        <section className={sectionClassName}>
+          <h2 className="font-serif text-xl font-semibold text-foreground">
+            Status transitions
+          </h2>
           <div className="mt-4 flex flex-wrap gap-3">
             {TRANSITIONS[pr.status].map((transition) => (
               <Button
@@ -413,14 +438,14 @@ export function PrDetailPage({ prId }: { prId: string }) {
       ) : null}
 
       {canReview ? (
-        <section className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Your review</h2>
+        <section className={sectionClassName}>
+          <h2 className="font-serif text-xl font-semibold text-foreground">Your review</h2>
           <textarea
             rows={3}
             value={reviewComment}
             onChange={(event) => setReviewComment(event.target.value)}
             placeholder="Optional comment"
-            className="mt-4 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className="mt-4 w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             data-testid="review-comment"
           />
           <div className="mt-4 flex flex-wrap gap-3">
@@ -449,14 +474,14 @@ export function PrDetailPage({ prId }: { prId: string }) {
 
       {canMutate ? <PrSharePanel prId={pr.id} /> : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Reviewers</h2>
+      <section className={sectionClassName}>
+        <h2 className="font-serif text-xl font-semibold text-foreground">Reviewers</h2>
         {pr.reviewers.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No reviewers assigned.</p>
+          <p className="mt-3 font-sans text-sm text-muted">No reviewers assigned.</p>
         ) : (
-          <ul className="mt-3 space-y-2 text-sm">
+          <ul className="mt-3 divide-y divide-border border-y border-border">
             {pr.reviewers.map((reviewer) => (
-              <li key={reviewer.userId}>
+              <li key={reviewer.userId} className="px-1 py-3 font-sans text-sm text-foreground">
                 {memberNameById.get(reviewer.userId) ?? reviewer.userId}
               </li>
             ))}
@@ -464,21 +489,27 @@ export function PrDetailPage({ prId }: { prId: string }) {
         )}
       </section>
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Reviews on current version</h2>
+      <section className={sectionClassName}>
+        <h2 className="font-serif text-xl font-semibold text-foreground">
+          Reviews on current version
+        </h2>
         {currentVersionReviews.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No reviews yet.</p>
+          <p className="mt-3 font-sans text-sm text-muted">No reviews yet.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-border">
+          <ul className="mt-3 divide-y divide-border border-y border-border">
             {currentVersionReviews.map((review) => (
-              <li key={review.id} className="py-3 text-sm">
+              <li key={review.id} className="px-1 py-3 font-sans text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">
+                  <span className="font-serif font-semibold text-foreground">
                     {memberNameById.get(review.reviewerId) ?? review.reviewerId}
                   </span>
-                  <span className="text-muted">{review.decision}</span>
+                  <span className="inline-flex rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-muted">
+                    {review.decision}
+                  </span>
                 </div>
-                {review.comment ? <p className="mt-1 text-muted">{review.comment}</p> : null}
+                {review.comment ? (
+                  <p className="mt-1 font-serif text-muted">{review.comment}</p>
+                ) : null}
                 <p className="mt-1 text-xs text-muted">{formatDate(review.createdAt)}</p>
               </li>
             ))}
@@ -486,8 +517,8 @@ export function PrDetailPage({ prId }: { prId: string }) {
         )}
       </section>
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Versions</h2>
+      <section className={sectionClassName}>
+        <h2 className="font-serif text-xl font-semibold text-foreground">Versions</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {[...pr.versions]
             .sort((a, b) => b.versionNumber - a.versionNumber)
@@ -496,10 +527,10 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 key={version.id}
                 type="button"
                 onClick={() => setSelectedVersion(version.versionNumber)}
-                className={`rounded-md px-3 py-1.5 text-sm ${
+                className={`rounded-full px-3.5 py-1.5 font-sans text-sm font-medium transition-colors duration-200 ${
                   selectedVersion === version.versionNumber
                     ? "bg-brand-600 text-white"
-                    : "border border-border bg-surface text-foreground hover:bg-surface-muted"
+                    : "border border-border bg-surface-raised text-foreground hover:bg-surface-muted"
                 }`}
                 data-testid={`version-${version.versionNumber}`}
               >
@@ -510,27 +541,25 @@ export function PrDetailPage({ prId }: { prId: string }) {
 
         {selectedVersion !== null ? (
           <div className="mt-4">
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
               Diff for version {selectedVersion}
             </h3>
             {isShared ? (
-              <p className="mt-2 text-sm text-muted">
+              <p className="mt-2 font-sans text-sm text-muted">
                 Version diffs are not available on shared access.
               </p>
             ) : !diff ? (
-              <p className="mt-2 text-sm text-muted">Loading diff…</p>
+              <p className="mt-2 font-sans text-sm text-muted">Loading diff…</p>
             ) : diff.changes.length === 0 ? (
-              <p className="mt-2 text-sm text-muted">No changes from previous version.</p>
+              <p className="mt-2 font-sans text-sm text-muted">No changes from previous version.</p>
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 divide-y divide-border border-y border-border">
                 {diff.changes.map((change) => (
-                  <li
-                    key={change.field}
-                    className="rounded-md border border-border bg-surface-muted p-3 text-sm"
-                  >
-                    <p className="font-medium text-foreground">{change.field}</p>
+                  <li key={change.field} className="px-1 py-4 font-sans text-sm">
+                    <p className="font-serif font-semibold text-foreground">{change.field}</p>
                     <p className="mt-2 text-muted">
-                      <span className="font-medium">Before:</span> {change.before || "(empty)"}
+                      <span className="font-medium text-foreground">Before:</span>{" "}
+                      {change.before || "(empty)"}
                     </p>
                     <p className="mt-1 text-foreground">
                       <span className="font-medium">After:</span> {change.after || "(empty)"}

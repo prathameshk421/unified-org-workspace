@@ -69,23 +69,20 @@ export function PrCommentsSection({ prId }: { prId: string }) {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-medium text-foreground">Comments</h2>
+    <section className="border-t border-border pt-8">
+      <h2 className="font-serif text-xl font-semibold text-foreground">Comments</h2>
       {loading ? (
-        <p className="mt-3 text-sm text-muted">Loading comments…</p>
+        <p className="mt-3 font-sans text-sm text-muted">Loading comments…</p>
       ) : comments.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">No comments yet.</p>
+        <p className="mt-3 font-sans text-sm text-muted">No comments yet.</p>
       ) : (
-        <ul className="mt-4 space-y-4">
+        <ul className="mt-4 divide-y divide-border border-y border-border">
           {comments.map((comment) => (
-            <li
-              key={comment.id}
-              className="rounded-md border border-border bg-surface-muted/40 p-3"
-            >
-              <p className="whitespace-pre-wrap text-sm text-foreground">
+            <li key={comment.id} className="px-1 py-4">
+              <p className="whitespace-pre-wrap font-serif text-sm text-foreground">
                 {comment.body}
               </p>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 font-sans text-xs text-muted">
                 {new Date(comment.createdAt).toLocaleString()}
               </p>
             </li>
@@ -104,13 +101,13 @@ export function PrCommentsSection({ prId }: { prId: string }) {
           disabled={saving}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Add a comment…"
-          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
         />
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving || !body.trim()}>
             {saving ? "Posting…" : "Post comment"}
           </Button>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="font-sans text-sm text-brand-700">{error}</p> : null}
         </div>
       </form>
     </section>

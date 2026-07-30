@@ -9,6 +9,7 @@ import {
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { Share2 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/components/auth-guards";
@@ -34,15 +35,23 @@ function ShareRow({
   onRevoke: (id: string) => void;
 }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+    <li className="flex flex-wrap items-center justify-between gap-3 px-1 py-3 font-sans text-sm transition-colors duration-200 hover:bg-surface-muted/60">
       <div>
-        <p className="font-medium text-foreground">
+        <p className="font-serif font-semibold text-foreground">
           {resourceLabel(share)} · {share.resourceId.slice(0, 8)}…
         </p>
-        <p className="text-muted">
+        <p className="mt-1 text-muted">
           Recipient {share.grantedToUserId.slice(0, 8)}… ·{" "}
-          {share.status === ShareGrantStatus.ACTIVE ? "Active" : "Revoked"} ·{" "}
-          {new Date(share.createdAt).toLocaleString()}
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+              share.status === ShareGrantStatus.ACTIVE
+                ? "bg-brand-100 text-brand-800"
+                : "bg-surface-muted text-muted"
+            }`}
+          >
+            {share.status === ShareGrantStatus.ACTIVE ? "Active" : "Revoked"}
+          </span>{" "}
+          · {new Date(share.createdAt).toLocaleString()}
         </p>
       </div>
       {share.status === ShareGrantStatus.ACTIVE ? (
@@ -122,32 +131,38 @@ function SharesAdminContent() {
   }
 
   if (loading) {
-    return <p className="text-muted">Loading shares…</p>;
+    return <p className="font-sans text-muted">Loading shares…</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/settings/connections" className="text-sm text-brand-600 underline">
+    <div>
+      <div className="mb-8">
+        <Link
+          href="/settings/connections"
+          className="font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+        >
           ← Connections
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">
+        <h1 className="mt-3 font-serif text-3xl font-bold tracking-tight text-foreground">
           Share grants
         </h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 font-sans text-sm text-muted">
           Inbound shares you can access, and outbound shares from your org
           {isOrgAdmin ? " (admin)" : ""}.
         </p>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mb-4 font-sans text-sm text-brand-700">{error}</p> : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Inbound</h2>
+      <section className="border-t border-border pt-8">
+        <h2 className="font-serif text-xl font-semibold text-foreground">Inbound</h2>
         {inbound.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No inbound shares.</p>
+          <div className="mt-6 border-y border-border py-12 text-center">
+            <Share2 className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+            <p className="mt-3 font-serif text-muted">No inbound shares.</p>
+          </div>
         ) : (
-          <ul className="mt-3 divide-y divide-border">
+          <ul className="mt-3 divide-y divide-border border-y border-border">
             {inbound.map((share) => (
               <ShareRow
                 key={share.id}
@@ -161,12 +176,15 @@ function SharesAdminContent() {
       </section>
 
       {isOrgAdmin ? (
-        <section className="rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Outbound</h2>
+        <section className="mt-8 border-t border-border pt-8">
+          <h2 className="font-serif text-xl font-semibold text-foreground">Outbound</h2>
           {outbound.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">No outbound shares.</p>
+            <div className="mt-6 border-y border-border py-12 text-center">
+              <Share2 className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+              <p className="mt-3 font-serif text-muted">No outbound shares.</p>
+            </div>
           ) : (
-            <ul className="mt-3 divide-y divide-border">
+            <ul className="mt-3 divide-y divide-border border-y border-border">
               {outbound.map((share) => (
                 <ShareRow
                   key={share.id}
@@ -179,7 +197,7 @@ function SharesAdminContent() {
           )}
         </section>
       ) : (
-        <p className="text-sm text-muted">
+        <p className="mt-8 font-sans text-sm text-muted">
           Organization admins can also view outbound shares from this org.
         </p>
       )}

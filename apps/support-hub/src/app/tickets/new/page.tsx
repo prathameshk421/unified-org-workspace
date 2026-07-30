@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { OrgRole } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { AppShell } from "../../../components/app-shell";
 import { ProtectedRoute } from "../../../components/auth-guards";
 import { createTicket } from "../../../lib/tickets-api";
 
@@ -40,31 +41,38 @@ function NewTicketForm() {
 
   if (!canMutate) {
     return (
-      <main className="min-h-screen bg-surface-muted px-6 py-10">
+      <AppShell>
         <div className="mx-auto max-w-lg text-center">
-          <p className="text-muted">You do not have permission to create tickets.</p>
-          <Link href="/tickets" className="mt-4 inline-block text-brand-600 underline">
+          <p className="font-serif text-muted">
+            You do not have permission to create tickets.
+          </p>
+          <Link
+            href="/tickets"
+            className="mt-4 inline-block font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+          >
             Back to tickets
           </Link>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
+    <AppShell>
       <div className="mx-auto max-w-lg">
-        <Link href="/tickets" className="text-sm text-brand-600 underline">
-          ← Tickets
-        </Link>
-        <h1 className="mt-2 text-3xl font-semibold text-foreground">New ticket</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
+          New ticket
+        </h1>
 
         <form
           onSubmit={(event) => void onSubmit(event)}
-          className="mt-6 space-y-4 rounded-lg border border-border bg-surface p-6"
+          className="mt-8 space-y-4 border-t border-border pt-8"
         >
           <div>
-            <label htmlFor="title" className="mb-1 block text-sm text-muted">
+            <label
+              htmlFor="title"
+              className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
+            >
               Title
             </label>
             <input
@@ -74,12 +82,15 @@ function NewTicketForm() {
               maxLength={200}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             />
           </div>
 
           <div>
-            <label htmlFor="description" className="mb-1 block text-sm text-muted">
+            <label
+              htmlFor="description"
+              className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
+            >
               Description
             </label>
             <textarea
@@ -88,25 +99,25 @@ function NewTicketForm() {
               maxLength={10000}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             />
           </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="font-sans text-sm text-brand-700">{error}</p> : null}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={submitting || !title.trim()}>
               {submitting ? "Creating…" : "Create ticket"}
             </Button>
             <Link href="/tickets">
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="tertiary">
                 Cancel
               </Button>
             </Link>
           </div>
         </form>
       </div>
-    </main>
+    </AppShell>
   );
 }
 

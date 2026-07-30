@@ -8,6 +8,7 @@ import {
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { Link2, Shield } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/components/auth-guards";
@@ -21,15 +22,15 @@ import {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    PENDING: "bg-amber-100 text-amber-800",
-    ACCEPTED: "bg-green-100 text-green-800",
-    REJECTED: "bg-gray-100 text-gray-700",
-    REVOKED: "bg-red-100 text-red-800",
+    PENDING: "bg-brand-50 text-brand-700",
+    ACCEPTED: "bg-brand-100 text-brand-800",
+    REJECTED: "bg-surface-muted text-muted",
+    REVOKED: "bg-surface-muted text-foreground",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 font-sans text-xs font-medium ${colors[status] ?? "bg-surface-muted text-muted"}`}
     >
       {status}
     </span>
@@ -159,11 +160,12 @@ function ConnectionsContent() {
 
   if (!isOrgAdmin) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-foreground">
+      <div className="py-16 text-center">
+        <Shield className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+        <h1 className="mt-4 font-serif text-2xl font-semibold text-foreground">
           Org connections
         </h1>
-        <p className="text-sm text-muted">
+        <p className="mx-auto mt-2 max-w-md font-sans text-sm text-muted">
           Only organization admins can manage partner connections.
         </p>
       </div>
@@ -171,39 +173,42 @@ function ConnectionsContent() {
   }
 
   if (loading) {
-    return <p className="text-muted">Loading connections…</p>;
+    return <p className="font-sans text-muted">Loading connections…</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">
+    <div>
+      <div className="mb-8">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
           Org connections
         </h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 font-sans text-sm text-muted">
           Connect partner organizations to share individual pull requests.
         </p>
-        <p className="mt-2 text-sm">
-          <Link href="/settings/shares" className="text-brand-600 underline">
+        <p className="mt-2 font-sans text-sm">
+          <Link
+            href="/settings/shares"
+            className="text-brand-600 transition-colors duration-200 hover:text-brand-700"
+          >
             Inbound / outbound shares
           </Link>
         </p>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
+      {error ? <p className="mb-4 font-sans text-sm text-brand-700">{error}</p> : null}
+      {message ? <p className="mb-4 font-sans text-sm text-brand-700">{message}</p> : null}
 
       <form
         onSubmit={(event) => void onRequest(event)}
-        className="space-y-3 rounded-lg border border-border bg-surface p-6"
+        className="space-y-4 border-t border-border pt-8"
       >
-        <h2 className="text-lg font-medium text-foreground">
+        <h2 className="font-serif text-xl font-semibold text-foreground">
           Request connection
         </h2>
         <div>
           <label
             htmlFor="partner-slug"
-            className="mb-1 block text-sm text-muted"
+            className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
           >
             Partner org slug
           </label>
@@ -214,7 +219,7 @@ function ConnectionsContent() {
             value={partnerOrgSlug}
             onChange={(event) => setPartnerOrgSlug(event.target.value)}
             placeholder="acme"
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
           />
         </div>
         <Button type="submit" disabled={busy}>
@@ -222,22 +227,25 @@ function ConnectionsContent() {
         </Button>
       </form>
 
-      <section className="rounded-lg border border-border bg-surface p-6">
-        <h2 className="text-lg font-medium text-foreground">Connections</h2>
+      <section className="mt-8 border-t border-border pt-8">
+        <h2 className="font-serif text-xl font-semibold text-foreground">Connections</h2>
         {connections.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No connections yet.</p>
+          <div className="mt-6 border-y border-border py-12 text-center">
+            <Link2 className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+            <p className="mt-3 font-serif text-muted">No connections yet.</p>
+          </div>
         ) : (
-          <ul className="mt-4 divide-y divide-border">
+          <ul className="mt-4 divide-y divide-border border-y border-border">
             {connections.map((connection) => (
               <li
                 key={connection.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-4"
+                className="flex flex-wrap items-center justify-between gap-3 px-1 py-4 transition-colors duration-200 hover:bg-surface-muted/60"
               >
                 <div>
-                  <p className="font-medium text-foreground">
+                  <p className="font-serif font-semibold text-foreground">
                     {connection.partnerOrg.orgName}
                   </p>
-                  <p className="text-sm text-muted">
+                  <p className="mt-1 font-sans text-sm text-muted">
                     @{connection.partnerOrg.orgSlug} · {connection.direction}
                   </p>
                   <div className="mt-2">

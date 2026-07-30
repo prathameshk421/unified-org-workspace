@@ -13,10 +13,10 @@ function safeReturnTo(raw: string | null, fallback = "/"): string {
 function AuthLoading({ message }: { message: string }) {
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-surface-muted"
+      className="flex min-h-screen items-center justify-center bg-surface"
       data-testid="auth-loading"
     >
-      <p className="text-muted">{message}</p>
+      <p className="font-sans text-muted">{message}</p>
     </main>
   );
 }

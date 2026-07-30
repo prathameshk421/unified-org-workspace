@@ -5,22 +5,23 @@ import { useEffect, useState } from "react";
 import { OrgRole } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { Ticket } from "lucide-react";
+import { AppShell } from "../../components/app-shell";
 import { ProtectedRoute } from "../../components/auth-guards";
-import { NotificationBellContainer } from "../../components/notification-bell-container";
 import { listTickets } from "../../lib/tickets-api";
 import type { TicketResponse } from "@unified/types";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    OPEN: "bg-blue-100 text-blue-800",
-    IN_PROGRESS: "bg-amber-100 text-amber-800",
-    RESOLVED: "bg-green-100 text-green-800",
-    CLOSED: "bg-gray-100 text-gray-700",
+    OPEN: "bg-brand-50 text-brand-700",
+    IN_PROGRESS: "bg-surface-muted text-foreground",
+    RESOLVED: "bg-brand-100 text-brand-800",
+    CLOSED: "bg-surface-muted text-muted",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 font-sans text-xs font-medium ${colors[status] ?? "bg-surface-muted text-muted"}`}
     >
       {status.replace("_", " ")}
     </span>
@@ -65,59 +66,55 @@ function TicketsListContent() {
   }, [activeOrg?.orgId]);
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
+    <AppShell>
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Link href="/" className="text-sm text-brand-600 underline">
-              ← Home
-            </Link>
-            <h1 className="mt-2 text-3xl font-semibold text-foreground">Tickets</h1>
-            <p className="mt-1 text-sm text-muted">
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
+              Tickets
+            </h1>
+            <p className="mt-1 font-sans text-sm text-muted">
               Organization: {activeOrg?.orgName ?? activeOrg?.orgId}
             </p>
-            <p className="mt-2 text-sm">
-              <Link href="/shared/tickets" className="text-brand-600 underline">
-                Shared with me
-              </Link>
-            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <NotificationBellContainer />
-            {canMutate ? (
-              <Link href="/tickets/new">
-                <Button type="button">New ticket</Button>
-              </Link>
-            ) : null}
-          </div>
+          {canMutate ? (
+            <Link href="/tickets/new">
+              <Button type="button">New ticket</Button>
+            </Link>
+          ) : null}
         </div>
 
         {loading ? (
-          <p className="text-muted">Loading tickets…</p>
+          <p className="font-sans text-muted">Loading tickets…</p>
         ) : error ? (
-          <p className="text-red-600">{error}</p>
+          <p className="font-sans text-brand-700">{error}</p>
         ) : tickets.length === 0 ? (
-          <p className="rounded-lg border border-border bg-surface p-6 text-muted">
-            No tickets yet.
-            {canMutate ? " Create one to get started." : null}
-          </p>
+          <div className="border-y border-border py-12 text-center">
+            <Ticket className="mx-auto h-8 w-8 text-muted" aria-hidden="true" />
+            <p className="mt-3 font-serif text-muted">
+              No tickets yet.
+              {canMutate ? " Create one to get started." : null}
+            </p>
+          </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border border-y border-border">
             {tickets.map((ticket) => (
               <li key={ticket.id}>
                 <Link
                   href={`/tickets/${ticket.id}`}
-                  className="block rounded-lg border border-border bg-surface p-4 transition hover:border-brand-600"
+                  className="block px-1 py-4 transition-colors duration-200 hover:bg-surface-muted/60"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{ticket.title}</p>
+                      <p className="font-serif font-semibold text-foreground">
+                        {ticket.title}
+                      </p>
                       {ticket.access === "shared" && ticket.sharedFromOrg ? (
-                        <p className="mt-1 text-xs font-medium text-brand-600">
+                        <p className="mt-1 font-sans text-xs font-medium text-brand-600">
                           Shared from {ticket.sharedFromOrg.orgName}
                         </p>
                       ) : null}
-                      <p className="mt-1 line-clamp-2 text-sm text-muted">
+                      <p className="mt-1 line-clamp-2 font-serif text-sm text-muted">
                         {ticket.description || "No description"}
                       </p>
                     </div>
@@ -129,7 +126,7 @@ function TicketsListContent() {
           </ul>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
 

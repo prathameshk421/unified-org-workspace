@@ -42,7 +42,13 @@ http {
     # Root asset probe: serve from disk instead of falling through to the
     # catch-all redirect below.
     location = /favicon.ico {
-      try_files /favicon.ico =404;
+      try_files /favicon.svg /favicon.ico =404;
+      access_log off;
+      default_type image/svg+xml;
+    }
+
+    location = /favicon.svg {
+      try_files /favicon.svg =404;
       access_log off;
     }
 

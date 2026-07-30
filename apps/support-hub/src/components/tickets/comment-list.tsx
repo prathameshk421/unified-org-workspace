@@ -25,7 +25,7 @@ export function CommentList({
   const [error, setError] = useState<string | null>(null);
 
   if (comments.length === 0) {
-    return <p className="text-sm text-muted">No comments yet.</p>;
+    return <p className="font-sans text-sm text-muted">No comments yet.</p>;
   }
 
   async function saveEdit(event: FormEvent<HTMLFormElement>, commentId: string) {
@@ -56,7 +56,7 @@ export function CommentList({
   }
 
   return (
-    <ul className="space-y-4">
+    <ul className="divide-y divide-border border-y border-border">
       {comments.map((comment) => {
         const isAuthor = comment.authorId === currentUserId;
         const canEdit = canMutate && isAuthor;
@@ -64,29 +64,27 @@ export function CommentList({
         const editing = editingId === comment.id;
 
         return (
-          <li
-            key={comment.id}
-            className="rounded-md border border-border bg-surface-muted/40 p-3"
-          >
+          <li key={comment.id} className="px-1 py-4">
             {editing ? (
               <form
                 onSubmit={(event) => void saveEdit(event, comment.id)}
-                className="space-y-2"
+                className="space-y-3"
               >
                 <textarea
                   rows={3}
                   maxLength={10000}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
                 />
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={busyId === comment.id}>
+                  <Button type="submit" size="sm" disabled={busyId === comment.id}>
                     Save
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="tertiary"
+                    size="sm"
                     onClick={() => setEditingId(null)}
                   >
                     Cancel
@@ -95,18 +93,19 @@ export function CommentList({
               </form>
             ) : (
               <>
-                <p className="whitespace-pre-wrap text-sm text-foreground">
+                <p className="whitespace-pre-wrap font-serif text-sm text-foreground">
                   {comment.body}
                 </p>
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 font-sans text-xs text-muted">
                   {new Date(comment.createdAt).toLocaleString()}
                 </p>
                 {(canEdit || canDelete) && (
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-3 flex gap-2">
                     {canEdit ? (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="tertiary"
+                        size="sm"
                         disabled={busyId === comment.id}
                         onClick={() => {
                           setEditingId(comment.id);
@@ -119,7 +118,8 @@ export function CommentList({
                     {canDelete ? (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="tertiary"
+                        size="sm"
                         disabled={busyId === comment.id}
                         onClick={() => void remove(comment.id)}
                       >
@@ -133,7 +133,11 @@ export function CommentList({
           </li>
         );
       })}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <li className="py-3">
+          <p className="font-sans text-sm text-brand-700">{error}</p>
+        </li>
+      ) : null}
     </ul>
   );
 }

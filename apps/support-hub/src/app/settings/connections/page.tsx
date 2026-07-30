@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import {
   OrgConnectionStatus,
@@ -9,6 +8,7 @@ import {
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { AppShell } from "../../../components/app-shell";
 import { ProtectedRoute } from "../../../components/auth-guards";
 import {
   acceptConnection,
@@ -20,15 +20,15 @@ import {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    PENDING: "bg-amber-100 text-amber-800",
-    ACCEPTED: "bg-green-100 text-green-800",
-    REJECTED: "bg-gray-100 text-gray-700",
-    REVOKED: "bg-red-100 text-red-800",
+    PENDING: "bg-surface-muted text-foreground",
+    ACCEPTED: "bg-brand-50 text-brand-700",
+    REJECTED: "bg-surface-muted text-muted",
+    REVOKED: "bg-brand-100 text-brand-800",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 font-sans text-xs font-medium ${colors[status] ?? "bg-surface-muted text-muted"}`}
     >
       {status}
     </span>
@@ -158,64 +158,56 @@ function ConnectionsContent() {
 
   if (!isOrgAdmin) {
     return (
-      <main className="min-h-screen bg-surface-muted px-6 py-10">
-        <div className="mx-auto max-w-xl">
-          <Link href="/settings" className="text-sm text-brand-600 underline">
-            ← Settings
-          </Link>
-          <h1 className="mt-4 text-3xl font-semibold text-foreground">
+      <AppShell>
+        <div className="mx-auto max-w-3xl">
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
             Org connections
           </h1>
-          <p className="mt-4 text-sm text-muted">
+          <p className="mt-4 font-sans text-sm text-muted">
             Only organization admins can manage partner connections.
           </p>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-muted">
-        <p className="text-muted">Loading connections…</p>
-      </main>
+      <AppShell>
+        <p className="font-sans text-muted">Loading connections…</p>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
-      <div className="mx-auto max-w-2xl">
-        <Link href="/settings" className="text-sm text-brand-600 underline">
-          ← Settings
-        </Link>
-        <h1 className="mt-4 text-3xl font-semibold text-foreground">
+    <AppShell>
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
           Org connections
         </h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-1 font-sans text-sm text-muted">
           Connect partner organizations to share individual tickets.{" "}
           {activeOrg?.orgName ?? "Active organization"}
         </p>
 
-        <p className="mt-2 text-sm">
-          <Link href="/settings/shares" className="text-brand-600 underline">
-            Inbound / outbound shares
-          </Link>
-        </p>
-
-        {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-        {message ? <p className="mt-4 text-sm text-green-700">{message}</p> : null}
+        {error ? (
+          <p className="mt-4 font-sans text-sm text-brand-700">{error}</p>
+        ) : null}
+        {message ? (
+          <p className="mt-4 font-sans text-sm text-brand-600">{message}</p>
+        ) : null}
 
         <form
           onSubmit={(event) => void onRequest(event)}
-          className="mt-6 space-y-3 rounded-lg border border-border bg-surface p-6"
+          className="mt-8 space-y-4 border-t border-border pt-8"
         >
-          <h2 className="text-lg font-medium text-foreground">
+          <h2 className="font-serif text-xl font-semibold text-foreground">
             Request connection
           </h2>
           <div>
             <label
               htmlFor="partner-slug"
-              className="mb-1 block text-sm text-muted"
+              className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
             >
               Partner org slug
             </label>
@@ -226,7 +218,7 @@ function ConnectionsContent() {
               value={partnerOrgSlug}
               onChange={(event) => setPartnerOrgSlug(event.target.value)}
               placeholder="globex"
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             />
           </div>
           <Button type="submit" disabled={busy}>
@@ -234,22 +226,26 @@ function ConnectionsContent() {
           </Button>
         </form>
 
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Connections</h2>
+        <section className="mt-10">
+          <h2 className="font-serif text-xl font-semibold text-foreground">
+            Connections
+          </h2>
           {connections.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">No connections yet.</p>
+            <p className="mt-3 font-sans text-sm text-muted">
+              No connections yet.
+            </p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="mt-4 divide-y divide-border border-y border-border">
               {connections.map((connection) => (
                 <li
                   key={connection.id}
                   className="flex flex-wrap items-center justify-between gap-3 py-4"
                 >
                   <div>
-                    <p className="font-medium text-foreground">
+                    <p className="font-serif font-semibold text-foreground">
                       {connection.partnerOrg.orgName}
                     </p>
-                    <p className="text-sm text-muted">
+                    <p className="mt-0.5 font-sans text-sm text-muted">
                       @{connection.partnerOrg.orgSlug} · {connection.direction}
                     </p>
                     <div className="mt-2">
@@ -262,6 +258,7 @@ function ConnectionsContent() {
                       <>
                         <Button
                           type="button"
+                          size="sm"
                           disabled={busy}
                           onClick={() => void onAccept(connection.id)}
                         >
@@ -269,7 +266,8 @@ function ConnectionsContent() {
                         </Button>
                         <Button
                           type="button"
-                          variant="secondary"
+                          variant="tertiary"
+                          size="sm"
                           disabled={busy}
                           onClick={() => void onReject(connection.id)}
                         >
@@ -281,7 +279,8 @@ function ConnectionsContent() {
                     connection.status === OrgConnectionStatus.PENDING ? (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="tertiary"
+                        size="sm"
                         disabled={busy}
                         onClick={() => void onRevoke(connection.id)}
                       >
@@ -295,7 +294,7 @@ function ConnectionsContent() {
           )}
         </section>
       </div>
-    </main>
+    </AppShell>
   );
 }
 

@@ -1,21 +1,25 @@
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-inter), "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-brand-50: #f0f7ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #1e3a8a;
+  /* Maroon / magenta accent ramp */
+  --color-brand-50: #fbf2f6;
+  --color-brand-100: #f5e0ea;
+  --color-brand-200: #ebc1d5;
+  --color-brand-300: #d98bb0;
+  --color-brand-400: #c45487;
+  --color-brand-500: #b03a6f;
+  --color-brand-600: #9b2c5d;
+  --color-brand-700: #7a2249;
+  --color-brand-800: #5c1a37;
+  --color-brand-900: #3f1226;
 
-  --color-surface: #ffffff;
-  --color-surface-muted: #f8fafc;
-  --color-foreground: #0f172a;
-  --color-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-surface: #faf7f2;
+  --color-surface-muted: #f3efe8;
+  --color-surface-raised: #ffffff;
+  --color-surface-ink: #1c1917;
+  --color-foreground: #1c1917;
+  --color-muted: #6b6560;
+  --color-border: color-mix(in srgb, #1c1917 12%, transparent);
 }

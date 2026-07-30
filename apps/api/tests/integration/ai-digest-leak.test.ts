@@ -8,6 +8,7 @@ import type { DigestFacts } from "../../src/digest/types.js";
 import { ownerDb } from "../support/db.js";
 import {
   cleanupRunFixtures,
+  createDigestRun,
   createOrg,
   createTicket,
   createUser,
@@ -194,12 +195,7 @@ describe("AI digest cross-org leak", () => {
     const before = await collectDigestFacts(world.eve.id);
     expect(idsOf(before, "ticket")).toContain(shared.ticketId);
 
-    const run = await ownerDb.digestRun.create({
-      data: {
-        scheduledFor: new Date("2099-01-01T06:00:00.000Z"),
-        status: "SUCCEEDED",
-      },
-    });
+    const run = await createDigestRun({ status: "SUCCEEDED" });
     await ownerDb.notification.create({
       data: {
         userId: world.eve.id,
@@ -266,12 +262,7 @@ describe("AI digest cross-org leak", () => {
 
   it("notification IDOR: Alice cannot mark Eve notification; no userId widen", async () => {
     const world = await createConnectedShareWorld();
-    const run = await ownerDb.digestRun.create({
-      data: {
-        scheduledFor: new Date("2099-02-01T06:00:00.000Z"),
-        status: "SUCCEEDED",
-      },
-    });
+    const run = await createDigestRun({ status: "SUCCEEDED" });
     const eveNotif = await ownerDb.notification.create({
       data: {
         userId: world.eve.id,

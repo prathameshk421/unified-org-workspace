@@ -29,7 +29,7 @@ export function AttachmentList({
   const [error, setError] = useState<string | null>(null);
 
   if (attachments.length === 0) {
-    return <p className="text-sm text-muted">No attachments yet.</p>;
+    return <p className="font-sans text-sm text-muted">No attachments yet.</p>;
   }
 
   async function download(attachment: TicketAttachmentResponse) {
@@ -58,7 +58,7 @@ export function AttachmentList({
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-border border-y border-border">
       {attachments.map((attachment) => {
         const canDelete =
           canMutate &&
@@ -67,20 +67,21 @@ export function AttachmentList({
         return (
           <li
             key={attachment.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-muted/40 px-3 py-2"
+            className="flex flex-wrap items-center justify-between gap-3 px-1 py-4"
           >
             <div>
-              <p className="text-sm font-medium text-foreground">
+              <p className="font-serif text-sm font-semibold text-foreground">
                 {attachment.fileName}
               </p>
-              <p className="text-xs text-muted">
+              <p className="mt-0.5 font-sans text-xs text-muted">
                 {attachment.mimeType} · {formatBytes(attachment.sizeBytes)}
               </p>
             </div>
             <div className="flex gap-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant="tertiary"
+                size="sm"
                 disabled={busyId === attachment.id}
                 onClick={() => void download(attachment)}
               >
@@ -89,7 +90,8 @@ export function AttachmentList({
               {canDelete ? (
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="tertiary"
+                  size="sm"
                   disabled={busyId === attachment.id}
                   onClick={() => void remove(attachment.id)}
                 >
@@ -100,7 +102,11 @@ export function AttachmentList({
           </li>
         );
       })}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <li className="py-3">
+          <p className="font-sans text-sm text-brand-700">{error}</p>
+        </li>
+      ) : null}
     </ul>
   );
 }

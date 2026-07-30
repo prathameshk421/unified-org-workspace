@@ -27,6 +27,17 @@ export async function submitLogin(page: Page, email: string, password: string) {
         "If status is 429, restart the API with AUTH_RATE_LIMIT_MAX=1000.",
     );
   }
+
+  const me = await page.waitForResponse(
+    (r) =>
+      r.url().includes("/auth/me") &&
+      r.request().method() === "GET" &&
+      r.status() === 200,
+  );
+  if (!me.ok()) {
+    const body = await me.text();
+    throw new Error(`Session hydrate failed for ${email} (${me.status()}): ${body}`);
+  }
 }
 
 export async function login(page: Page, email: string, password: string, baseUrl: string) {

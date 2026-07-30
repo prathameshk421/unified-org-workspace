@@ -28,6 +28,18 @@ export interface FixtureUser {
 
 const trackedUserIds = new Set<string>();
 const trackedOrgIds = new Set<string>();
+const trackedDigestRunIds = new Set<string>();
+
+let digestScheduledSeq = 0;
+
+/**
+ * Far-future, unique per create — avoids digest_runs.scheduledFor collisions.
+ * Offset stays within a few decades of 2099 (Prisma/Postgres reject year 10000+).
+ */
+export function uniqueTestScheduledFor(): Date {
+  digestScheduledSeq += 1;
+  return new Date(Date.UTC(2099, 0, 1, 6, 0, 0, 0) + Date.now() + digestScheduledSeq);
+}
 
 /** Track users created via POST /auth/register (not createUser). */
 export function trackApiRegisteredUser(user: { id: string }): void {
@@ -149,6 +161,19 @@ export async function createTicket(input: {
   };
 }
 
+export async function createDigestRun(
+  input: { status?: "SUCCEEDED" | "FAILED" | "RUNNING" | "SKIPPED" } = {},
+): Promise<{ id: string; scheduledFor: Date }> {
+  const run = await ownerDb.digestRun.create({
+    data: {
+      scheduledFor: uniqueTestScheduledFor(),
+      status: input.status ?? "SUCCEEDED",
+    },
+  });
+  trackedDigestRunIds.add(run.id);
+  return { id: run.id, scheduledFor: run.scheduledFor };
+}
+
 export async function createPullRequest(input: {
   orgId: string;
   authorId: string;
@@ -230,6 +255,13 @@ export async function cleanupRunFixtures(): Promise<void> {
     await ownerDb.notification.deleteMany({
       where: { userId: { in: userIds } },
     });
+  }
+
+  if (trackedDigestRunIds.size > 0) {
+    await ownerDb.digestRun.deleteMany({
+      where: { id: { in: [...trackedDigestRunIds] } },
+    });
+    trackedDigestRunIds.clear();
   }
 
   // HIGH-RISK: authorId/reviewerId are Restrict — must delete PRs before users

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   OrgRole,
@@ -10,6 +9,7 @@ import {
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { AppShell } from "../../../components/app-shell";
 import { ProtectedRoute } from "../../../components/auth-guards";
 import {
   listInboundShares,
@@ -33,21 +33,30 @@ function ShareRow({
   onRevoke: (id: string) => void;
 }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+    <li className="flex flex-wrap items-center justify-between gap-3 px-1 py-4">
       <div>
-        <p className="font-medium text-foreground">
+        <p className="font-serif font-semibold text-foreground">
           {resourceLabel(share)} · {share.resourceId.slice(0, 8)}…
         </p>
-        <p className="text-muted">
+        <p className="mt-0.5 font-sans text-sm text-muted">
           Recipient {share.grantedToUserId.slice(0, 8)}… ·{" "}
-          {share.status === ShareGrantStatus.ACTIVE ? "Active" : "Revoked"} ·{" "}
-          {new Date(share.createdAt).toLocaleString()}
+          {share.status === ShareGrantStatus.ACTIVE ? (
+            <span className="inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+              Active
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-muted">
+              Revoked
+            </span>
+          )}{" "}
+          · {new Date(share.createdAt).toLocaleString()}
         </p>
       </div>
       {share.status === ShareGrantStatus.ACTIVE ? (
         <Button
           type="button"
-          variant="secondary"
+          variant="tertiary"
+          size="sm"
           disabled={busy}
           onClick={() => onRevoke(share.id)}
         >
@@ -122,34 +131,37 @@ function SharesAdminContent() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-muted">
-        <p className="text-muted">Loading shares…</p>
-      </main>
+      <AppShell>
+        <p className="font-sans text-muted">Loading shares…</p>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
-      <div className="mx-auto max-w-2xl">
-        <Link href="/settings" className="text-sm text-brand-600 underline">
-          ← Settings
-        </Link>
-        <h1 className="mt-4 text-3xl font-semibold text-foreground">
+    <AppShell>
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
           Share grants
         </h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-1 font-sans text-sm text-muted">
           Inbound shares you can access, and outbound shares from your org
           {isOrgAdmin ? " (admin)" : ""}.
         </p>
 
-        {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 font-sans text-sm text-brand-700">{error}</p>
+        ) : null}
 
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Inbound</h2>
+        <section className="mt-8">
+          <h2 className="font-serif text-xl font-semibold text-foreground">
+            Inbound
+          </h2>
           {inbound.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">No inbound shares.</p>
+            <p className="mt-3 font-sans text-sm text-muted">
+              No inbound shares.
+            </p>
           ) : (
-            <ul className="mt-3 divide-y divide-border">
+            <ul className="mt-3 divide-y divide-border border-y border-border">
               {inbound.map((share) => (
                 <ShareRow
                   key={share.id}
@@ -163,12 +175,16 @@ function SharesAdminContent() {
         </section>
 
         {isOrgAdmin ? (
-          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h2 className="text-lg font-medium text-foreground">Outbound</h2>
+          <section className="mt-10">
+            <h2 className="font-serif text-xl font-semibold text-foreground">
+              Outbound
+            </h2>
             {outbound.length === 0 ? (
-              <p className="mt-3 text-sm text-muted">No outbound shares.</p>
+              <p className="mt-3 font-sans text-sm text-muted">
+                No outbound shares.
+              </p>
             ) : (
-              <ul className="mt-3 divide-y divide-border">
+              <ul className="mt-3 divide-y divide-border border-y border-border">
                 {outbound.map((share) => (
                   <ShareRow
                     key={share.id}
@@ -181,12 +197,12 @@ function SharesAdminContent() {
             )}
           </section>
         ) : (
-          <p className="mt-6 text-sm text-muted">
+          <p className="mt-8 font-sans text-sm text-muted">
             Organization admins can also view outbound shares from this org.
           </p>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
 

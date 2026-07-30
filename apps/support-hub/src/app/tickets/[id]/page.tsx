@@ -14,6 +14,7 @@ import {
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
 import { Button } from "@unified/ui";
+import { AppShell } from "../../../components/app-shell";
 import { ProtectedRoute } from "../../../components/auth-guards";
 import { AttachmentList } from "../../../components/tickets/attachment-list";
 import { AttachmentUpload } from "../../../components/tickets/attachment-upload";
@@ -42,15 +43,15 @@ import {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    OPEN: "bg-blue-100 text-blue-800",
-    IN_PROGRESS: "bg-amber-100 text-amber-800",
-    RESOLVED: "bg-green-100 text-green-800",
-    CLOSED: "bg-gray-100 text-gray-700",
+    OPEN: "bg-brand-50 text-brand-700",
+    IN_PROGRESS: "bg-surface-muted text-foreground",
+    RESOLVED: "bg-brand-100 text-brand-800",
+    CLOSED: "bg-surface-muted text-muted",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-700"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 font-sans text-xs font-medium ${colors[status] ?? "bg-surface-muted text-muted"}`}
     >
       {status.replace("_", " ")}
     </span>
@@ -205,22 +206,25 @@ function TicketDetailContent() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-muted">
-        <p className="text-muted">Loading ticket…</p>
-      </main>
+      <AppShell>
+        <p className="font-sans text-muted">Loading ticket…</p>
+      </AppShell>
     );
   }
 
   if (error && !ticket) {
     return (
-      <main className="min-h-screen bg-surface-muted px-6 py-10">
-        <div className="mx-auto max-w-2xl">
-          <Link href="/tickets" className="text-sm text-brand-600 underline">
+      <AppShell>
+        <div className="mx-auto max-w-3xl">
+          <Link
+            href="/tickets"
+            className="font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+          >
             ← Tickets
           </Link>
-          <p className="mt-4 text-red-600">{error}</p>
+          <p className="mt-4 font-sans text-brand-700">{error}</p>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
@@ -231,20 +235,25 @@ function TicketDetailContent() {
   const nextStatuses = TICKET_STATUS_TRANSITIONS[ticket.status];
 
   return (
-    <main className="min-h-screen bg-surface-muted px-6 py-10">
-      <div className="mx-auto max-w-2xl">
-        <Link href={backHref} className="text-sm text-brand-600 underline">
+    <AppShell>
+      <div className="mx-auto max-w-3xl">
+        <Link
+          href={backHref}
+          className="font-sans text-sm text-brand-600 transition-colors duration-200 hover:text-brand-700"
+        >
           ← {backLabel}
         </Link>
 
-        <div className="mt-4 flex items-start justify-between gap-4">
+        <div className="mt-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-foreground">{ticket.title}</h1>
-            <p className="mt-1 text-sm text-muted">
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
+              {ticket.title}
+            </h1>
+            <p className="mt-1 font-sans text-sm text-muted">
               Updated {new Date(ticket.updatedAt).toLocaleString()}
             </p>
             {isShared && ticket.sharedFromOrg ? (
-              <p className="mt-2 inline-flex rounded-full bg-brand-600/10 px-2.5 py-0.5 text-xs font-medium text-brand-600">
+              <p className="mt-2 inline-flex rounded-full bg-brand-50 px-2.5 py-0.5 font-sans text-xs font-medium text-brand-700">
                 Shared from {ticket.sharedFromOrg.orgName} · view & comment only
               </p>
             ) : null}
@@ -255,10 +264,13 @@ function TicketDetailContent() {
         {editing && canMutate ? (
           <form
             onSubmit={(event) => void onSave(event)}
-            className="mt-6 space-y-4 rounded-lg border border-border bg-surface p-6"
+            className="mt-8 space-y-4 border-y border-border py-8"
           >
             <div>
-              <label htmlFor="edit-title" className="mb-1 block text-sm text-muted">
+              <label
+                htmlFor="edit-title"
+                className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
+              >
                 Title
               </label>
               <input
@@ -268,13 +280,13 @@ function TicketDetailContent() {
                 maxLength={200}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="edit-description"
-                className="mb-1 block text-sm text-muted"
+                className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted"
               >
                 Description
               </label>
@@ -284,16 +296,16 @@ function TicketDetailContent() {
                 maxLength={10000}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="tertiary"
                 onClick={() => {
                   setTitle(ticket.title);
                   setDescription(ticket.description);
@@ -305,14 +317,14 @@ function TicketDetailContent() {
             </div>
           </form>
         ) : (
-          <div className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <p className="whitespace-pre-wrap text-foreground">
+          <div className="mt-8 border-y border-border py-8">
+            <p className="whitespace-pre-wrap font-serif text-foreground">
               {ticket.description || "No description"}
             </p>
             {canMutate ? (
               <Button
                 type="button"
-                variant="secondary"
+                variant="tertiary"
                 className="mt-4"
                 onClick={() => setEditing(true)}
               >
@@ -323,14 +335,17 @@ function TicketDetailContent() {
         )}
 
         {canMutate && nextStatuses.length > 0 ? (
-          <div className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h2 className="text-sm font-medium text-foreground">Change status</h2>
+          <div className="mt-8 border-b border-border pb-8">
+            <h2 className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+              Change status
+            </h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {nextStatuses.map((status) => (
                 <Button
                   key={status}
                   type="button"
-                  variant="secondary"
+                  variant="tertiary"
+                  size="sm"
                   disabled={statusUpdating}
                   onClick={() => void onStatusChange(status)}
                 >
@@ -341,10 +356,12 @@ function TicketDetailContent() {
           </div>
         ) : null}
 
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Comments</h2>
+        <section className="mt-8 border-b border-border pb-8">
+          <h2 className="font-serif text-xl font-semibold text-foreground">
+            Comments
+          </h2>
           {!commentsEnabled ? (
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 font-sans text-sm text-muted">
               Comments are disabled for this organization
             </p>
           ) : null}
@@ -365,7 +382,7 @@ function TicketDetailContent() {
             />
           </div>
           {commentsEnabled ? (
-            <div className="mt-4">
+            <div className="mt-6">
               <CommentForm
                 onSubmit={async (body) => {
                   await createComment(ticket.id, { body });
@@ -376,15 +393,17 @@ function TicketDetailContent() {
           ) : null}
         </section>
 
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h2 className="text-lg font-medium text-foreground">Attachments</h2>
+        <section className="mt-8 border-b border-border pb-8">
+          <h2 className="font-serif text-xl font-semibold text-foreground">
+            Attachments
+          </h2>
           {!attachmentsEnabled ? (
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 font-sans text-sm text-muted">
               Attachments are disabled for this organization
             </p>
           ) : null}
           {isShared ? (
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 font-sans text-sm text-muted">
               Shared access allows download only.
             </p>
           ) : null}
@@ -408,7 +427,7 @@ function TicketDetailContent() {
             />
           </div>
           {attachmentsEnabled && canMutate ? (
-            <div className="mt-4">
+            <div className="mt-6">
               <AttachmentUpload
                 onUpload={async (file) => {
                   await uploadAttachment(ticket.id, file);
@@ -420,16 +439,16 @@ function TicketDetailContent() {
         </section>
 
         {canMutate ? (
-          <div className="mt-6">
+          <div className="mt-8">
             <TicketSharePanel ticketId={ticket.id} />
           </div>
         ) : null}
 
         {canMutate ? (
-          <div className="mt-6">
+          <div className="mt-8 border-t border-border pt-8">
             <Button
               type="button"
-              variant="secondary"
+              variant="tertiary"
               disabled={deleting}
               onClick={() => void onDelete()}
             >
@@ -438,9 +457,11 @@ function TicketDetailContent() {
           </div>
         ) : null}
 
-        {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 font-sans text-sm text-brand-700">{error}</p>
+        ) : null}
       </div>
-    </main>
+    </AppShell>
   );
 }
 

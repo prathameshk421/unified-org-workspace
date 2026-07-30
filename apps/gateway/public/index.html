@@ -4,127 +4,742 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Unified Org Workspace</title>
-    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <meta
+      name="description"
+      content="Shared identity across Support Hub and Review Console — one session, two dashboards, strict org isolation."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --ink: #12202e;
-        --muted: #4a5d70;
-        --surface: #f3f6f4;
-        --accent: #0f6b5c;
-        --accent-hover: #0b5247;
-        --line: rgba(18, 32, 46, 0.12);
+        --surface: #faf7f2;
+        --surface-raised: #ffffff;
+        --surface-muted: #f3efe8;
+        --surface-ink: #1c1917;
+        --foreground: #1c1917;
+        --muted: #6b6560;
+        --accent: #9b2c5d;
+        --accent-hover: #7a2249;
+        --border: rgba(28, 25, 23, 0.12);
+        --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+        --font-sans: Inter, "Helvetica Neue", Arial, sans-serif;
       }
 
       * {
         box-sizing: border-box;
       }
 
-      html,
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
         margin: 0;
         min-height: 100%;
-      }
-
-      body {
-        font-family: "Source Sans 3", system-ui, sans-serif;
-        color: var(--ink);
-        background:
-          radial-gradient(1200px 600px at 10% -10%, rgba(15, 107, 92, 0.14), transparent 55%),
-          radial-gradient(900px 500px at 100% 0%, rgba(18, 32, 46, 0.08), transparent 50%),
-          linear-gradient(165deg, #eef3f0 0%, var(--surface) 45%, #e7ecea 100%);
-      }
-
-      main {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 3rem 1.5rem 4rem;
-        max-width: 40rem;
-        margin: 0 auto;
-      }
-
-      h1 {
-        font-family: Fraunces, Georgia, serif;
-        font-size: clamp(2.35rem, 7vw, 3.4rem);
-        font-weight: 700;
-        line-height: 1.05;
-        letter-spacing: -0.02em;
-        margin: 0 0 0.85rem;
-      }
-
-      .lede {
-        margin: 0 0 2.5rem;
-        font-size: 1.125rem;
-        line-height: 1.45;
-        color: var(--muted);
-        max-width: 28rem;
-      }
-
-      nav {
-        display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
-        border-top: 1px solid var(--line);
-        padding-top: 1.75rem;
+        font-family: var(--font-sans);
+        color: var(--foreground);
+        background: var(--surface);
+        -webkit-font-smoothing: antialiased;
       }
 
       a {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 0.65rem;
-        width: fit-content;
-        color: var(--accent);
-        font-size: 1.2rem;
-        font-weight: 600;
+        color: inherit;
         text-decoration: none;
-        border-bottom: 2px solid transparent;
-        padding-bottom: 0.1rem;
-        transition: color 0.15s ease, border-color 0.15s ease;
       }
 
-      a:hover,
-      a:focus-visible {
-        color: var(--accent-hover);
-        border-bottom-color: currentColor;
+      .container {
+        width: min(1120px, calc(100% - 2.5rem));
+        margin-inline: auto;
+      }
+
+      /* Header */
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--surface-raised);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-family: var(--font-serif);
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: -0.01em;
+      }
+
+      .brand svg {
+        width: 1.15rem;
+        height: 1.15rem;
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .nav {
+        display: none;
+        align-items: center;
+        gap: 0.25rem;
+      }
+
+      .nav a {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--muted);
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+        transition: color 0.2s ease, background-color 0.2s ease;
+      }
+
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--foreground);
+        background: var(--surface-muted);
         outline: none;
       }
 
-      a span {
-        font-size: 0.95rem;
+      .nav a.active {
+        color: var(--foreground);
+        background: var(--surface-muted);
+      }
+
+      .header-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.55rem 1.15rem;
+        border-radius: 9999px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
+      }
+
+      .header-cta:hover,
+      .header-cta:focus-visible {
+        background: var(--accent-hover);
+        outline: none;
+      }
+
+      /* Hero */
+      .hero {
+        padding: 5.5rem 0 4.5rem;
+        text-align: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        border: 1px solid var(--border);
+        background: var(--surface-raised);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--muted);
+        opacity: 0;
+        animation: fadeUp 0.7s ease forwards;
+      }
+
+      .eyebrow span.accent {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .hero h1 {
+        margin: 1.25rem auto 0;
+        max-width: 18ch;
+        font-family: var(--font-serif);
+        font-size: clamp(2.5rem, 6vw, 3.75rem);
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        opacity: 0;
+        animation: fadeUp 0.7s ease 0.12s forwards;
+      }
+
+      .hero h1 .accent {
+        color: var(--accent);
+      }
+
+      .hero-lede {
+        margin: 1.25rem auto 0;
+        max-width: 36rem;
+        font-family: var(--font-serif);
+        font-size: 1.125rem;
+        line-height: 1.55;
         font-weight: 400;
+        color: var(--muted);
+        opacity: 0;
+        animation: fadeUp 0.7s ease 0.24s forwards;
+      }
+
+      .hero-actions {
+        margin-top: 2rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem;
+        opacity: 0;
+        animation: fadeUp 0.7s ease 0.36s forwards;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        padding: 0.75rem 1.4rem;
+        border-radius: 9999px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .btn svg {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border: 1px solid transparent;
+      }
+
+      .btn-primary:hover,
+      .btn-primary:focus-visible {
+        background: var(--accent-hover);
+        outline: none;
+      }
+
+      .btn-secondary {
+        background: var(--foreground);
+        color: var(--surface-raised);
+        border: 1px solid transparent;
+      }
+
+      .btn-secondary:hover,
+      .btn-secondary:focus-visible {
+        background: var(--surface-ink);
+        outline: none;
+      }
+
+      .btn-tertiary {
+        background: transparent;
+        color: var(--foreground);
+        border: 1px solid var(--border);
+      }
+
+      .btn-tertiary:hover,
+      .btn-tertiary:focus-visible {
+        background: var(--surface-muted);
+        outline: none;
+      }
+
+      .trust-line {
+        margin: 1.5rem 0 0;
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        opacity: 0;
+        animation: fadeUp 0.7s ease 0.48s forwards;
+      }
+
+      /* Features */
+      .features {
+        border-top: 1px solid var(--border);
+        padding: 4.5rem 0;
+      }
+
+      .features-intro {
+        max-width: 36rem;
+        margin-bottom: 2.5rem;
+      }
+
+      .features-intro h2 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: clamp(1.75rem, 3vw, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .features-intro p {
+        margin: 0.75rem 0 0;
+        font-family: var(--font-serif);
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .feature-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .feature-list li {
+        display: grid;
+        gap: 0.75rem 1.5rem;
+        padding: 1.75rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .feature-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        border: 1px solid var(--border);
+        background: var(--surface-raised);
+        color: var(--accent);
+      }
+
+      .feature-icon svg {
+        width: 1.05rem;
+        height: 1.05rem;
+      }
+
+      .feature-list h3 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 1.25rem;
+        font-weight: 700;
+      }
+
+      .feature-list p {
+        margin: 0.4rem 0 0;
+        max-width: 36rem;
+        font-family: var(--font-serif);
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      /* Dark band */
+      .ink-band {
+        background: var(--surface-ink);
+        color: var(--surface);
+        padding: 4.5rem 0;
+      }
+
+      .ink-band h2 {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: clamp(1.75rem, 3vw, 2.35rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        max-width: 18ch;
+      }
+
+      .ink-band p {
+        margin: 1rem 0 0;
+        max-width: 32rem;
+        font-family: var(--font-serif);
+        color: rgba(250, 247, 242, 0.72);
+        line-height: 1.55;
+      }
+
+      .ink-actions {
+        margin-top: 1.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .ink-band .btn-primary {
+        background: var(--accent);
+      }
+
+      .ink-band .btn-tertiary {
+        border-color: rgba(250, 247, 242, 0.22);
+        color: var(--surface);
+      }
+
+      .ink-band .btn-tertiary:hover,
+      .ink-band .btn-tertiary:focus-visible {
+        background: rgba(250, 247, 242, 0.08);
+      }
+
+      /* Footer */
+      .site-footer {
+        border-top: 1px solid var(--border);
+        background: var(--surface-raised);
+        padding: 3.5rem 0 0;
+      }
+
+      .footer-grid {
+        display: grid;
+        gap: 2.5rem;
+      }
+
+      .footer-brand p {
+        margin: 0.75rem 0 0;
+        max-width: 22rem;
+        font-family: var(--font-serif);
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 0.95rem;
+      }
+
+      .footer-actions {
+        margin-top: 1.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+      }
+
+      .footer-col h4 {
+        margin: 0 0 1rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
         color: var(--muted);
       }
 
-      @media (min-width: 540px) {
-        main {
-          padding-left: 2.5rem;
-          padding-right: 2.5rem;
+      .footer-col ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .footer-col a {
+        font-size: 0.9rem;
+        color: var(--foreground);
+        transition: color 0.2s ease;
+      }
+
+      .footer-col a:hover,
+      .footer-col a:focus-visible {
+        color: var(--accent);
+        outline: none;
+      }
+
+      .newsletter {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .newsletter input {
+        flex: 1 1 10rem;
+        min-width: 0;
+        padding: 0.65rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--surface);
+        font: inherit;
+        font-size: 0.875rem;
+        color: var(--foreground);
+      }
+
+      .newsletter input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .newsletter button {
+        padding: 0.65rem 1.1rem;
+        border: none;
+        border-radius: 9999px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      .newsletter button:hover,
+      .newsletter button:focus-visible {
+        background: var(--accent-hover);
+        outline: none;
+      }
+
+      .footer-bottom {
+        margin-top: 3rem;
+        border-top: 1px solid var(--border);
+        padding: 1.15rem 0;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.75rem 1.5rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .footer-legal {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .footer-legal a:hover,
+      .footer-legal a:focus-visible {
+        color: var(--foreground);
+        outline: none;
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
         }
 
-        nav {
-          flex-direction: row;
-          gap: 2.25rem;
+        .eyebrow,
+        .hero h1,
+        .hero-lede,
+        .hero-actions,
+        .trust-line {
+          opacity: 1;
+          animation: none;
+        }
+      }
+
+      @media (min-width: 720px) {
+        .nav {
+          display: flex;
+        }
+
+        .feature-list li {
+          grid-template-columns: auto 1fr;
+          align-items: start;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
         }
       }
     </style>
   </head>
   <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+          </svg>
+          Unified Org
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a class="active" href="/">Home</a>
+          <a href="/support-hub">Support Hub</a>
+          <a href="/console">Review Console</a>
+        </nav>
+        <a class="header-cta" href="/support-hub">Open Support Hub</a>
+      </div>
+    </header>
+
     <main>
-      <h1>Unified Org Workspace</h1>
-      <p class="lede">
-        Shared identity across Support Hub and Review Console — pick a dashboard to continue.
-      </p>
-      <nav aria-label="Dashboards">
-        <a href="/support-hub">Support Hub <span>tickets</span></a>
-        <a href="/console">Review Console <span>audit</span></a>
-      </nav>
+      <section class="hero">
+        <div class="container">
+          <div class="eyebrow">
+            Shared identity · <span class="accent">two dashboards</span>
+          </div>
+          <h1>
+            One workspace.<br />
+            <span class="accent">Strict org isolation.</span>
+          </h1>
+          <p class="hero-lede">
+            Support Hub and Review Console share a single identity layer — JWT
+            sessions, org-scoped access, and append-only audit — without
+            collapsing tenant boundaries.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/support-hub">
+              Enter Support Hub
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </a>
+            <a class="btn btn-tertiary" href="/console">Open Review Console</a>
+          </div>
+          <p class="trust-line">Org-scoped · BOLA-tested · Append-only audit</p>
+        </div>
+      </section>
+
+      <section class="features" id="product">
+        <div class="container">
+          <div class="features-intro">
+            <h2>Built for dual dashboards, one session</h2>
+            <p>
+              Pick a product surface. Auth cookies live on the API origin —
+              both apps stay in sync when you sign in, switch orgs, or sign out
+              everywhere.
+            </p>
+          </div>
+          <ul class="feature-list">
+            <li>
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 5v2" />
+                  <path d="M15 11v2" />
+                  <path d="M15 17v2" />
+                  <path d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2" />
+                </svg>
+              </div>
+              <div>
+                <h3>Support Hub</h3>
+                <p>
+                  Tickets, comments, attachments, and cross-org shares — scoped
+                  to your active organization from the verified session.
+                </p>
+              </div>
+            </li>
+            <li>
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="18" r="3" />
+                  <circle cx="6" cy="6" r="3" />
+                  <path d="M13 6h3a2 2 0 0 1 2 2v7" />
+                  <path d="M6 9v12" />
+                </svg>
+              </div>
+              <div>
+                <h3>Review Console</h3>
+                <p>
+                  Pull requests, reviews, and an append-only audit trail for
+                  reviewers and org admins — same identity, separate product UI.
+                </p>
+              </div>
+            </li>
+            <li>
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+                </svg>
+              </div>
+              <div>
+                <h3>Tenant isolation by default</h3>
+                <p>
+                  Active org comes only from the session. Direct ID manipulation
+                  returns 403/404 — covered by automated BOLA tests.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="ink-band">
+        <div class="container">
+          <h2>Continue where your work lives</h2>
+          <p>
+            Demo users sign in with <em>@example.com</em> accounts. Session sync
+            across Hub and Console works on this shared gateway hostname.
+          </p>
+          <div class="ink-actions">
+            <a class="btn btn-primary" href="/support-hub">Support Hub</a>
+            <a class="btn btn-tertiary" href="/console">Review Console</a>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a class="brand" href="/">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+              </svg>
+              Unified Org
+            </a>
+            <p>
+              Multi-tenant dual-dashboard workspace with shared JWT auth and
+              org isolation.
+            </p>
+            <div class="footer-actions">
+              <a class="btn btn-primary" href="/support-hub" style="padding: 0.55rem 1.1rem; font-size: 0.8125rem">
+                Support Hub
+              </a>
+              <a class="btn btn-tertiary" href="/console" style="padding: 0.55rem 1.1rem; font-size: 0.8125rem">
+                Console
+              </a>
+            </div>
+          </div>
+
+          <div class="footer-col">
+            <h4>Connect</h4>
+            <ul>
+              <li><a href="/support-hub">Support Hub</a></li>
+              <li><a href="/console">Review Console</a></li>
+              <li><a href="/api/health">API health</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+              <li><a href="mailto:hello@example.com">hello@example.com</a></li>
+              <li><a href="/support-hub">Open a ticket</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Newsletter</h4>
+            <form
+              class="newsletter"
+              action="mailto:hello@example.com"
+              method="get"
+              enctype="text/plain"
+              onsubmit="return false;"
+            >
+              <label class="visually-hidden" for="email" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+                Email
+              </label>
+              <input id="email" type="email" name="email" placeholder="you@company.com" autocomplete="email" />
+              <button type="button">Subscribe</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <div class="footer-legal">
+            <a href="/">Privacy</a>
+            <a href="/">Terms</a>
+            <a href="/api/health">Status</a>
+          </div>
+          <p>© 2026 Unified Org Workspace</p>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

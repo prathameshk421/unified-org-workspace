@@ -5,7 +5,7 @@ import {
   NotificationBell,
   type NotificationBellItem,
 } from "@unified/ui";
-import { useCallback, useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -43,10 +43,6 @@ export function NotificationBellContainer({
     }
   }, [status]);
 
-  const onVisibleRefresh = useEffectEvent(() => {
-    void refresh();
-  });
-
   useEffect(() => {
     if (status !== "authenticated") {
       setUnreadCount(0);
@@ -62,7 +58,7 @@ export function NotificationBellContainer({
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        onVisibleRefresh();
+        void refresh();
       }
     };
     document.addEventListener("visibilitychange", onVisibility);

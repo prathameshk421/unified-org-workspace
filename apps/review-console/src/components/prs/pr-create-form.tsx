@@ -9,6 +9,12 @@ import { ForbiddenMessage } from "@/components/forbidden-message";
 import { apiFetch } from "@/lib/api";
 import type { OrgMember } from "@/lib/types";
 
+const inputClassName =
+  "w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none";
+
+const labelClassName =
+  "mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted";
+
 export function PrCreateForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -90,20 +96,22 @@ export function PrCreateForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">New pull request</h1>
-        <p className="mt-1 text-sm text-muted">
+        <h1 className="font-serif text-3xl font-bold tracking-tight text-foreground">
+          New pull request
+        </h1>
+        <p className="mt-1 font-sans text-sm text-muted">
           Create a draft pull request for your organization.
         </p>
       </div>
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="space-y-5 rounded-lg border border-border bg-surface p-6"
+        className="mt-8 space-y-5 border-t border-border pt-8"
       >
         <div>
-          <label htmlFor="pr-title" className="mb-1 block text-sm font-medium text-foreground">
+          <label htmlFor="pr-title" className={labelClassName}>
             Title
           </label>
           <input
@@ -112,16 +120,13 @@ export function PrCreateForm() {
             required
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className={inputClassName}
             data-testid="pr-title-input"
           />
         </div>
 
         <div>
-          <label
-            htmlFor="pr-description"
-            className="mb-1 block text-sm font-medium text-foreground"
-          >
+          <label htmlFor="pr-description" className={labelClassName}>
             Description
           </label>
           <textarea
@@ -129,13 +134,13 @@ export function PrCreateForm() {
             rows={5}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             data-testid="pr-description-input"
           />
         </div>
 
         <div>
-          <label htmlFor="pr-approvals" className="mb-1 block text-sm font-medium text-foreground">
+          <label htmlFor="pr-approvals" className={labelClassName}>
             Required approvals
           </label>
           <input
@@ -145,22 +150,22 @@ export function PrCreateForm() {
             required
             value={requiresApprovals}
             onChange={(event) => setRequiresApprovals(Number(event.target.value))}
-            className="w-32 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
             data-testid="pr-approvals-input"
           />
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-foreground">Reviewers</p>
+          <p className={labelClassName}>Reviewers</p>
           {loadingMembers ? (
-            <p className="text-sm text-muted">Loading members…</p>
+            <p className="font-sans text-sm text-muted">Loading members…</p>
           ) : members.length === 0 ? (
-            <p className="text-sm text-muted">No members available.</p>
+            <p className="font-sans text-sm text-muted">No members available.</p>
           ) : (
             <ul className="space-y-2">
               {members.map((member) => (
                 <li key={member.id}>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <label className="flex cursor-pointer items-center gap-2 font-sans text-sm">
                     <input
                       type="checkbox"
                       checked={selectedReviewerIds.includes(member.id)}
@@ -178,9 +183,9 @@ export function PrCreateForm() {
           )}
         </div>
 
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {error ? <p className="font-sans text-sm text-brand-700">{error}</p> : null}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <Button
             type="submit"
             disabled={submitting || !title.trim()}

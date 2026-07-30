@@ -1,12 +1,11 @@
 "use client";
 
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
-import { GitPullRequest } from "lucide-react";
+import { Ticket } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { OrgRole } from "@unified/types";
-import { canMutatePrs, canViewAudit } from "@/lib/roles";
 import { NotificationBellContainer } from "@/components/notification-bell-container";
 
 function NavLink({
@@ -35,8 +34,6 @@ function NavLink({
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, activeOrg } = useAuth();
   const pathname = usePathname();
-  const showPrs = canMutatePrs(activeOrg?.role);
-  const showAudit = canViewAudit(activeOrg?.role);
   const isOrgAdmin = activeOrg?.role === OrgRole.ORG_ADMIN;
 
   return (
@@ -48,26 +45,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               href="/"
               className="inline-flex items-center gap-2 font-serif text-base font-semibold text-foreground transition-opacity duration-200 hover:opacity-80"
             >
-              <GitPullRequest className="h-4 w-4 text-brand-600" aria-hidden="true" />
-              Review Console
+              <Ticket className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              Support Hub
             </Link>
             <nav className="flex flex-wrap items-center gap-0.5">
-              {showPrs ? (
-                <NavLink href="/prs" active={pathname.startsWith("/prs")}>
-                  Pull requests
-                </NavLink>
-              ) : null}
+              <NavLink href="/tickets" active={pathname.startsWith("/tickets")}>
+                Tickets
+              </NavLink>
               <NavLink
-                href="/shared/prs"
+                href="/shared/tickets"
                 active={pathname.startsWith("/shared")}
               >
                 Shared with me
               </NavLink>
-              {showAudit ? (
-                <NavLink href="/audit" active={pathname.startsWith("/audit")}>
-                  Audit log
-                </NavLink>
-              ) : null}
+              <NavLink
+                href="/settings"
+                active={pathname === "/settings"}
+              >
+                Settings
+              </NavLink>
               {isOrgAdmin ? (
                 <>
                   <NavLink

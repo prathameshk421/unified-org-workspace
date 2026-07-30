@@ -15,6 +15,12 @@ import {
   revokeShare,
 } from "@/lib/shares-api";
 
+const inputClassName =
+  "w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none";
+
+const labelClassName =
+  "mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted";
+
 export function PrSharePanel({ prId }: { prId: string }) {
   const [connections, setConnections] = useState<ConnectionDto[]>([]);
   const [canListConnections, setCanListConnections] = useState(false);
@@ -145,7 +151,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading shares…</p>;
+    return <p className="font-sans text-sm text-muted">Loading shares…</p>;
   }
 
   if (!canListShares && !canListConnections) {
@@ -153,32 +159,31 @@ export function PrSharePanel({ prId }: { prId: string }) {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6">
-      <h2 className="text-lg font-medium text-foreground">Share with partner</h2>
-      <p className="mt-1 text-sm text-muted">
+    <section className="border-t border-border pt-8">
+      <h2 className="font-serif text-xl font-semibold text-foreground">
+        Share with partner
+      </h2>
+      <p className="mt-1 font-sans text-sm text-muted">
         Share this pull request with a user in a connected organization.
         Recipients can view and comment only.
       </p>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-3 font-sans text-sm text-brand-700">{error}</p> : null}
 
       {!canListConnections ? (
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 font-sans text-sm text-muted">
           Partner picker needs an accepted org connection list. Ask an org admin
           to connect a partner under Connections, or ensure you can list
           connections.
         </p>
       ) : accepted.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 font-sans text-sm text-muted">
           No accepted org connections. Connect a partner org first.
         </p>
       ) : (
         <div className="mt-4 space-y-3">
           <div>
-            <label
-              htmlFor="pr-share-partner"
-              className="mb-1 block text-sm text-muted"
-            >
+            <label htmlFor="pr-share-partner" className={labelClassName}>
               Partner organization
             </label>
             <select
@@ -189,7 +194,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
                 setSelectedRecipientId("");
                 setQuery("");
               }}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              className={inputClassName}
             >
               <option value="">Select partner…</option>
               {accepted.map((c) => (
@@ -203,10 +208,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
           {selectedConnectionId ? (
             <>
               <div>
-                <label
-                  htmlFor="pr-share-recipient-query"
-                  className="mb-1 block text-sm text-muted"
-                >
+                <label htmlFor="pr-share-recipient-query" className={labelClassName}>
                   Find recipient
                 </label>
                 <input
@@ -215,21 +217,18 @@ export function PrSharePanel({ prId }: { prId: string }) {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search by name…"
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                  className={inputClassName}
                 />
               </div>
               <div>
-                <label
-                  htmlFor="pr-share-recipient"
-                  className="mb-1 block text-sm text-muted"
-                >
+                <label htmlFor="pr-share-recipient" className={labelClassName}>
                   Recipient
                 </label>
                 <select
                   id="pr-share-recipient"
                   value={selectedRecipientId}
                   onChange={(event) => setSelectedRecipientId(event.target.value)}
-                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                  className={inputClassName}
                 >
                   <option value="">Select recipient…</option>
                   {recipients.map((r) => (
@@ -253,11 +252,15 @@ export function PrSharePanel({ prId }: { prId: string }) {
 
       {canListShares ? (
         <div className="mt-6">
-          <h3 className="text-sm font-medium text-foreground">Active shares</h3>
+          <h3 className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
+            Active shares
+          </h3>
           {activeShares.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">Not shared with anyone yet.</p>
+            <p className="mt-2 font-sans text-sm text-muted">
+              Not shared with anyone yet.
+            </p>
           ) : (
-            <ul className="mt-3 divide-y divide-border">
+            <ul className="mt-3 divide-y divide-border border-y border-border">
               {activeShares.map((share) => {
                 const partner = connections.find(
                   (c) => c.id === share.orgConnectionId,
@@ -265,10 +268,10 @@ export function PrSharePanel({ prId }: { prId: string }) {
                 return (
                   <li
                     key={share.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-3 px-1 py-3 font-sans text-sm"
                   >
                     <div>
-                      <p className="text-foreground">
+                      <p className="font-serif font-semibold text-foreground">
                         Recipient {share.grantedToUserId.slice(0, 8)}…
                       </p>
                       <p className="text-muted">
