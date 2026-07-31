@@ -115,7 +115,7 @@ Safe echo endpoints under `/rbac` (no product data):
 | `alice@acme.com`       | Acme          | ORG_ADMIN            | `password123` |
 | `bob@acme.com`         | Acme          | SUPPORT_AGENT        | `password123` |
 | `carol@globex.com`     | Globex        | ORG_ADMIN            | `password123` |
-| `dave@example.com`     | Acme + Globex | REVIEWER             | `password123` |
+| `temporary.hamesha.ka.group@gmail.com`     | Acme + Globex | REVIEWER             | `password123` |
 | `eve@example.com`      | Globex        | SUPPORT_AGENT (receives Acme ticket share) | `password123` |
 | `frank@example.com`    | Acme          | CROSS_ORG_GUEST (assignee-only) | `password123` |
 | `platform@example.com` | none          | Platform Super Admin | `password123` |

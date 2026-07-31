@@ -77,11 +77,23 @@ async function main() {
     },
   });
 
-  const dave = await prisma.user.upsert({
+  // Real alt Gmail for Argus digest email testing (no secrets in seed).
+  const daveEmail = "temporary.hamesha.ka.group@gmail.com";
+  const legacyDave = await prisma.user.findUnique({
     where: { email: "dave@example.com" },
+  });
+  if (legacyDave) {
+    await prisma.user.update({
+      where: { id: legacyDave.id },
+      data: { email: daveEmail },
+    });
+  }
+
+  const dave = await prisma.user.upsert({
+    where: { email: daveEmail },
     update: { name: "Dave Reviewer", passwordHash },
     create: {
-      email: "dave@example.com",
+      email: daveEmail,
       name: "Dave Reviewer",
       passwordHash,
     },
@@ -532,7 +544,7 @@ async function main() {
   console.log(`  - alice@acme.com        (ORG_ADMIN on Acme)`);
   console.log(`  - bob@acme.com          (SUPPORT_AGENT on Acme)`);
   console.log(`  - carol@globex.com      (ORG_ADMIN on Globex)`);
-  console.log(`  - dave@example.com      (REVIEWER on Acme + Globex)`);
+  console.log(`  - temporary.hamesha.ka.group@gmail.com  (REVIEWER on Acme + Globex; Argus inbox)`);
   console.log(`  - eve@example.com       (SUPPORT_AGENT on Globex; receives Acme ticket share)`);
   console.log(`  - frank@example.com     (CROSS_ORG_GUEST on Acme; assignee-only)`);
   console.log(`  - platform@example.com  (Platform Super Admin, no org memberships)`);

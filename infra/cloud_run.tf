@@ -519,6 +519,36 @@ resource "google_cloud_run_v2_job" "digest" {
         }
 
         env {
+          name  = "DIGEST_EMAIL_ENABLED"
+          value = var.digest_email_enabled ? "true" : "false"
+        }
+
+        env {
+          name  = "SMTP_HOST"
+          value = "smtp.gmail.com"
+        }
+
+        env {
+          name  = "SMTP_PORT"
+          value = "587"
+        }
+
+        env {
+          name  = "SMTP_FROM"
+          value = "Argus <argus.unified.workspace@gmail.com>"
+        }
+
+        dynamic "env" {
+          for_each = var.digest_email_allowlist != "" ? [1] : []
+          content {
+            name  = "DIGEST_EMAIL_ALLOWLIST"
+            value = var.digest_email_allowlist
+          }
+        }
+
+        # DIGEST_EMAIL_REDIRECT_TO is intentionally omitted — never set in prod.
+
+        env {
           name = "DATABASE_APP_URL"
           value_source {
             secret_key_ref {
@@ -548,6 +578,26 @@ resource "google_cloud_run_v2_job" "digest" {
           }
         }
 
+        env {
+          name = "SMTP_PASS"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.smtp_pass.secret_id
+              version = "latest"
+            }
+          }
+        }
+
+        env {
+          name = "SMTP_USER"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.smtp_user.secret_id
+              version = "latest"
+            }
+          }
+        }
+
         resources {
           limits = {
             cpu    = "1"
@@ -572,6 +622,8 @@ resource "google_cloud_run_v2_job" "digest" {
     google_secret_manager_secret_version.database_app_url,
     google_secret_manager_secret_version.jwt_secret,
     google_secret_manager_secret_version.groq_api_key,
+    google_secret_manager_secret_version.smtp_pass,
+    google_secret_manager_secret_version.smtp_user,
     google_project_iam_member.runtime_secret_accessor,
     google_project_iam_member.runtime_sql_client,
   ]

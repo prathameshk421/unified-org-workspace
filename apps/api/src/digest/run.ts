@@ -7,7 +7,8 @@ import {
 } from "./collect-facts.js";
 import { inAppDispatcher } from "./dispatch.js";
 import { digestEnv } from "./env.js";
-import { summarizeDigest } from "./summarize.js";
+import { isDigestEmailConfigured } from "./email.js";
+import { summarizeDigest, summarizeDigestEmail } from "./summarize.js";
 import { isDigestEmpty } from "./types.js";
 
 export type DigestRunStats = {
@@ -17,7 +18,24 @@ export type DigestRunStats = {
   skippedEmpty: number;
   alreadyExists: number;
   errors: number;
+  emailed: number;
+  emailSkipped: number;
+  emailErrors: number;
 };
+
+function emptyStats(partial?: Partial<DigestRunStats>): DigestRunStats {
+  return {
+    processedUserCount: 0,
+    notifiedUserCount: 0,
+    skippedEmpty: 0,
+    alreadyExists: 0,
+    errors: 0,
+    emailed: 0,
+    emailSkipped: 0,
+    emailErrors: 0,
+    ...partial,
+  };
+}
 
 function truncateToUtcDayBucket(d: Date): Date {
   return new Date(
@@ -90,37 +108,17 @@ export async function runDigestJob(input?: {
   now?: Date;
 }): Promise<DigestRunStats> {
   if (!digestEnv.enabled) {
-    return {
-      skipped: true,
-      processedUserCount: 0,
-      notifiedUserCount: 0,
-      skippedEmpty: 0,
-      alreadyExists: 0,
-      errors: 0,
-    };
+    return emptyStats({ skipped: true });
   }
 
   const now = input?.now ?? new Date();
   const scheduledFor = input?.scheduledFor ?? computeScheduledFor(now);
   const claimed = await claimOrResumeRun(scheduledFor);
   if (!claimed) {
-    return {
-      skipped: true,
-      processedUserCount: 0,
-      notifiedUserCount: 0,
-      skippedEmpty: 0,
-      alreadyExists: 0,
-      errors: 0,
-    };
+    return emptyStats({ skipped: true });
   }
 
-  const stats: DigestRunStats = {
-    processedUserCount: 0,
-    notifiedUserCount: 0,
-    skippedEmpty: 0,
-    alreadyExists: 0,
-    errors: 0,
-  };
+  const stats = emptyStats();
 
   try {
     const memberships = await prisma.orgMembership.findMany({
@@ -146,12 +144,12 @@ export async function runDigestJob(input?: {
           continue;
         }
 
-        const summary = await summarizeDigest(facts);
+        const inAppSummary = await summarizeDigest(facts);
         const result = await inAppDispatcher.deliverInApp({
           userId,
           digestRunId: claimed.runId,
-          title: summary.title,
-          body: summary.body,
+          title: inAppSummary.title,
+          body: inAppSummary.body,
           facts,
         });
 
@@ -159,6 +157,29 @@ export async function runDigestJob(input?: {
           stats.notifiedUserCount += 1;
         } else {
           stats.alreadyExists += 1;
+        }
+
+        // Soft-fail: email errors never fail the digest run.
+        try {
+          const emailSummary = isDigestEmailConfigured()
+            ? await summarizeDigestEmail(facts)
+            : inAppSummary;
+          const emailResult = await inAppDispatcher.deliverEmail({
+            userId,
+            digestRunId: claimed.runId,
+            title: emailSummary.title,
+            body: emailSummary.body,
+          });
+          if (emailResult === "created") {
+            stats.emailed += 1;
+          } else if (emailResult === "error") {
+            stats.emailErrors += 1;
+          } else {
+            // skipped | exists
+            stats.emailSkipped += 1;
+          }
+        } catch {
+          stats.emailErrors += 1;
         }
       } catch {
         stats.errors += 1;
@@ -176,6 +197,9 @@ export async function runDigestJob(input?: {
           skippedEmpty: stats.skippedEmpty,
           alreadyExists: stats.alreadyExists,
           errors: stats.errors,
+          emailed: stats.emailed,
+          emailSkipped: stats.emailSkipped,
+          emailErrors: stats.emailErrors,
         },
       },
     });
@@ -207,6 +231,9 @@ export async function runDigestJob(input?: {
           skippedEmpty: stats.skippedEmpty,
           alreadyExists: stats.alreadyExists,
           errors: stats.errors,
+          emailed: stats.emailed,
+          emailSkipped: stats.emailSkipped,
+          emailErrors: stats.emailErrors,
         },
       },
     });

@@ -78,6 +78,38 @@ Migration `20260731020000_digest_notifications` (included in `pnpm --filter @uni
 
 The worker also needs `DATABASE_APP_URL` (same as API runtime). It does not need `JWT_SECRET`.
 
+### Argus email digest (optional second channel)
+
+**Argus** is the only brand for outbound digest email. Sender Gmail: `argus.unified.workspace@gmail.com`. Default From: `Argus <argus.unified.workspace@gmail.com>`.
+
+Email delivery is **off by default** (`DIGEST_EMAIL_ENABLED=false`). Only the digest worker uses these vars — not `pnpm dev` / the API request path. Soft-fail: missing SMTP config or send errors never block in-app delivery.
+
+| Variable | Required? | Default | Notes |
+| -------- | --------- | ------- | ----- |
+| `DIGEST_EMAIL_ENABLED` | no | `false` | Master switch — leave `false` until you intentionally enable Argus email |
+| `SMTP_HOST` | when enabled | `smtp.gmail.com` | Gmail SMTP |
+| `SMTP_PORT` | when enabled | `587` | STARTTLS |
+| `SMTP_USER` | when enabled | — | `argus.unified.workspace@gmail.com` |
+| `SMTP_PASS` | when enabled | — | Gmail **App Password** for Argus (not the normal Gmail password) |
+| `SMTP_FROM` | no | `Argus <argus.unified.workspace@gmail.com>` | From header |
+| `DIGEST_EMAIL_ALLOWLIST` | no | empty | Soft rollout: only email these comma-separated addresses |
+| `DIGEST_EMAIL_REDIRECT_TO` | no | empty | **Local/test only** — forces every send to one inbox; **never set in production** |
+
+Recipient rules when email is enabled: redirect (if set) → else allowlist (if non-empty) → else `user.email`.
+
+Seed user **Dave** (`temporary.hamesha.ka.group@gmail.com`) is the real-inbox recipient for Argus email testing. Prefer allowlisting that address locally — do **not** set `DIGEST_EMAIL_REDIRECT_TO` for this path (redirect remains available for other ad-hoc tests only; never in production).
+
+```bash
+# Local test: allowlist Dave’s real inbox (seed user)
+DIGEST_EMAIL_ENABLED=true
+DIGEST_EMAIL_ALLOWLIST=temporary.hamesha.ka.group@gmail.com
+SMTP_USER=argus.unified.workspace@gmail.com
+SMTP_FROM=Argus <argus.unified.workspace@gmail.com>
+SMTP_PASS=xxxx xxxx xxxx xxxx
+```
+
+Create the Argus Gmail account, enable 2-Step Verification, then create an [App Password](https://myaccount.google.com/apppasswords) (Mail / Other → “Argus”) for `SMTP_PASS`.
+
 ### Run once locally
 
 ```bash
@@ -87,7 +119,18 @@ DIGEST_ENABLED=true pnpm --filter @unified/api digest:once
 
 Optional: `DIGEST_ENABLED=true pnpm --filter @unified/api digest:once -- --scheduled-for=2026-07-31T06:00:00.000Z`
 
-Then open Support Hub or Review Console — the notification bell should show the digest.
+With Argus email enabled + Dave allowlist (local):
+
+```bash
+DIGEST_ENABLED=true DIGEST_EMAIL_ENABLED=true \
+  SMTP_USER=argus.unified.workspace@gmail.com \
+  SMTP_FROM='Argus <argus.unified.workspace@gmail.com>' \
+  SMTP_PASS='xxxx xxxx xxxx xxxx' \
+  DIGEST_EMAIL_ALLOWLIST=temporary.hamesha.ka.group@gmail.com \
+  pnpm --filter @unified/api digest:once
+```
+
+Then open Support Hub or Review Console — the notification bell should show the digest (in-app only; EMAIL rows do not inflate the bell). Check Dave’s Gmail for the Argus message.
 
 Isolation leak coverage: `pnpm test:bola` includes `ai-digest-leak.test.ts`. Product details: [requirements/ai-progress-tracker.md](./requirements/ai-progress-tracker.md). Production job + Scheduler: [deployment.md](./deployment.md#ai-progress-tracker-digest).
 

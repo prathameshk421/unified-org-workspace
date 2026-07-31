@@ -34,7 +34,7 @@ test.describe("session sync", () => {
   });
 
   test("org switcher for multi-org user", async ({ page, context }) => {
-    await login(page, "dave@example.com", "password123", HUB);
+    await login(page, "temporary.hamesha.ka.group@gmail.com", "password123", HUB);
     await expect(page.getByTestId("org-switcher")).toBeVisible();
 
     const select = page.getByTestId("org-switcher");
@@ -59,7 +59,7 @@ test.describe("session sync", () => {
     // Sibling dashboard should see the same active org after navigation.
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText("dave@example.com");
+    await expect(consolePage.getByTestId("auth-status")).toContainText("temporary.hamesha.ka.group@gmail.com");
     await expect(consolePage.getByTestId("active-org")).toHaveText(
       await page.getByTestId("active-org").innerText(),
       { timeout: 10_000 },

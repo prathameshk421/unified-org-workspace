@@ -185,6 +185,7 @@ export type NotificationType =
 
 export const NotificationChannel = {
   IN_APP: "IN_APP",
+  EMAIL: "EMAIL",
 } as const;
 
 export type NotificationChannel =

@@ -65,6 +65,33 @@ resource "google_secret_manager_secret_version" "groq_api_key" {
   secret_data = var.groq_api_key
 }
 
+# Argus digest email (Gmail SMTP) — mounted on digest job only
+resource "google_secret_manager_secret" "smtp_pass" {
+  secret_id = "SMTP_PASS"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "smtp_pass" {
+  secret      = google_secret_manager_secret.smtp_pass.id
+  secret_data = var.smtp_pass
+}
+
+resource "google_secret_manager_secret" "smtp_user" {
+  secret_id = "SMTP_USER"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "smtp_user" {
+  secret      = google_secret_manager_secret.smtp_user.id
+  secret_data = var.smtp_user
+}
+
 resource "random_password" "jwt_secret" {
   length  = 64
   special = true

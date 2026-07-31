@@ -60,7 +60,7 @@ curl -s -c $JAR -b $JAR "$API/auth/me?orgId=ignored" | jq '.activeOrg'
 # 4. Login as Dave (multi-org) in separate jar
 curl -s -c cookies-dave.txt -b cookies-dave.txt -X POST $API/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"dave@example.com","password":"password123"}' | jq
+  -d '{"email":"temporary.hamesha.ka.group@gmail.com","password":"password123"}' | jq
 
 # 5. Switch org (use Globex orgId from /auth/me memberships)
 GLOBEX_ID=$(curl -s -c cookies-dave.txt -b cookies-dave.txt $API/auth/me | jq -r '.memberships[] | select(.orgSlug=="globex") | .orgId')

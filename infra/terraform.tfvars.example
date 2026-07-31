@@ -18,3 +18,10 @@ enable_custom_domain = false
 # AI Progress Tracker (digest Cloud Run Job + Cloud Scheduler 06:00 UTC)
 # digest_enabled = true
 # groq_api_key   = "gsk_..."   # Secret Manager GROQ_API_KEY; leave unset for template-only digests
+
+# Argus digest email (Gmail SMTP) — mounted on digest job only; email stays off until enabled
+# digest_email_enabled   = false
+# smtp_user              = "argus.unified.workspace@gmail.com"
+# smtp_pass              = "xxxx xxxx xxxx xxxx"  # Gmail App Password; leave unset until ready
+# digest_email_allowlist = "your-alt@whatever.com"  # optional soft-launch allowlist
+# Never set DIGEST_EMAIL_REDIRECT_TO in prod terraform.

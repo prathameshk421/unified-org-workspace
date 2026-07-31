@@ -50,7 +50,7 @@ Per-app adapters: `ProtectedRoute` / `GuestRoute` (redirect only when `authStatu
 1. Login on Support Hub → open Review Console (same browser) → `data-testid="auth-status"` shows the same user.
 2. Logout on one dashboard → other dashboard loses session on next navigation/hydration.
 3. Logout-everywhere invalidates refresh; subsequent `/auth/me` and `/auth/refresh` return 401.
-4. Multi-org user (`dave@example.com`) can switch org via OrgSwitcher; active org updates from server.
+4. Multi-org user (`temporary.hamesha.ka.group@gmail.com`) can switch org via OrgSwitcher; active org updates from server.
 5. Alice cannot `switch-org` to Globex (403) — Newman.
 6. Non-JSON `POST /auth/login` → 415 — Newman.
 7. No forced `COOKIE_DOMAIN` on gateway / default deploy (set only with custom parent domain).
@@ -66,7 +66,7 @@ pnpm test:auth
 bash scripts/run-auth-e2e.sh
 ```
 
-Demo users (password `password123`): `alice@acme.com`, `dave@example.com` (multi-org).
+Demo users (password `password123`): `alice@acme.com`, `temporary.hamesha.ka.group@gmail.com` (multi-org).
 
 ## Explicitly out of scope
 

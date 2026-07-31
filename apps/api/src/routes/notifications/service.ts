@@ -37,6 +37,7 @@ export async function listNotifications(
   const items = await prisma.notification.findMany({
     where: {
       userId,
+      channel: "IN_APP",
       redactedAt: null,
       ...(opts.unreadOnly ? { readAt: null } : {}),
     },
@@ -62,7 +63,7 @@ export async function listNotifications(
 
 export async function getUnreadCount(userId: string): Promise<number> {
   return prisma.notification.count({
-    where: { userId, readAt: null, redactedAt: null },
+    where: { userId, channel: "IN_APP", readAt: null, redactedAt: null },
   });
 }
 

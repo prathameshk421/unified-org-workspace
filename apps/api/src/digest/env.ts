@@ -16,9 +16,22 @@ function positiveIntEnv(key: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseAllowlist(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Default Argus From header — locked brand. */
+export const DEFAULT_SMTP_FROM =
+  "Argus <argus.unified.workspace@gmail.com>";
+
 /**
  * Worker-safe env — does not require JWT_SECRET.
  * Import load-env before reading process.env in the worker entrypoint.
+ * Email settings are optional; never requireEnv.
  */
 export const digestEnv = {
   enabled: boolEnv("DIGEST_ENABLED", false),
@@ -31,4 +44,16 @@ export const digestEnv = {
   maxUsersPerRun: positiveIntEnv("DIGEST_MAX_USERS_PER_RUN", 10_000),
   /** Stale RUNNING claim older than this may be resumed. */
   staleRunningMs: positiveIntEnv("DIGEST_STALE_RUNNING_MS", 10 * 60_000),
+
+  /** Master switch — production default OFF. */
+  emailEnabled: boolEnv("DIGEST_EMAIL_ENABLED", false),
+  smtpHost: optionalEnv("SMTP_HOST") ?? "smtp.gmail.com",
+  smtpPort: positiveIntEnv("SMTP_PORT", 587),
+  smtpUser: optionalEnv("SMTP_USER"),
+  smtpPass: optionalEnv("SMTP_PASS"),
+  smtpFrom: optionalEnv("SMTP_FROM") ?? DEFAULT_SMTP_FROM,
+  /** Comma-separated emails; empty = all users when enabled. */
+  emailAllowlist: parseAllowlist(optionalEnv("DIGEST_EMAIL_ALLOWLIST")),
+  /** Dev/test only — force every send to this inbox. Never set in prod. */
+  emailRedirectTo: optionalEnv("DIGEST_EMAIL_REDIRECT_TO"),
 } as const;

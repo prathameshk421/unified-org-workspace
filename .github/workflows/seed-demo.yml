@@ -37,4 +37,4 @@ jobs:
           echo "  - alice@acme.com   (ORG_ADMIN on Acme)"
           echo "  - bob@acme.com     (SUPPORT_AGENT on Acme)"
           echo "  - carol@globex.com (ORG_ADMIN on Globex)"
-          echo "  - dave@example.com (REVIEWER on Acme + Globex)"
+          echo "  - temporary.hamesha.ka.group@gmail.com (REVIEWER on Acme + Globex)"

@@ -47,7 +47,7 @@ Verified against:
 | Entity      | Details                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------- |
 | Orgs        | `acme` (Acme Corp), `globex` (Globex Inc)                                                                |
-| Users       | alice@acme.com, bob@acme.com, carol@globex.com, dave@example.com                                         |
+| Users       | alice@acme.com, bob@acme.com, carol@globex.com, temporary.hamesha.ka.group@gmail.com                                         |
 | Password    | `password123` (bcrypt hashed)                                                                            |
 | Memberships | Alice → ORG_ADMIN (Acme); Bob → SUPPORT_AGENT (Acme); Carol → ORG_ADMIN (Globex); Dave → REVIEWER (both) |
 | Connection  | Acme ↔ Globex, `ACCEPTED`                                                                                |

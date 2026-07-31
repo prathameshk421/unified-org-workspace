@@ -64,6 +64,7 @@ enum NotificationType {
 
 enum NotificationChannel {
   IN_APP
+  EMAIL
 }
 
 model Organization {

@@ -58,7 +58,7 @@ flowchart LR
 | Database       | Cloud SQL PostgreSQL 16                  | Private IP + Cloud SQL connector  |
 | Cache          | Memorystore Redis 7                      | VPC-private                       |
 | Images         | Artifact Registry (`unified-org`)        | Built by GitHub Actions           |
-| Secrets        | Secret Manager                           | JWT, DB URLs, Redis URL, Groq     |
+| Secrets        | Secret Manager                           | JWT, DB URLs, Redis URL, Groq, SMTP (Argus) |
 | Deploy auth    | Workload Identity Federation             | No JSON service-account keys      |
 
 ## URLs
@@ -101,8 +101,10 @@ Set `enable_custom_domain = true` in `terraform.tfvars` and configure DNS for `a
 | `DATABASE_APP_URL` | API runtime + digest job   | Restricted `unified_app` role (append-only audit)    |
 | `REDIS_URL`        | API                        | Memorystore connection string                        |
 | `GROQ_API_KEY`     | Digest job only            | From `var.groq_api_key` in `terraform.tfvars` (default `"unset"` → template-only digests) |
+| `SMTP_USER`        | Digest job only            | Argus Gmail: `argus.unified.workspace@gmail.com` (`var.smtp_user`) |
+| `SMTP_PASS`        | Digest job only            | Argus Gmail App Password (`var.smtp_pass`, default `"unset"`) |
 
-There is **no** GitHub Actions secret for Groq — set it in Terraform / Secret Manager. CD only rebuilds and updates the digest job image.
+There is **no** GitHub Actions secret for Groq or SMTP — set them in Terraform / Secret Manager. CD only rebuilds and updates the digest job image. Mount SMTP secrets on **`unified-org-digest` only** (same pattern as `GROQ_API_KEY`). Do **not** put SMTP secrets on the API service.
 
 ### Cloud Run API env (set by Terraform)
 
@@ -121,7 +123,7 @@ Cookie SameSite policy (application code): custom domain → `Strict`; gateway /
 
 ### Cloud Run digest job env (set by Terraform)
 
-The API **service** does not need Groq/digest vars — only the `unified-org-digest` job does. Notifications APIs read `notifications` rows already written by the worker.
+The API **service** does not need Groq/digest/SMTP vars — only the `unified-org-digest` job does. Notifications APIs read `notifications` rows already written by the worker.
 
 | Variable             | Source                         | Notes |
 | -------------------- | ------------------------------ | ----- |
@@ -131,14 +133,26 @@ The API **service** does not need Groq/digest vars — only the `unified-org-dig
 | `GROQ_API_KEY`       | Secret Manager                 | From `terraform.tfvars` `groq_api_key` |
 | `DATABASE_APP_URL`   | Secret Manager                 | Same restricted role as API |
 | `JWT_SECRET`         | Secret Manager                 | Mounted for image parity; worker does not require it |
+| `DIGEST_EMAIL_ENABLED` | `var.digest_email_enabled`   | **Production default `false`** until you opt in to Argus email |
+| `SMTP_HOST`          | hardcoded / tf                 | `smtp.gmail.com` |
+| `SMTP_PORT`          | hardcoded / tf                 | `587` |
+| `SMTP_FROM`          | tf / default                   | `Argus <argus.unified.workspace@gmail.com>` |
+| `SMTP_USER`          | Secret Manager                 | `argus.unified.workspace@gmail.com` |
+| `SMTP_PASS`          | Secret Manager                 | Argus App Password |
+| `DIGEST_EMAIL_ALLOWLIST` | optional tf                | Soft launch: restrict to listed addresses; empty = all users when enabled |
+| `DIGEST_EMAIL_REDIRECT_TO` | —                        | **Omit / never set in production** (local/test only) |
 
 Optional tuning vars (`DIGEST_TICKET_STALE_DAYS`, etc.) exist for local runs — see [setup.md](./setup.md#ai-progress-tracker-digest). Prod uses code defaults unless you extend Terraform.
 
 In `infra/terraform.tfvars`:
 
 ```hcl
-digest_enabled = true
-groq_api_key   = "gsk_..."   # or leave default "unset" for template-only digests
+digest_enabled       = true
+groq_api_key         = "gsk_..."   # or leave default "unset" for template-only digests
+digest_email_enabled = false       # keep false until Argus SMTP secrets are set
+# smtp_user          = "argus.unified.workspace@gmail.com"
+# smtp_pass          = "xxxx xxxx xxxx xxxx"  # Gmail App Password labeled Argus
+# Optional soft launch: DIGEST_EMAIL_ALLOWLIST via Terraform once enabled
 ```
 
 ### Next.js build-time vars (set in CD)
@@ -163,7 +177,7 @@ Run the **Seed Demo Data** workflow once after the first successful deploy and m
 | `alice@acme.com`       | Acme          | ORG_ADMIN            | `password123` |
 | `bob@acme.com`         | Acme          | SUPPORT_AGENT        | `password123` |
 | `carol@globex.com`     | Globex        | ORG_ADMIN            | `password123` |
-| `dave@example.com`     | Acme + Globex | REVIEWER             | `password123` |
+| `temporary.hamesha.ka.group@gmail.com`     | Acme + Globex | REVIEWER             | `password123` |
 | `eve@example.com`      | Acme          | CROSS_ORG_GUEST      | `password123` |
 | `platform@example.com` | —             | Platform Super Admin | `password123` |
 
@@ -295,7 +309,7 @@ gcloud run jobs execute unified-org-digest --region=<region> --wait
 
 ### Rotate secrets
 
-Update values in Secret Manager, then redeploy affected Cloud Run services/jobs so new revisions pick up `latest` secret versions. For Groq: change `groq_api_key` in `terraform.tfvars` and `terraform apply`, or add a new Secret Manager version for `GROQ_API_KEY`, then re-execute / redeploy the digest job.
+Update values in Secret Manager, then redeploy affected Cloud Run services/jobs so new revisions pick up `latest` secret versions. For Groq: change `groq_api_key` in `terraform.tfvars` and `terraform apply`, or add a new Secret Manager version for `GROQ_API_KEY`, then re-execute / redeploy the digest job. For Argus SMTP: change `smtp_user` / `smtp_pass` in `terraform.tfvars` and `terraform apply`, or add new Secret Manager versions for `SMTP_USER` / `SMTP_PASS`, then redeploy the digest job.
 
 ### Terraform changes
 
@@ -317,9 +331,20 @@ Product behavior: [requirements/ai-progress-tracker.md](./requirements/ai-progre
 | Cloud Run Job | `unified-org-digest` (API image, entrypoint `node dist/worker/digest-once.js`) |
 | Scheduler | `unified-org-digest-daily` — cron `0 6 * * *` (Etc/UTC) POSTs the job `:run` API |
 | CD | Deploy workflow runs `gcloud run jobs update unified-org-digest` after API image publish |
-| GitHub secrets/vars | None specific to digests (Groq is Terraform → Secret Manager only) |
+| GitHub secrets/vars | None specific to digests (Groq + Argus SMTP are Terraform → Secret Manager only) |
 
 Enable LLM summaries by setting `groq_api_key` in `terraform.tfvars` (never commit the real key). With the default `"unset"`, digests still run using the template summarizer when `digest_enabled = true`.
+
+### Argus email channel (production)
+
+Outbound digests may also go via **Argus** Gmail SMTP (`argus.unified.workspace@gmail.com`, From `Argus <argus.unified.workspace@gmail.com>`). **`DIGEST_EMAIL_ENABLED` defaults to `false`** — digests and bells behave exactly as today until you opt in. Soft-fail: SMTP errors never fail the job if in-app delivery succeeded. **`DIGEST_EMAIL_REDIRECT_TO` must never be set in production** (local/test redirect only). Use `DIGEST_EMAIL_ALLOWLIST` for soft rollout.
+
+**Prod rollout (nothing breaks until step 3):**
+
+1. Deploy with `digest_email_enabled = false` → in-app only (identical to today)
+2. Create Argus Gmail + App Password; set `smtp_user` / `smtp_pass` in tfvars; `terraform apply`
+3. Soft launch: `digest_email_enabled = true` + allowlist `temporary.hamesha.ka.group@gmail.com` (seed Dave already uses this real inbox)
+4. Full launch: clear allowlist
 
 ## Known limits (first cut)
 

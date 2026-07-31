@@ -71,3 +71,29 @@ variable "digest_enabled" {
   type        = bool
   default     = true
 }
+
+variable "digest_email_enabled" {
+  description = "Whether Argus digest emails are sent (digest job only; default false until SMTP secrets are ready)"
+  type        = bool
+  default     = false
+}
+
+variable "smtp_pass" {
+  description = "Gmail App Password for Argus SMTP (set in terraform.tfvars; use unset until ready)"
+  type        = string
+  sensitive   = true
+  default     = "unset"
+}
+
+variable "smtp_user" {
+  description = "SMTP username for Argus digest email (Gmail address)"
+  type        = string
+  sensitive   = true
+  default     = "argus.unified.workspace@gmail.com"
+}
+
+variable "digest_email_allowlist" {
+  description = "Optional comma-separated emails allowed to receive Argus digests (empty = all users when enabled)"
+  type        = string
+  default     = ""
+}

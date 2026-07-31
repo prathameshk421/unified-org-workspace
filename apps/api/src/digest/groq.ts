@@ -1,3 +1,5 @@
+import type { DigestChannel } from "./prompts.js";
+import { digestBodyCharLimit, digestSystemPrompt } from "./prompts.js";
 import type { DigestFacts } from "./types.js";
 
 const GROQ_BASE = "https://api.groq.com/openai/v1";
@@ -6,6 +8,7 @@ export type GroqSummarizeOpts = {
   apiKey: string;
   model: string;
   timeoutMs: number;
+  channel?: DigestChannel;
 };
 
 type ChatCompletionResponse = {
@@ -56,6 +59,7 @@ export async function summarizeDigestWithGroq(
   facts: DigestFacts,
   opts: GroqSummarizeOpts,
 ): Promise<{ title: string; body: string }> {
+  const channel = opts.channel ?? "in_app";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs);
 
@@ -74,10 +78,7 @@ export async function summarizeDigestWithGroq(
         messages: [
           {
             role: "system",
-            content:
-              "You write short in-app progress digests for a multi-tenant workspace. " +
-              "Use ONLY the provided JSON facts. Do not invent ids, titles, or organizations. " +
-              "Respond with JSON: {\"title\": string, \"body\": string}. Body max ~400 characters.",
+            content: digestSystemPrompt(channel),
           },
           {
             role: "user",
@@ -100,6 +101,10 @@ export async function summarizeDigestWithGroq(
 
     const out = extractJsonObject(content);
     assertSummaryUsesOnlyKnownIds(facts, `${out.title}\n${out.body}`);
+    const limit = digestBodyCharLimit(channel);
+    if (out.body.length > limit) {
+      out.body = out.body.slice(0, limit).trimEnd();
+    }
     return out;
   } finally {
     clearTimeout(timer);
