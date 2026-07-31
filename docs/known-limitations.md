@@ -16,7 +16,7 @@ Product and workflow gaps in the current build — not deployment topology or in
 
 ### Notifications & AI digests
 
-**Batched digests, not realtime** — Progress digests run on a scheduled background job (`digest:once` locally; Cloud Scheduler in production), not when a ticket or PR changes. The in-app notification bell updates after each run.
+**Batched digests, not realtime** — Progress digests run on a scheduled background job every 3 hours UTC by default (`DIGEST_INTERVAL_HOURS`; `digest:once` locally; Cloud Scheduler in production), not when a ticket or PR changes. The in-app notification bell updates after each run.
 
 **LLM summarization is per-run, not per-event** — When `GROQ_API_KEY` is set, Groq is called once per user per digest run to summarize scoped facts. It is not invoked on every comment or status change, to keep latency, cost, and API rate limits manageable — especially on Groq's free tier. Without a key or if the call fails, a template summary is used instead.
 
@@ -40,7 +40,7 @@ Product and workflow gaps in the current build — not deployment topology or in
 - **Auto-triage tickets** — Classify incoming issues, suggest priority/assignee, and propose status transitions from title + body + attachments.
 - **Ticket creation agents** — Turn Slack/email/support-form signals into draft tickets for human approve-or-send (no silent cross-org writes).
 - **PR workflow agents** — Nudge stale reviewers, draft review comments from diff context, open follow-up tickets when a merge unblocks support work.
-- **Scheduled + event-driven runs** — Move beyond daily digests: agents act on triggers (new comment, idle PR, overdue assignee) with explicit guardrails and audit trail.
+- **Event-driven runs** — Move beyond interval-based digests: agents act on triggers (new comment, idle PR, overdue assignee) with explicit guardrails and audit trail.
 
 ### Platform & integrations
 

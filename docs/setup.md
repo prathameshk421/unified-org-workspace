@@ -137,7 +137,7 @@ Optional private Argus email tester: set `SEED_ARGUS_TEST_EMAIL` (and matching `
 
 ## Optional: AI progress digest
 
-Digests run via a background worker, not on page load. To generate notifications once:
+Digests run via a background worker on a configurable UTC interval (default **3 hours** via `DIGEST_INTERVAL_HOURS`; Cloud Scheduler in production). They are not triggered on page load. To generate notifications once:
 
 ```bash
 DIGEST_ENABLED=true pnpm --filter @unified/api digest:once

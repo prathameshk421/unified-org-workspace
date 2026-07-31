@@ -13,8 +13,8 @@ resource "google_cloud_run_v2_job_iam_member" "digest_scheduler_runner" {
 
 resource "google_cloud_scheduler_job" "digest_daily" {
   name             = "${local.name_prefix}-digest-daily"
-  description      = "Run AI progress digest job daily at 06:00 UTC"
-  schedule         = "0 6 * * *"
+  description      = "Run AI progress digest job every 3 hours (UTC)"
+  schedule         = "0 */3 * * *"
   time_zone        = "Etc/UTC"
   attempt_deadline = "320s"
   region           = var.region

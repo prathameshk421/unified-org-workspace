@@ -37,14 +37,18 @@ function emptyStats(partial?: Partial<DigestRunStats>): DigestRunStats {
   };
 }
 
-function truncateToUtcDayBucket(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 6, 0, 0, 0),
-  );
+function truncateToUtcIntervalBucket(d: Date, intervalHours: number): Date {
+  const hours = Math.max(1, intervalHours);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const day = d.getUTCDate();
+  const h = d.getUTCHours();
+  const bucketHour = Math.floor(h / hours) * hours;
+  return new Date(Date.UTC(y, m, day, bucketHour, 0, 0, 0));
 }
 
 export function computeScheduledFor(now: Date = new Date()): Date {
-  return truncateToUtcDayBucket(now);
+  return truncateToUtcIntervalBucket(now, digestEnv.intervalHours);
 }
 
 async function claimOrResumeRun(scheduledFor: Date): Promise<{

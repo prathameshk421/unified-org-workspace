@@ -42,6 +42,8 @@ export const digestEnv = {
   ticketStaleDays: positiveIntEnv("DIGEST_TICKET_STALE_DAYS", 3),
   prIdleDays: positiveIntEnv("DIGEST_PR_IDLE_DAYS", 3),
   maxUsersPerRun: positiveIntEnv("DIGEST_MAX_USERS_PER_RUN", 10_000),
+  /** Hours between digest run buckets (UTC). Default 3. */
+  intervalHours: positiveIntEnv("DIGEST_INTERVAL_HOURS", 3),
   /** Stale RUNNING claim older than this may be resumed. */
   staleRunningMs: positiveIntEnv("DIGEST_STALE_RUNNING_MS", 10 * 60_000),
 

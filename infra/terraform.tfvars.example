@@ -14,7 +14,7 @@ enable_custom_domain = false
 # Optional cost controls
 # db_tier = "db-f1-micro"
 
-# AI Progress Tracker (digest Cloud Run Job + Cloud Scheduler 06:00 UTC)
+# AI Progress Tracker (digest Cloud Run Job + Cloud Scheduler every 3 hours UTC)
 digest_enabled = true
 # groq_api_key   = "gsk_..."   # Secret Manager GROQ_API_KEY; leave "unset" for template-only digests
 
