@@ -5,6 +5,14 @@
 @source "../../packages/ui/src/**/*.{ts,tsx}";
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
   h1,
   h2,
   h3,
@@ -14,7 +22,19 @@
   }
 
   body {
-    background-color: var(--color-surface);
+    margin: 0;
+    min-height: 100dvh;
+    background-color: #fcfaf8;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgb(245 239 230 / 90%), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 50% 100%, rgb(248 232 238 / 25%), transparent 60%);
+    overflow-x: hidden;
+  }
+
+  button,
+  a,
+  select {
+    -webkit-tap-highlight-color: transparent;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -25,5 +45,88 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+@layer components {
+  .argus-card {
+    border: 1px solid rgb(55 42 36 / 9%);
+    background: rgb(255 255 255 / 88%);
+    box-shadow:
+      0 1px 2px rgb(86 49 61 / 3%),
+      0 14px 38px rgb(71 48 39 / 5%);
+    backdrop-filter: blur(8px);
+  }
+
+  .argus-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    border: 1px solid rgb(155 44 93 / 7%);
+    background: linear-gradient(145deg, #fff8fb, #f8e8ef);
+    color: #92204f;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+  }
+
+  .argus-rings {
+    position: fixed;
+    z-index: 0;
+    width: 27rem;
+    height: 27rem;
+    border: 1px solid rgb(155 44 93 / 8%);
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  .argus-rings::before,
+  .argus-rings::after {
+    position: absolute;
+    content: "";
+    border: 1px solid rgb(155 44 93 / 7%);
+    border-radius: inherit;
+  }
+
+  .argus-rings::before {
+    inset: 3.6rem;
+  }
+
+  .argus-rings::after {
+    inset: 7.2rem;
+  }
+
+  .argus-rings-bottom {
+    bottom: -13.5rem;
+    left: -13.5rem;
+  }
+
+  .argus-rings-top {
+    top: -17rem;
+    right: -12rem;
+    border-color: rgb(139 100 70 / 7%);
+  }
+
+  .argus-dots {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgb(176 58 111 / 19%) 0 1.5px, transparent 2px),
+      radial-gradient(circle, rgb(176 58 111 / 11%) 0 1px, transparent 1.5px),
+      radial-gradient(circle, rgb(120 87 67 / 9%) 0 1px, transparent 1.5px);
+    background-position:
+      17% 75%,
+      79% 19%,
+      58% 60%;
+    background-repeat: no-repeat;
+    background-size:
+      1rem 1rem,
+      1rem 1rem,
+      1rem 1rem;
+  }
+
+  .argus-org-select {
+    appearance: auto;
   }
 }

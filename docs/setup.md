@@ -1,173 +1,221 @@
 # Local Setup Guide
 
+This guide explains how to run the project locally. Architecture diagrams for the three main components are in this folder:
+
+- `identity-org-service.png` — Identity/Org service (Express API, port 4000)
+- `dashboard-1-support-hub.png` — Dashboard 1: Support Hub (port 3000)
+- `dashboard-2-review-console.png` — Dashboard 2: Review & Audit Console (port 3001)
+
+Both dashboards share the same Identity/Org session — log in on one and you are logged in on the other (localhost three-port mode).
+
+---
+
 ## Prerequisites
 
-- Node.js 22+
-- pnpm 10+
-- Docker and Docker Compose
+- **Node.js 22+**
+- **pnpm 10+** (`corepack enable` if needed)
+- **Docker Desktop** (for PostgreSQL)
 
-## Quick start
+---
 
-1. **Clone and install**
+## Quick start (one command)
 
-   ```bash
-   pnpm install
-   ```
-
-2. **Configure environment**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Start infrastructure**
-
-   ```bash
-   docker compose up -d
-   ```
-
-   Postgres runs on `localhost:5432`, Redis on `localhost:6379`.
-
-4. **Run database migrations**
-
-   ```bash
-   pnpm --filter @unified/db db:migrate
-   ```
-
-5. **Seed sample data**
-
-   ```bash
-   pnpm --filter @unified/db db:seed
-   ```
-
-   Demo users all use password `password123`. See [requirements/database-schema.md](./requirements/database-schema.md) for seed details.
-
-6. **Run all apps**
-
-   ```bash
-   pnpm dev
-   ```
-
-## App URLs
-
-| App                    | URL                          |
-| ---------------------- | ---------------------------- |
-| API                    | http://localhost:4000/health |
-| Support Hub            | http://localhost:3000        |
-| Review & Audit Console | http://localhost:3001        |
-
-## AI Progress Tracker (digest)
-
-Digests are delivered by a **background worker**, not on page load / `pnpm dev`. The notification bell reads rows the worker already wrote.
-
-Migration `20260731020000_digest_notifications` (included in `pnpm --filter @unified/db db:migrate`) creates `digest_runs` + `notifications`. No special seed is required — run the worker against existing demo users/tickets/PRs.
-
-### Local env (root `.env`)
-
-| Variable | Required? | Default | Notes |
-| -------- | --------- | ------- | ----- |
-| `DIGEST_ENABLED` | yes to process | `false` | Must be `true` for the worker to create notifications |
-| `GROQ_API_KEY` | optional | unset | Groq LLM summaries; template fallback if missing |
-| `DIGEST_LLM_ENABLED` | optional | `true` if key set | Force off with `false` even when key is present |
-| `GROQ_MODEL` | optional | `openai/gpt-oss-20b` | Groq model id |
-| `DIGEST_TICKET_STALE_DAYS` | optional | `3` | Idle ticket threshold (`updatedAt`) |
-| `DIGEST_PR_IDLE_DAYS` | optional | `3` | Waiting-review PR idle threshold |
-| `DIGEST_LLM_TIMEOUT_MS` | optional | `8000` | Groq request timeout |
-| `DIGEST_MAX_USERS_PER_RUN` | optional | `10000` | Cap users processed per run |
-| `DIGEST_STALE_RUNNING_MS` | optional | `600000` | Resume stale `RUNNING` digest claims |
-
-The worker also needs `DATABASE_APP_URL` (same as API runtime). It does not need `JWT_SECRET`.
-
-### Argus email digest (optional second channel)
-
-**Argus** is the only brand for outbound digest email. Sender Gmail: `argus.unified.workspace@gmail.com`. Default From: `Argus <argus.unified.workspace@gmail.com>`.
-
-Email delivery is **off by default** (`DIGEST_EMAIL_ENABLED=false`). Only the digest worker uses these vars — not `pnpm dev` / the API request path. Soft-fail: missing SMTP config or send errors never block in-app delivery.
-
-| Variable | Required? | Default | Notes |
-| -------- | --------- | ------- | ----- |
-| `DIGEST_EMAIL_ENABLED` | no | `false` | Master switch — leave `false` until you intentionally enable Argus email |
-| `SMTP_HOST` | when enabled | `smtp.gmail.com` | Gmail SMTP |
-| `SMTP_PORT` | when enabled | `587` | STARTTLS |
-| `SMTP_USER` | when enabled | — | `argus.unified.workspace@gmail.com` |
-| `SMTP_PASS` | when enabled | — | Gmail **App Password** for Argus (not the normal Gmail password) |
-| `SMTP_FROM` | no | `Argus <argus.unified.workspace@gmail.com>` | From header |
-| `DIGEST_EMAIL_ALLOWLIST` | no | empty | Soft rollout: only email these comma-separated addresses |
-| `DIGEST_EMAIL_REDIRECT_TO` | no | empty | **Local/test only** — forces every send to one inbox; **never set in production** |
-
-Recipient rules when email is enabled: redirect (if set) → else allowlist (if non-empty) → else `user.email`.
-
-Seed user **Dave** (`temporary.hamesha.ka.group@gmail.com`) is the real-inbox recipient for Argus email testing. Prefer allowlisting that address locally — do **not** set `DIGEST_EMAIL_REDIRECT_TO` for this path (redirect remains available for other ad-hoc tests only; never in production).
+From the repo root:
 
 ```bash
-# Local test: allowlist Dave’s real inbox (seed user)
-DIGEST_EMAIL_ENABLED=true
-DIGEST_EMAIL_ALLOWLIST=temporary.hamesha.ka.group@gmail.com
-SMTP_USER=argus.unified.workspace@gmail.com
-SMTP_FROM=Argus <argus.unified.workspace@gmail.com>
-SMTP_PASS=xxxx xxxx xxxx xxxx
+chmod +x run_all.sh   # first time only
+./run_all.sh
 ```
 
-Create the Argus Gmail account, enable 2-Step Verification, then create an [App Password](https://myaccount.google.com/apppasswords) (Mail / Other → “Argus”) for `SMTP_PASS`.
+This script will:
 
-### Run once locally
+1. Create `.env` from `.env.example` if missing
+2. Run `pnpm install`
+3. Start Postgres via Docker Compose
+4. Run database migrations and seed demo data
+5. Start the API + both dashboards with `pnpm dev`
+
+Press **Ctrl+C** to stop the apps. Postgres keeps running in Docker until you run `docker compose down`.
+
+---
+
+## Manual setup (step by step)
+
+Use this if you prefer to run each step yourself or need to debug.
+
+### 1. Install dependencies
 
 ```bash
-# After migrate/seed; optional GROQ_API_KEY in .env for LLM (template fallback without it)
+pnpm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+The defaults in `.env.example` work for local development. Key values:
+
+| Variable | Local default | Purpose |
+| -------- | ------------- | ------- |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/unified_org` | Migrations and seed (owner role) |
+| `DATABASE_APP_URL` | `postgresql://unified_app:unified_app@localhost:5432/unified_org` | API runtime (append-only audit) |
+| `API_PORT` | `4000` | Identity/Org service |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | API URL for both dashboards |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:3001` | Credentialed cross-origin requests |
+| `JWT_SECRET` | dev secret in example | Must be ≥32 characters |
+
+### 3. Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+Postgres listens on `localhost:5432`. Wait until it is healthy:
+
+```bash
+docker compose exec postgres pg_isready -U postgres -d unified_org
+```
+
+### 4. Run migrations
+
+```bash
+pnpm --filter @unified/db db:migrate:deploy
+```
+
+This applies all Prisma migrations non-interactively (including the `unified_app` DB role and append-only audit permissions).
+
+### 5. Seed demo data
+
+```bash
+pnpm --filter @unified/db db:seed
+```
+
+Creates sample orgs (Acme, Globex), users, tickets, PRs, a cross-org connection, and share grants.
+
+### 6. Start all apps
+
+```bash
+pnpm dev
+```
+
+Turbo starts three processes in parallel:
+
+| Component | Package | URL |
+| --------- | ------- | --- |
+| Identity/Org service | `@unified/api` | http://localhost:4000/health |
+| Dashboard 1 — Support Hub | `@unified/support-hub` | http://localhost:3000 |
+| Dashboard 2 — Review Console | `@unified/review-console` | http://localhost:3001 |
+
+---
+
+## Demo credentials
+
+All seed users use password **`password123`**:
+
+| Email | Org(s) | Notes |
+| ----- | ------ | ----- |
+| `alice@acme.com` | Acme | Admin |
+| `bob@acme.com` | Acme | Member |
+| `carol@globex.com` | Globex | Admin |
+| `dave@example.com` | Acme + Globex | Dave — multi-org user |
+
+Optional private Argus email tester: set `SEED_ARGUS_TEST_EMAIL` (and matching `DIGEST_EMAIL_ALLOWLIST`) in `.env` before `db:seed`. That account is **not** a public demo credential — Dave stays `dave@example.com`.
+
+---
+
+## What to try
+
+1. **Login** — Open Support Hub and Review Console in two browser tabs. Log in on one; the other should show you as authenticated.
+2. **Org switcher** — As Dave, switch between Acme and Globex. Both dashboards should reflect the active org.
+3. **Tickets** — In Support Hub, browse and comment on tickets scoped to your active org.
+4. **PRs & audit** — In Review Console, browse PRs and the audit log for your org.
+5. **Cross-org share** — Demo seed includes an accepted org connection and item-level shares. Guests can view and comment only — no workspace-wide access.
+
+---
+
+## Optional: AI progress digest
+
+Digests run via a background worker, not on page load. To generate notifications once:
+
+```bash
 DIGEST_ENABLED=true pnpm --filter @unified/api digest:once
 ```
 
-Optional: `DIGEST_ENABLED=true pnpm --filter @unified/api digest:once -- --scheduled-for=2026-07-31T06:00:00.000Z`
+Optional LLM summaries need `GROQ_API_KEY` in `.env`. Without it, a template fallback is used. See `.env.example` for all digest and email (Argus) variables.
 
-With Argus email enabled + Dave allowlist (local):
+---
 
-```bash
-DIGEST_ENABLED=true DIGEST_EMAIL_ENABLED=true \
-  SMTP_USER=argus.unified.workspace@gmail.com \
-  SMTP_FROM='Argus <argus.unified.workspace@gmail.com>' \
-  SMTP_PASS='xxxx xxxx xxxx xxxx' \
-  DIGEST_EMAIL_ALLOWLIST=temporary.hamesha.ka.group@gmail.com \
-  pnpm --filter @unified/api digest:once
-```
-
-Then open Support Hub or Review Console — the notification bell should show the digest (in-app only; EMAIL rows do not inflate the bell). Check Dave’s Gmail for the Argus message.
-
-Isolation leak coverage: `pnpm test:bola` includes `ai-digest-leak.test.ts`. Product details: [requirements/ai-progress-tracker.md](./requirements/ai-progress-tracker.md). Production job + Scheduler: [deployment.md](./deployment.md#ai-progress-tracker-digest).
-
-## Auth verification (Branch 3)
-
-With the API running (`pnpm --filter @unified/api dev`), test auth via curl or Postman. See [requirements/identity-auth.md](./requirements/identity-auth.md).
-
-Postman: import [`postman/unified-org-identity-auth.postman_collection.json`](../postman/unified-org-identity-auth.postman_collection.json) or run `pnpm test:auth` (Newman complementary smoke: identity, RBAC, tickets BOLA) with API on port 4000. Newman is **not** the product BOLA gate exit criterion.
-
-## API integration / product BOLA gate
-
-Requires Postgres migrated (`pnpm --filter @unified/db exec prisma migrate deploy`) and the same local `DATABASE_URL` / `DATABASE_APP_URL` as in [AGENTS.md](../AGENTS.md).
+## Verify the stack
 
 ```bash
-pnpm test:bola              # Core Product Security Gate (exact allowlist)
-pnpm test:product-security  # alias for test:bola
-pnpm test:integration       # full API integration suite
+curl http://localhost:4000/health
 ```
 
-See [requirements/bola-tests.md](./requirements/bola-tests.md) and [requirements/product-bola-gate.md](./requirements/product-bola-gate.md).
+With the API running, optional automated checks:
+
+```bash
+pnpm test:auth        # Newman identity/RBAC smoke (API on :4000)
+pnpm test:bola        # Product BOLA security gate (needs migrated DB)
+```
+
+End-to-end browser tests (starts services + Playwright):
+
+```bash
+bash scripts/run-auth-e2e.sh
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| `Port 4000/3000/3001 already in use` | Stop the conflicting process: `lsof -iTCP:4000 -sTCP:LISTEN` |
+| `Docker is not running` | Start Docker Desktop, then retry `./run_all.sh` |
+| Migration errors | Ensure Postgres is up: `docker compose ps` |
+| `401` on API calls | Check `JWT_SECRET` in `.env`; re-login after changing it |
+| Dashboard can't reach API | Confirm `NEXT_PUBLIC_API_URL=http://localhost:4000` and `CORS_ORIGINS` includes both dashboard URLs |
+| Session not syncing between dashboards | On localhost this should work out of the box. In production, Hub and Console must share one hostname (gateway) or a parent `COOKIE_DOMAIN` |
+
+To reset the database:
+
+```bash
+docker compose down -v
+docker compose up -d
+pnpm --filter @unified/db db:migrate:deploy
+pnpm --filter @unified/db db:seed
+```
+
+---
+
+## Monorepo layout
+
+| Path | Description |
+| ---- | ----------- |
+| `apps/api` | Identity/Org service — Express API |
+| `apps/support-hub` | Dashboard 1 — Support Hub (Next.js 15) |
+| `apps/review-console` | Dashboard 2 — Review & Audit Console (Next.js 15) |
+| `apps/gateway` | nginx reverse proxy (production single-hostname deploy only) |
+| `packages/auth-client` | Shared auth provider, credentialed fetch, org switcher |
+| `packages/db` | Prisma schema, migrations, seed |
+| `packages/types` | Shared TypeScript types |
+| `packages/ui` | Shared React UI components |
+| `packages/config` | ESLint, Prettier, Tailwind, TS configs |
+
+Stack: **pnpm + Turborepo**, Node 22, Prisma 6, PostgreSQL 16.
+
+---
 
 ## Common commands
 
 ```bash
-pnpm lint          # ESLint across workspace
-pnpm typecheck     # TypeScript across workspace
-pnpm build         # Production build for all apps/packages
-pnpm test          # Package unit tests (turbo)
-pnpm test:bola     # Product BOLA security gate
-DIGEST_ENABLED=true pnpm --filter @unified/api digest:once   # one-shot AI digest worker
+./run_all.sh                              # full bootstrap + dev
+pnpm dev                                  # start API + both dashboards
+pnpm build                                # production build all apps
+pnpm lint                                 # ESLint
+pnpm typecheck                            # TypeScript
+pnpm --filter @unified/db db:studio       # Prisma Studio (interactive)
+docker compose down                       # stop Postgres (add -v to wipe data)
 ```
-
-## Monorepo layout
-
-- `apps/api` — Express API (`@unified/api`)
-- `apps/support-hub` — Next.js Dashboard 1 (`@unified/support-hub`)
-- `apps/review-console` — Next.js Dashboard 2 (`@unified/review-console`)
-- `packages/*` — Shared libraries (`@unified/ui`, `@unified/types`, etc.)
-
-See [requirements/monorepo-scaffold.md](./requirements/monorepo-scaffold.md) for full scaffold scope.

@@ -12,16 +12,16 @@ enable_custom_domain = false
 # domain = "yourdomain.com"
 
 # Optional cost controls
-# db_tier         = "db-f1-micro"
-# redis_memory_gb = 1
+# db_tier = "db-f1-micro"
 
 # AI Progress Tracker (digest Cloud Run Job + Cloud Scheduler 06:00 UTC)
-# digest_enabled = true
-# groq_api_key   = "gsk_..."   # Secret Manager GROQ_API_KEY; leave unset for template-only digests
+digest_enabled = true
+# groq_api_key   = "gsk_..."   # Secret Manager GROQ_API_KEY; leave "unset" for template-only digests
 
 # Argus digest email (Gmail SMTP) — mounted on digest job only; email stays off until enabled
-# digest_email_enabled   = false
+digest_email_enabled = false
 # smtp_user              = "argus.unified.workspace@gmail.com"
 # smtp_pass              = "xxxx xxxx xxxx xxxx"  # Gmail App Password; leave unset until ready
-# digest_email_allowlist = "your-alt@whatever.com"  # optional soft-launch allowlist
+# digest_email_allowlist = "you@gmail.com"  # soft-launch; match SEED_ARGUS_TEST_EMAIL (private tester)
 # Never set DIGEST_EMAIL_REDIRECT_TO in prod terraform.
+# Private Argus tester is NOT in terraform — set SEED_ARGUS_TEST_EMAIL on the seed job when seeding.

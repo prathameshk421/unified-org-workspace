@@ -52,17 +52,17 @@ describe("digest email recipient rules", () => {
   });
 
   it("allowlist skips users not listed", () => {
-    digestEnv.emailAllowlist = ["temporary.hamesha.ka.group@gmail.com"];
+    digestEnv.emailAllowlist = ["dave@example.com"];
     expect(resolveDigestEmailRecipient("alice@acme.com")).toBeNull();
-    expect(resolveDigestEmailRecipient("temporary.hamesha.ka.group@gmail.com")).toBe(
-      "temporary.hamesha.ka.group@gmail.com",
+    expect(resolveDigestEmailRecipient("dave@example.com")).toBe(
+      "dave@example.com",
     );
   });
 
   it("allowlist is case-insensitive", () => {
-    digestEnv.emailAllowlist = ["temporary.hamesha.ka.group@gmail.com"];
-    expect(resolveDigestEmailRecipient("Temporary.Hamesha.Ka.Group@gmail.com")).toBe(
-      "Temporary.Hamesha.Ka.Group@gmail.com",
+    digestEnv.emailAllowlist = ["dave@example.com"];
+    expect(resolveDigestEmailRecipient("Dave@example.com")).toBe(
+      "Dave@example.com",
     );
   });
 

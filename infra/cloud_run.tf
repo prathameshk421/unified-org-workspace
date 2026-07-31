@@ -110,7 +110,6 @@ resource "google_cloud_run_v2_service" "api" {
     google_artifact_registry_repository.main,
     google_secret_manager_secret_version.database_app_url,
     google_secret_manager_secret_version.jwt_secret,
-    google_secret_manager_secret_version.redis_url,
     google_project_iam_member.runtime_secret_accessor,
     google_project_iam_member.runtime_sql_client,
     google_storage_bucket_iam_member.runtime_attachments_object_admin,

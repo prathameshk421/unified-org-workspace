@@ -32,12 +32,6 @@ variable "db_tier" {
   default     = "db-f1-micro"
 }
 
-variable "redis_memory_gb" {
-  description = "Memorystore Redis memory size in GB"
-  type        = number
-  default     = 1
-}
-
 variable "artifact_registry_repo" {
   description = "Artifact Registry repository ID"
   type        = string

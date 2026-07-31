@@ -25,9 +25,5 @@ locals {
       name   = "DATABASE_APP_URL"
       secret = google_secret_manager_secret.database_app_url.secret_id
     },
-    {
-      name   = "REDIS_URL"
-      secret = google_secret_manager_secret.redis_url.secret_id
-    },
   ]
 }

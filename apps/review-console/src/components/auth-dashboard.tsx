@@ -1,114 +1,306 @@
 "use client";
 
 import { OrgSwitcher, useAuth } from "@unified/auth-client/react";
-import { Button } from "@unified/ui";
-import { ArrowRight, GitPullRequest } from "lucide-react";
+import type { PullRequestSummary } from "@unified/types";
+import {
+  ArrowRight,
+  Building2,
+  ChevronDown,
+  ExternalLink,
+  GitPullRequest,
+  Link2,
+  Menu,
+  ScrollText,
+  ShieldCheck,
+  UserRound,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { canMutatePrs, canViewAudit } from "@/lib/roles";
+import { apiFetch } from "@/lib/api";
+import { NotificationBellContainer } from "./notification-bell-container";
+
+function initialsFromEmail(email?: string): string {
+  const parts = email?.split("@")[0]?.split(/[._-]+/).filter(Boolean) ?? [];
+  if (parts.length > 1) return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  return (parts[0]?.slice(0, 2) || "AR").toUpperCase();
+}
+
+function relativeTime(value: string): string {
+  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function statusStyle(status: string): string {
+  if (status === "IN_REVIEW") return "bg-[#fae9f2] text-[#92204f]";
+  if (status === "OPEN") return "bg-[#fff4da] text-[#8a6220]";
+  if (status === "APPROVED" || status === "MERGED") return "bg-[#e8f6eb] text-[#31744a]";
+  return "bg-[#f1efed] text-[#67615d]";
+}
 
 export function AuthDashboard({
   title,
-  subtitle,
   siblingLabel,
   siblingUrl,
 }: {
   title: string;
-  subtitle: string;
   siblingLabel: string;
   siblingUrl?: string;
 }) {
   const { user, activeOrg, logout, logoutEverywhere } = useAuth();
   const showPrs = canMutatePrs(activeOrg?.role);
   const showAudit = canViewAudit(activeOrg?.role);
+  const [recentPrs, setRecentPrs] = useState<PullRequestSummary[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!showPrs) {
+      setRecentPrs([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void apiFetch<PullRequestSummary[]>("/prs")
+      .then((prs) => {
+        if (!cancelled) {
+          setRecentPrs(
+            [...prs]
+              .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+              .slice(0, 3),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRecentPrs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrg?.orgId, showPrs]);
+
+  const actions: Array<{
+    href: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    testId: string;
+  }> = [
+    ...(showPrs
+      ? [{
+          href: "/prs",
+          title: "Pull requests",
+          description: "Review and manage pull requests.",
+          icon: GitPullRequest,
+          testId: "nav-prs",
+        }]
+      : []),
+    {
+      href: "/shared/prs",
+      title: "Shared with me",
+      description: "Reviews shared across organizations.",
+      icon: UsersRound,
+      testId: "nav-shared-prs",
+    },
+    ...(showAudit
+      ? [{
+          href: "/audit",
+          title: "Audit log",
+          description: "Inspect immutable workspace activity.",
+          icon: ScrollText,
+          testId: "nav-audit",
+        }]
+      : []),
+    {
+      href: "/settings/connections",
+      title: "Connections",
+      description: "Manage integrations and connections.",
+      icon: Link2,
+      testId: "nav-connections",
+    },
+  ];
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6 py-16">
-      <div className="w-full max-w-lg text-center">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-raised px-3 py-1 font-sans text-xs font-medium text-muted">
-          <GitPullRequest className="h-3.5 w-3.5 text-brand-600" aria-hidden="true" />
-          Unified Org Workspace
-        </div>
-        <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground">
-          {title}
-        </h1>
-        <p className="mx-auto mt-3 max-w-md font-serif text-base text-muted">{subtitle}</p>
+    <div className="relative min-h-screen overflow-hidden bg-transparent">
+      <div className="argus-rings argus-rings-bottom" aria-hidden="true" />
+      <div className="argus-rings argus-rings-top" aria-hidden="true" />
+      <div className="argus-dots" aria-hidden="true" />
+      <div className="fixed bottom-[8.5rem] left-10 z-0 hidden h-12 w-12 items-center justify-center rounded-full border border-brand-100 bg-white/70 text-brand-600 shadow-sm lg:flex">
+        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <div className="fixed right-20 top-36 z-0 hidden h-12 w-12 items-center justify-center rounded-full border border-brand-100 bg-white/70 text-brand-600 shadow-sm xl:flex">
+        <UsersRound className="h-5 w-5" aria-hidden="true" />
+      </div>
 
-        <div className="mt-10 space-y-3 border-y border-border py-8 text-left">
-          <p className="font-sans text-xs font-medium uppercase tracking-wider text-muted">
-            Signed in as
-          </p>
-          <p className="font-serif text-lg font-semibold text-foreground" data-testid="auth-status">
-            {user?.email}
-          </p>
-          <p className="pt-3 font-sans text-xs font-medium uppercase tracking-wider text-muted">
-            Active organization
-          </p>
-          <p className="font-serif font-medium text-foreground" data-testid="active-org">
-            {activeOrg?.orgName ?? activeOrg?.orgId ?? "None"}
-          </p>
-          <div className="pt-4">
-            <label className="mb-1.5 block font-sans text-xs font-medium uppercase tracking-wider text-muted">
-              Organization
-            </label>
-            <OrgSwitcher className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm transition-colors duration-200" />
-          </div>
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          {showPrs ? (
-            <Link href="/prs">
-              <Button type="button" data-testid="nav-prs">
-                Pull requests
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </Link>
-          ) : null}
-          <Link href="/shared/prs">
-            <Button type="button" variant="tertiary" data-testid="nav-shared-prs">
-              Shared with me
-            </Button>
-          </Link>
-          {showAudit ? (
-            <Link href="/audit">
-              <Button type="button" variant="tertiary" data-testid="nav-audit">
-                Audit log
-              </Button>
-            </Link>
-          ) : null}
-          <Link href="/settings/connections">
-            <Button type="button" variant="tertiary" data-testid="nav-connections">
-              Connections
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Button type="button" variant="secondary" size="sm" data-testid="logout" onClick={() => void logout()}>
-            Sign out
-          </Button>
-          <Button
-            type="button"
-            variant="tertiary"
-            size="sm"
-            data-testid="logout-everywhere"
-            onClick={() => void logoutEverywhere()}
-          >
-            Sign out everywhere
-          </Button>
-        </div>
-
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[272px] flex-col border-r border-[#e9e3de] bg-[linear-gradient(180deg,rgba(255,253,251,.97),rgba(252,248,245,.94))] px-5 py-7 lg:flex">
+        <Link href="/" className="flex items-center gap-3 px-2">
+          <Image src="/argus-mark.svg" alt="" width={36} height={36} />
+          <span className="font-serif text-[22px] font-bold tracking-[-0.03em] text-foreground">Argus</span>
+        </Link>
+        <nav className="mt-12 space-y-2 font-sans text-sm font-medium">
+          <SidebarLink href="/" icon={ScrollText} active>Review Console</SidebarLink>
+          {showPrs ? <SidebarLink href="/prs" icon={GitPullRequest}>Pull requests</SidebarLink> : null}
+          <SidebarLink href="/shared/prs" icon={UsersRound}>Shared with me</SidebarLink>
+          {showAudit ? <SidebarLink href="/audit" icon={ScrollText}>Audit log</SidebarLink> : null}
+          <SidebarLink href="/settings/connections" icon={Link2}>Connections</SidebarLink>
+        </nav>
         {siblingUrl ? (
-          <p className="mt-8 font-sans text-sm text-muted">
+          <div className="mt-8 border-t border-[#e9e3de] pt-7">
             <a
-              className="text-brand-600 transition-colors duration-200 hover:text-brand-700"
+              className="group flex items-center justify-between px-2 font-sans text-sm font-medium text-brand-600 transition-colors hover:text-brand-700"
               href={siblingUrl}
               data-testid="sibling-dashboard-link"
             >
               Open {siblingLabel}
+              <ExternalLink className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
             </a>
-          </p>
+          </div>
         ) : null}
-      </div>
-    </main>
+      </aside>
+
+      <header className="relative z-30 flex h-[82px] items-center justify-between border-b border-[#eee9e5]/70 px-5 lg:ml-[272px] lg:justify-end lg:border-0 lg:px-9">
+        <Link href="/" className="flex items-center gap-2.5 lg:hidden">
+          <Image src="/argus-mark.svg" alt="" width={32} height={32} />
+          <span className="font-serif text-xl font-bold">Argus</span>
+        </Link>
+        <div className="flex items-center gap-4">
+          <details className="group relative lg:hidden">
+            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-border bg-white text-foreground hover:bg-surface-muted [&::-webkit-details-marker]:hidden" aria-label="Open navigation">
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </summary>
+            <nav className="argus-card absolute right-0 mt-3 w-64 rounded-2xl p-2 font-sans">
+              <MobileNavLink href="/" icon={ScrollText}>Review Console</MobileNavLink>
+              {showPrs ? <MobileNavLink href="/prs" icon={GitPullRequest}>Pull requests</MobileNavLink> : null}
+              <MobileNavLink href="/shared/prs" icon={UsersRound}>Shared with me</MobileNavLink>
+              {showAudit ? <MobileNavLink href="/audit" icon={ScrollText}>Audit log</MobileNavLink> : null}
+              <MobileNavLink href="/settings/connections" icon={Link2}>Connections</MobileNavLink>
+            </nav>
+          </details>
+          <NotificationBellContainer />
+          <details className="group relative">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full outline-none [&::-webkit-details-marker]:hidden">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 font-sans text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
+                {initialsFromEmail(user?.email)}
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="argus-card absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl p-2">
+              <p className="truncate border-b border-border px-3 py-2.5 font-sans text-xs text-muted">{user?.email}</p>
+              <button type="button" data-testid="logout" onClick={() => void logout()} className="mt-1 w-full rounded-xl px-3 py-2 text-left font-sans text-sm hover:bg-surface-muted">Sign out</button>
+              <button type="button" data-testid="logout-everywhere" onClick={() => void logoutEverywhere()} className="w-full rounded-xl px-3 py-2 text-left font-sans text-sm text-muted hover:bg-surface-muted hover:text-foreground">Sign out everywhere</button>
+            </div>
+          </details>
+        </div>
+      </header>
+
+      <main className="relative z-10 px-5 pb-12 pt-8 sm:px-8 lg:ml-[272px] lg:px-10 lg:pb-16 xl:px-14">
+        <div className="mx-auto max-w-[1280px]">
+          <div className="border-b border-[#e8e2dd] pb-7">
+            <h1 className="font-serif text-4xl font-bold tracking-[-0.035em] text-foreground sm:text-[46px]">{title}</h1>
+          </div>
+
+          <section className="mt-7 grid gap-4 xl:grid-cols-2">
+            <div className="argus-card flex min-h-[142px] items-center gap-5 rounded-[20px] p-6 sm:p-7">
+              <span className="argus-icon h-14 w-14 rounded-2xl"><UserRound className="h-7 w-7" strokeWidth={1.8} aria-hidden="true" /></span>
+              <div className="min-w-0">
+                <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Signed in as</p>
+                <p className="mt-2 truncate font-sans text-sm font-semibold text-foreground sm:text-base" data-testid="auth-status">{user?.email}</p>
+                <p className="mt-2 flex items-center gap-2 font-sans text-xs text-muted"><span className="h-2 w-2 rounded-full bg-[#55b879]" />Authenticated via Shared Identity</p>
+              </div>
+            </div>
+            <div className="argus-card flex min-h-[142px] flex-col gap-5 rounded-[20px] p-6 sm:flex-row sm:items-center sm:p-7">
+              <span className="argus-icon h-14 w-14 rounded-2xl"><Building2 className="h-7 w-7" strokeWidth={1.8} aria-hidden="true" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Active organization</p>
+                <p className="mt-2 truncate font-sans text-base font-semibold text-foreground" data-testid="active-org">{activeOrg?.orgName ?? activeOrg?.orgId ?? "None"}</p>
+                <p className="mt-1 font-sans text-xs text-muted">Current workspace</p>
+              </div>
+              <OrgSwitcher className="argus-org-select max-w-full rounded-xl border border-[#e6e0db] bg-white px-3.5 py-2.5 font-sans text-xs font-semibold text-foreground outline-none hover:border-brand-200 focus:border-brand-400 sm:max-w-[190px]" />
+            </div>
+          </section>
+
+          <section className="argus-card mt-5 rounded-[20px] p-4 sm:p-5">
+            <h2 className="px-1 pb-4 font-sans text-sm font-semibold text-foreground">Quick actions</h2>
+            <div className={`grid gap-3 md:grid-cols-2 ${actions.length > 3 ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} href={action.href} data-testid={action.testId} className="group flex min-h-[104px] items-center gap-3 rounded-2xl border border-[#ece7e2] bg-white px-4 py-4 shadow-[0_5px_18px_rgba(68,45,37,.025)] transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[0_10px_25px_rgba(92,26,55,.07)]">
+                    <span className="argus-icon h-11 w-11 rounded-xl"><Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-sans text-xs font-semibold text-foreground">{action.title}</span>
+                      <span className="mt-1 block font-sans text-[11px] leading-4 text-muted">{action.description}</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 flex-none text-brand-500 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="argus-card mt-5 rounded-[20px] p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4 px-1 pb-3">
+              <h2 className="font-sans text-sm font-semibold text-foreground">Recent activity</h2>
+              {showPrs ? (
+                <Link href="/prs" className="group inline-flex items-center gap-2 rounded-xl border border-[#ece7e2] bg-white px-3.5 py-2 font-sans text-xs font-semibold text-foreground hover:border-brand-200">
+                  View all pull requests
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </Link>
+              ) : null}
+            </div>
+            {recentPrs.length > 0 ? (
+              <ul className="divide-y divide-[#eee9e5]">
+                {recentPrs.map((pr) => (
+                  <li key={pr.id}>
+                    <Link href={`/prs/${pr.id}`} className="group flex items-center gap-4 rounded-xl px-1 py-4 transition-colors hover:bg-[#fdf9f7] sm:px-2">
+                      <span className="argus-icon h-10 w-10 rounded-xl"><GitPullRequest className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-sans text-sm font-semibold text-foreground">{pr.title}</span>
+                        <span className="mt-1 block truncate font-sans text-xs text-muted">Version {pr.currentVersion} · {pr.description || "No description"}</span>
+                      </span>
+                      <span className={`hidden rounded-full px-3 py-1 font-sans text-[10px] font-semibold sm:inline-flex ${statusStyle(pr.status)}`}>{pr.status.replaceAll("_", " ").toLowerCase()}</span>
+                      <span className="w-14 flex-none text-right font-sans text-[11px] text-muted">{relativeTime(pr.updatedAt)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="flex min-h-32 flex-col items-center justify-center border-t border-[#eee9e5] text-center">
+                <GitPullRequest className="h-6 w-6 text-brand-300" aria-hidden="true" />
+                <p className="mt-2 font-sans text-sm font-medium text-foreground">No recent review activity</p>
+                <p className="mt-1 font-sans text-xs text-muted">Pull request updates in this workspace will appear here.</p>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SidebarLink({ href, icon: Icon, children, active = false }: { href: string; icon: LucideIcon; children: React.ReactNode; active?: boolean }) {
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined} className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition-all ${active ? "border-brand-100/60 bg-[linear-gradient(110deg,#fff6fa,#f8e9ef)] text-brand-700 shadow-[inset_0_1px_0_rgba(255,255,255,.8)]" : "border-transparent text-[#514c49] hover:bg-white/70 hover:text-foreground"}`}>
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+      {children}
+    </Link>
+  );
+}
+
+function MobileNavLink({ href, icon: Icon, children }: { href: string; icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#514c49] transition-colors hover:bg-surface-muted hover:text-foreground">
+      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+      {children}
+    </Link>
   );
 }

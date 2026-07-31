@@ -1,22 +1,15 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this repo. For full requirements, read the docs — do not re-derive constraints from chat.
+Guidance for AI coding agents working in this repo.
 
 ## Project
 
-Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Console) sharing one Identity API. Built as a Froncort.AI full-stack assignment with shared JWT auth, org isolation, append-only audit, and cross-org item sharing.
+Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Console) sharing one Identity/Org API. Built as a Froncort.AI full-stack assignment with shared JWT auth, org isolation, append-only audit, and cross-org item sharing.
 
-**Source of truth:**
+**Docs:**
 
-- [docs/requirements/assignment-spec.md](docs/requirements/assignment-spec.md)
-- [docs/requirements/tiered-build-plan.md](docs/requirements/tiered-build-plan.md)
-- [docs/requirements/identity-auth.md](docs/requirements/identity-auth.md)
-- [docs/requirements/session-sync.md](docs/requirements/session-sync.md)
-- [docs/requirements/rbac-middleware.md](docs/requirements/rbac-middleware.md)
-- [docs/requirements/database-schema.md](docs/requirements/database-schema.md)
-- [docs/requirements/audit-log.md](docs/requirements/audit-log.md)
-- [docs/requirements/ai-progress-tracker.md](docs/requirements/ai-progress-tracker.md)
-- [docs/setup.md](docs/setup.md)
+- [docs/setup.md](docs/setup.md) — local setup
+- [docs/known-limitations.md](docs/known-limitations.md) — limitations and future work
 
 ## Hand long-running commands to the user
 
@@ -25,7 +18,7 @@ Multi-tenant dual-dashboard workspace (Support Hub ticketing + Review & Audit Co
 Hand to the user:
 
 - `docker compose up -d` and any Docker build/pull
-- `pnpm dev`, Turbo persistent watchers, `next dev`, `tsx watch`
+- `./run_all.sh`, `pnpm dev`, Turbo persistent watchers, `next dev`, `tsx watch`
 - `pnpm --filter @unified/db db:migrate` (interactive migrate)
 - `pnpm --filter @unified/db db:studio`
 - `pnpm test:e2e` / `bash scripts/run-auth-e2e.sh` (starts API + both apps)
@@ -52,9 +45,9 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 - Cookies live on the **API origin** (`unified_access` 15m JWT, `unified_refresh` 7d opaque token). Dashboards use `credentials: "include"`; **never** `document.cookie` for auth.
 - Active org is persisted on `Session.activeOrgId` (mirrored in JWT). Org switch updates all of the user's active sessions.
 - `requireAuth` re-checks `Session.revokedAt` and live `OrgMembership` on every protected route.
-- Org-scoped routes: `requireAuth` → `requireOrgAccess` (sets `req.orgId` from session only) → `requireRole(...)` as needed. Platform routes: `requirePlatformAdmin`. See [rbac-middleware.md](docs/requirements/rbac-middleware.md).
+- Org-scoped routes: `requireAuth` → `requireOrgAccess` (sets `req.orgId` from session only) → `requireRole(...)` as needed. Platform routes: `requirePlatformAdmin`.
 - Logout-everywhere must invalidate prior tokens across both dashboards.
-- **Production Hub↔Console sync** requires a shared site: Cloud Run gateway (single hostname) **or** custom parent domain. Three default `*.run.app` hosts do **not** sync under Chrome third-party cookie partitioning. Localhost three-port remains valid. Demo/submit should use the gateway URL when gateway mode is on. Gateway paths: landing `/`, Hub `/support-hub`, Console `/console`, API `/api`.
+- **Production Hub↔Console sync** requires a shared site: Cloud Run gateway (single hostname) **or** custom parent domain. Three default `*.run.app` hosts do **not** sync under Chrome third-party cookie partitioning. Localhost three-port remains valid. Gateway paths: landing `/`, Hub `/support-hub`, Console `/console`, API `/api`.
 - Do **not** relax Helmet CORP for session sync. Do **not** force `COOKIE_DOMAIN` on gateway / default Cloud Run deploy.
 - `ProtectedRoute` / `GuestRoute`: redirect only when `authStatus === "unauthenticated"`, never while `loading`.
 - Hydrate via `GET /auth/me` with `Cache-Control: no-store`. `@unified/auth-client` does single-flight `401 → refresh → retry once`.
@@ -62,7 +55,7 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 
 ## Tier gating & audit
 
-- **Tier 1 is non-negotiable.** Do not start Tier 2 product work until Tier 1 passes its required tests (auth, session sync, org scoping, audit append-only, RBAC). See [tiered-build-plan.md](docs/requirements/tiered-build-plan.md).
+- **Tier 1 is non-negotiable.** Auth, session sync, org scoping, audit append-only, and RBAC must pass before Tier 2 product work.
 - **Audit log** is append-only at the **database permission level** (`unified_app` = INSERT/SELECT only on `audit_logs`) — app-only guards are insufficient.
 - **DB dual URLs:** migrate/seed with `DATABASE_URL`; runtime API uses `DATABASE_APP_URL`.
 - **AI digests:** scoped to user's org + explicit shares only; delivered by background job (`pnpm --filter @unified/api digest:once`), not on page load; dedicated leak test in BOLA allowlist. Groq LLM summarizes scoped facts only (template fallback).
@@ -71,24 +64,24 @@ Tenant isolation is enforced at the **query layer**. The **BOLA (Broken Object L
 
 | Piece                                              | Notes                                               |
 | -------------------------------------------------- | --------------------------------------------------- |
-| `apps/api`                                         | Express Identity API — port **4000**                |
+| `apps/api`                                         | Express Identity/Org API — port **4000**            |
 | `apps/support-hub`                                 | Next.js 15 Dashboard 1 — port **3000**              |
 | `apps/review-console`                              | Next.js 15 Dashboard 2 — port **3001**              |
 | `packages/auth-client`                             | Credentialed fetch + `AuthProvider` / `OrgSwitcher` |
 | `packages/db`                                      | Prisma schema, migrations, seed                     |
 | `packages/types`, `packages/ui`, `packages/config` | Shared types, UI, tooling config                    |
 
-Stack: pnpm + Turborepo, Node 22, Prisma 6, PostgreSQL 16, Redis (provisioned; not yet used by app code).
+Stack: pnpm + Turborepo, Node 22, Prisma 6, PostgreSQL 16.
 
 ## Verification
 
 - Auth/BOLA foundation: `pnpm test:auth` (Newman) — only if API is already running on `:4000`; otherwise ask the user.
 - Audit append-only (DB permissions): `pnpm --filter @unified/db test:audit-append-only` — requires Postgres migrated; uses `DATABASE_APP_URL`.
+- Product BOLA gate: `pnpm test:bola`
 - Session sync e2e: `bash scripts/run-auth-e2e.sh` — hand to the user.
-- Demo users: `password123` (alice@acme.com, bob@acme.com, carol@globex.com, **dave** = `temporary.hamesha.ka.group@gmail.com` multi-org Acme + Globex / Argus inbox).
+- Demo users: `password123` (alice@acme.com, bob@acme.com, carol@globex.com, **dave** = `dave@example.com` multi-org Acme + Globex).
 
 ## Where to read more
 
 - Local setup: [docs/setup.md](docs/setup.md)
-- Production deploy: [docs/deployment.md](docs/deployment.md)
-- Monorepo scaffold decisions: [docs/requirements/monorepo-scaffold.md](docs/requirements/monorepo-scaffold.md)
+- Known limitations: [docs/known-limitations.md](docs/known-limitations.md)

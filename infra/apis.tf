@@ -8,7 +8,6 @@ resource "google_project_service" "required" {
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
     "sqladmin.googleapis.com",
-    "redis.googleapis.com",
     "storage.googleapis.com",
     "vpcaccess.googleapis.com",
     "cloudscheduler.googleapis.com",

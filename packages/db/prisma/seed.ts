@@ -77,16 +77,21 @@ async function main() {
     },
   });
 
-  // Real alt Gmail for Argus digest email testing (no secrets in seed).
-  const daveEmail = "temporary.hamesha.ka.group@gmail.com";
-  const legacyDave = await prisma.user.findUnique({
-    where: { email: "dave@example.com" },
-  });
-  if (legacyDave) {
-    await prisma.user.update({
-      where: { id: legacyDave.id },
-      data: { email: daveEmail },
-    });
+  // Public multi-org demo user (never a personal inbox).
+  const daveEmail = "dave@example.com";
+
+  // Optional one-shot: rename a prior Dave email → dave@example.com when Dave does not exist yet.
+  // Example (prod recovery): SEED_MIGRATE_DAVE_FROM=you@gmail.com SEED_ARGUS_TEST_EMAIL=you@gmail.com
+  const migrateDaveFrom = process.env.SEED_MIGRATE_DAVE_FROM?.trim().toLowerCase();
+  if (migrateDaveFrom && migrateDaveFrom !== daveEmail) {
+    const fromUser = await prisma.user.findUnique({ where: { email: migrateDaveFrom } });
+    const daveExists = await prisma.user.findUnique({ where: { email: daveEmail } });
+    if (fromUser && !daveExists) {
+      await prisma.user.update({
+        where: { id: fromUser.id },
+        data: { email: daveEmail, name: "Dave Reviewer" },
+      });
+    }
   }
 
   const dave = await prisma.user.upsert({
@@ -184,6 +189,33 @@ async function main() {
       acceptedAt: new Date(),
     },
   });
+
+  // Private Argus email tester — only when SEED_ARGUS_TEST_EMAIL is set (gitignored .env / Cloud Run job env).
+  // Not listed in public demo credentials. Pair with DIGEST_EMAIL_ALLOWLIST for soft-launch digests.
+  const argusTestEmail = process.env.SEED_ARGUS_TEST_EMAIL?.trim().toLowerCase();
+  let argusTesterEmail: string | undefined;
+  if (argusTestEmail && argusTestEmail !== daveEmail) {
+    const argusTester = await prisma.user.upsert({
+      where: { email: argusTestEmail },
+      update: { name: "Argus Email Tester", passwordHash },
+      create: {
+        email: argusTestEmail,
+        name: "Argus Email Tester",
+        passwordHash,
+      },
+    });
+    await prisma.orgMembership.upsert({
+      where: { userId_orgId: { userId: argusTester.id, orgId: acme.id } },
+      update: { role: "REVIEWER", acceptedAt: new Date() },
+      create: {
+        userId: argusTester.id,
+        orgId: acme.id,
+        role: "REVIEWER",
+        acceptedAt: new Date(),
+      },
+    });
+    argusTesterEmail = argusTestEmail;
+  }
 
   // Eve: Globex SUPPORT_AGENT only (receives Acme shares). Remove legacy Acme guest seat.
   await prisma.orgMembership.deleteMany({
@@ -544,10 +576,13 @@ async function main() {
   console.log(`  - alice@acme.com        (ORG_ADMIN on Acme)`);
   console.log(`  - bob@acme.com          (SUPPORT_AGENT on Acme)`);
   console.log(`  - carol@globex.com      (ORG_ADMIN on Globex)`);
-  console.log(`  - temporary.hamesha.ka.group@gmail.com  (REVIEWER on Acme + Globex; Argus inbox)`);
+  console.log(`  - dave@example.com      (REVIEWER on Acme + Globex)`);
   console.log(`  - eve@example.com       (SUPPORT_AGENT on Globex; receives Acme ticket share)`);
   console.log(`  - frank@example.com     (CROSS_ORG_GUEST on Acme; assignee-only)`);
   console.log(`  - platform@example.com  (Platform Super Admin, no org memberships)`);
+  if (argusTesterEmail) {
+    console.log(`  - ${argusTesterEmail}  (Argus email tester on Acme — private, not for reviewers)`);
+  }
   console.log("\nCross-org connection:");
   console.log(`  - Acme <-> Globex (ACCEPTED)`);
   console.log("\nCross-org shares:");

@@ -6,7 +6,6 @@ export default function HomePage() {
     <ProtectedRoute>
       <AuthDashboard
         title="Support Hub"
-        subtitle="Dashboard 1 — authenticated via shared Identity/Org session."
         siblingLabel="Review & Audit Console"
         siblingUrl={process.env.NEXT_PUBLIC_REVIEW_CONSOLE_URL}
       />

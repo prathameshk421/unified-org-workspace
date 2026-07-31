@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Unified Org Workspace</title>
+    <title>Argus — Unified Org Workspace</title>
     <meta
       name="description"
-      content="Shared identity across Support Hub and Review Console — one session, two dashboards, strict org isolation."
+      content="Argus: Support Hub and Review Console share a single identity layer — JWT sessions, org-scoped access, and append-only audit — without collapsing tenant boundaries."
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
@@ -16,18 +16,33 @@
     />
     <style>
       :root {
-        --surface: #faf7f2;
-        --surface-raised: #ffffff;
-        --surface-muted: #f3efe8;
-        --surface-ink: #1c1917;
-        --foreground: #1c1917;
-        --muted: #6b6560;
-        --accent: #9b2c5d;
-        --accent-hover: #7a2249;
-        --border: rgba(28, 25, 23, 0.12);
-        --font-sans: "Anthropic Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-        --font-serif: "Anthropic Serif", Georgia, serif;
-        --font-mono: "Anthropic Mono", ui-monospace, monospace;
+        --bg: #fcfaf8;
+        --bg-beige: #f5efe6;
+        --surface: #ffffff;
+        --foreground: #1a1714;
+        --muted: #6e6760;
+        --muted-soft: #8a8278;
+        --border: rgba(28, 25, 23, 0.1);
+        --border-soft: rgba(28, 25, 23, 0.07);
+        --blush: #f8e8ee;
+        --blush-deep: #f0d4df;
+        --burgundy: #7a1f3d;
+        --burgundy-mid: #9b2c5d;
+        --magenta: #c2185b;
+        --gold: #d4b896;
+        --gold-soft: rgba(212, 184, 150, 0.35);
+        --pink-glow: rgba(194, 24, 91, 0.12);
+        --gold-glow: rgba(212, 184, 150, 0.28);
+        --shadow-card: 0 4px 24px rgba(28, 25, 23, 0.04), 0 1px 3px rgba(28, 25, 23, 0.03);
+        --shadow-ambient: 0 12px 40px rgba(122, 31, 61, 0.06);
+        --gradient-cta: linear-gradient(135deg, #7a1f3d 0%, #9b2c5d 45%, #c2185b 100%);
+        --gradient-hero: linear-gradient(105deg, #7a1f3d 0%, #9b2c5d 40%, #c2185b 100%);
+        --gradient-mark: linear-gradient(145deg, #7a1f3d 0%, #9b2c5d 50%, #c2185b 100%);
+        --font-sans:
+          "Anthropic Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        --font-serif: "Anthropic Serif", Georgia, "Times New Roman", serif;
+        --focus-ring: 0 0 0 3px rgba(155, 44, 93, 0.28);
+        --radius-card: 20px;
       }
 
       * {
@@ -40,11 +55,16 @@
 
       body {
         margin: 0;
-        min-height: 100%;
+        min-height: 100dvh;
         font-family: var(--font-sans);
         color: var(--foreground);
-        background: var(--surface);
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 239, 230, 0.9), transparent 70%),
+          radial-gradient(ellipse 50% 40% at 50% 100%, rgba(248, 232, 238, 0.25), transparent 60%);
         -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
       }
 
       a {
@@ -52,463 +72,501 @@
         text-decoration: none;
       }
 
-      .container {
-        width: min(1120px, calc(100% - 2.5rem));
-        margin-inline: auto;
-      }
-
-      /* Header */
-      .site-header {
-        position: sticky;
-        top: 0;
-        z-index: 40;
-        background: var(--surface-raised);
-        border-bottom: 1px solid var(--border);
-      }
-
-      .header-inner {
+      /* ── Page shell — single viewport stack ── */
+      .page {
+        position: relative;
+        min-height: 100dvh;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.9rem 0;
+        padding: 1.5rem 1.5rem 1.25rem;
+        isolation: isolate;
       }
 
-      .brand {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        font-family: var(--font-serif);
-        font-weight: 700;
-        font-size: 1.05rem;
-        letter-spacing: -0.01em;
-      }
-
-      .brand svg {
-        width: 1.15rem;
-        height: 1.15rem;
-        color: var(--accent);
-        flex-shrink: 0;
-      }
-
-      .nav {
-        display: none;
-        align-items: center;
-        gap: 0.25rem;
-      }
-
-      .nav a {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--muted);
-        padding: 0.4rem 0.85rem;
-        border-radius: 9999px;
-        transition: color 0.2s ease, background-color 0.2s ease;
-      }
-
-      .nav a:hover,
-      .nav a:focus-visible {
-        color: var(--foreground);
-        background: var(--surface-muted);
-        outline: none;
-      }
-
-      .nav a.active {
-        color: var(--foreground);
-        background: var(--surface-muted);
-      }
-
-      .header-cta {
-        display: inline-flex;
+      .content {
+        position: relative;
+        z-index: 2;
+        width: min(860px, 100%);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 0.55rem 1.15rem;
-        border-radius: 9999px;
-        background: var(--accent);
-        color: #fff;
-        font-size: 0.875rem;
-        font-weight: 600;
-        transition: background-color 0.2s ease;
+        gap: 0;
+        padding-block: 1.25rem;
       }
 
-      .header-cta:hover,
-      .header-cta:focus-visible {
-        background: var(--accent-hover);
-        outline: none;
+      /* ── Decorative layer (subtler / smaller) ── */
+      .decor {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
       }
 
-      /* Hero */
-      .hero {
-        padding: 5.5rem 0 4.5rem;
-        text-align: center;
+      .decor-glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(2px);
       }
 
-      .eyebrow {
-        display: inline-flex;
+      .decor-glow--left {
+        width: min(380px, 55vw);
+        height: min(380px, 55vw);
+        left: -16%;
+        top: 20%;
+        background: radial-gradient(circle, var(--pink-glow) 0%, transparent 68%);
+        opacity: 0.7;
+      }
+
+      .decor-glow--right {
+        width: min(340px, 50vw);
+        height: min(340px, 50vw);
+        right: -14%;
+        top: 30%;
+        background: radial-gradient(circle, var(--gold-glow) 0%, transparent 68%);
+        opacity: 0.75;
+      }
+
+      .decor-rings {
+        position: absolute;
+        width: min(300px, 45vw);
+        height: min(300px, 45vw);
+        opacity: 0.75;
+      }
+
+      .decor-rings--left {
+        left: -12%;
+        top: 24%;
+      }
+
+      .decor-rings--right {
+        right: -10%;
+        top: 34%;
+      }
+
+      .decor-rings svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .decor-rings circle {
+        fill: none;
+        stroke-width: 1;
+      }
+
+      .decor-rings--left circle {
+        stroke: rgba(194, 24, 91, 0.1);
+      }
+
+      .decor-rings--right circle {
+        stroke: rgba(180, 150, 110, 0.15);
+      }
+
+      .decor-node {
+        position: absolute;
+        border-radius: 50%;
+        animation: float 8s ease-in-out infinite;
+      }
+
+      .decor-node--pink {
+        background: rgba(194, 24, 91, 0.2);
+        box-shadow: 0 0 10px rgba(194, 24, 91, 0.1);
+      }
+
+      .decor-node--beige {
+        background: rgba(180, 150, 110, 0.3);
+        box-shadow: 0 0 8px rgba(180, 150, 110, 0.12);
+      }
+
+      .node-1 {
+        width: 5px;
+        height: 5px;
+        left: 6%;
+        top: 32%;
+        animation-delay: 0s;
+      }
+      .node-2 {
+        width: 4px;
+        height: 4px;
+        left: 14%;
+        top: 48%;
+        animation-delay: -2.5s;
+      }
+      .node-3 {
+        width: 5px;
+        height: 5px;
+        left: 4%;
+        top: 58%;
+        animation-delay: -4s;
+      }
+      .node-4 {
+        width: 5px;
+        height: 5px;
+        right: 8%;
+        top: 38%;
+        animation-delay: -1s;
+      }
+      .node-5 {
+        width: 4px;
+        height: 4px;
+        right: 15%;
+        top: 52%;
+        animation-delay: -3.5s;
+      }
+      .node-6 {
+        width: 5px;
+        height: 5px;
+        right: 5%;
+        top: 62%;
+        animation-delay: -5.5s;
+      }
+
+      .decor-badge {
+        position: absolute;
+        display: flex;
         align-items: center;
-        gap: 0.4rem;
-        padding: 0.35rem 0.85rem;
-        border-radius: 9999px;
-        border: 1px solid var(--border);
-        background: var(--surface-raised);
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: var(--muted);
-        opacity: 0;
-        animation: fadeUp 0.7s ease forwards;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-card);
+        color: var(--burgundy-mid);
+        animation: float 9s ease-in-out infinite;
       }
 
-      .eyebrow span.accent {
-        color: var(--accent);
-        font-weight: 600;
+      .decor-badge svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .decor-badge--left {
+        left: 6%;
+        top: 42%;
+        animation-delay: -1.5s;
+      }
+
+      .decor-badge--right {
+        right: 7%;
+        top: 48%;
+        animation-delay: -4s;
+        color: #a8895c;
+      }
+
+      .decor-grid {
+        position: absolute;
+        width: 72px;
+        height: 72px;
+        opacity: 0.28;
+        background-image: radial-gradient(circle, rgba(194, 24, 91, 0.35) 1px, transparent 1px);
+        background-size: 14px 14px;
+      }
+
+      .decor-grid--left {
+        left: 3%;
+        top: 10%;
+      }
+
+      .decor-grid--right {
+        right: 4%;
+        bottom: 10%;
+        background-image: radial-gradient(circle, rgba(180, 150, 110, 0.4) 1px, transparent 1px);
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+
+      /* ── Brand ── */
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        gap: 1rem;
+        margin-bottom: 1.35rem;
+        border-radius: 0.5rem;
+        opacity: 0;
+        animation: fadeUp 0.75s ease forwards;
+      }
+
+      .brand:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+
+      .brand-mark {
+        width: 72px;
+        height: 72px;
+        flex-shrink: 0;
+        overflow: visible;
+      }
+
+      .brand-name {
+        font-family: var(--font-serif);
+        font-weight: 700;
+        font-size: 2.4rem;
+        letter-spacing: -0.02em;
+        color: var(--foreground);
+        line-height: 1;
+      }
+
+      /* ── Hero ── */
+      .hero {
+        text-align: center;
+        width: 100%;
+        overflow: visible;
       }
 
       .hero h1 {
-        margin: 1.25rem auto 0;
-        max-width: 18ch;
+        margin: 0;
         font-family: var(--font-serif);
-        font-size: clamp(2.5rem, 6vw, 3.75rem);
+        font-size: clamp(2.05rem, 4.8vw, 2.85rem);
         font-weight: 700;
-        line-height: 1.08;
-        letter-spacing: -0.02em;
+        line-height: 1.3;
+        letter-spacing: -0.03em;
+        color: var(--foreground);
+        overflow: visible;
         opacity: 0;
-        animation: fadeUp 0.7s ease 0.12s forwards;
+        animation: fadeUp 0.75s ease 0.1s forwards;
       }
 
-      .hero h1 .accent {
-        color: var(--accent);
+      .hero h1 .line {
+        display: block;
+        overflow: visible;
+      }
+
+      /*
+        Gradient line: solid base always paints full glyphs (incl. “g” descender).
+        Overlay uses background-clip for the burgundy gradient; if the clip box
+        truncates ink, the solid base still shows through — no flat cut.
+      */
+      .hero h1 .gradient-wrap {
+        position: relative;
+        display: block;
+        line-height: 1.35;
+        padding-bottom: 0.08em;
+      }
+
+      .hero h1 .gradient-base {
+        color: var(--burgundy-mid);
+      }
+
+      .hero h1 .gradient-overlay {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        background-image: var(--gradient-hero);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        pointer-events: none;
+        user-select: none;
+        /* Extra paint room for WebKit background-clip descender bugs */
+        padding-bottom: 0.22em;
+        -webkit-text-stroke: 0.35px transparent;
       }
 
       .hero-lede {
-        margin: 1.25rem auto 0;
-        max-width: 36rem;
-        font-family: var(--font-serif);
-        font-size: 1.125rem;
-        line-height: 1.55;
+        margin: 0.7rem auto 0;
+        max-width: 37rem;
+        font-size: 0.98rem;
+        line-height: 1.5;
         font-weight: 400;
         color: var(--muted);
         opacity: 0;
-        animation: fadeUp 0.7s ease 0.24s forwards;
+        animation: fadeUp 0.75s ease 0.22s forwards;
       }
 
-      .hero-actions {
-        margin-top: 2rem;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.75rem;
+      /* ── Feature cards ── */
+      .cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        width: 100%;
+        margin-top: 1.65rem;
         opacity: 0;
-        animation: fadeUp 0.7s ease 0.36s forwards;
+        animation: fadeUp 0.75s ease 0.34s forwards;
       }
 
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.45rem;
-        padding: 0.75rem 1.4rem;
-        border-radius: 9999px;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-      }
-
-      .btn svg {
-        width: 1rem;
-        height: 1rem;
-      }
-
-      .btn-primary {
-        background: var(--accent);
-        color: #fff;
-        border: 1px solid transparent;
-      }
-
-      .btn-primary:hover,
-      .btn-primary:focus-visible {
-        background: var(--accent-hover);
-        outline: none;
-      }
-
-      .btn-secondary {
-        background: var(--foreground);
-        color: var(--surface-raised);
-        border: 1px solid transparent;
-      }
-
-      .btn-secondary:hover,
-      .btn-secondary:focus-visible {
-        background: var(--surface-ink);
-        outline: none;
-      }
-
-      .btn-tertiary {
-        background: transparent;
-        color: var(--foreground);
-        border: 1px solid var(--border);
-      }
-
-      .btn-tertiary:hover,
-      .btn-tertiary:focus-visible {
-        background: var(--surface-muted);
-        outline: none;
-      }
-
-      .trust-line {
-        margin: 1.5rem 0 0;
-        font-size: 0.7rem;
-        font-weight: 500;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--muted);
-        opacity: 0;
-        animation: fadeUp 0.7s ease 0.48s forwards;
-      }
-
-      /* Features */
-      .features {
-        border-top: 1px solid var(--border);
-        padding: 4.5rem 0;
-      }
-
-      .features-intro {
-        max-width: 36rem;
-        margin-bottom: 2.5rem;
-      }
-
-      .features-intro h2 {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-size: clamp(1.75rem, 3vw, 2.25rem);
-        font-weight: 700;
-        letter-spacing: -0.02em;
-      }
-
-      .features-intro p {
-        margin: 0.75rem 0 0;
-        font-family: var(--font-serif);
-        color: var(--muted);
-        line-height: 1.55;
-      }
-
-      .feature-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        border-top: 1px solid var(--border);
-      }
-
-      .feature-list li {
-        display: grid;
-        gap: 0.75rem 1.5rem;
-        padding: 1.75rem 0;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .feature-icon {
-        width: 2.25rem;
-        height: 2.25rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 9999px;
-        border: 1px solid var(--border);
-        background: var(--surface-raised);
-        color: var(--accent);
-      }
-
-      .feature-icon svg {
-        width: 1.05rem;
-        height: 1.05rem;
-      }
-
-      .feature-list h3 {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-size: 1.25rem;
-        font-weight: 700;
-      }
-
-      .feature-list p {
-        margin: 0.4rem 0 0;
-        max-width: 36rem;
-        font-family: var(--font-serif);
-        color: var(--muted);
-        line-height: 1.55;
-      }
-
-      /* Dark band */
-      .ink-band {
-        background: var(--surface-ink);
-        color: var(--surface);
-        padding: 4.5rem 0;
-      }
-
-      .ink-band h2 {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-size: clamp(1.75rem, 3vw, 2.35rem);
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        max-width: 18ch;
-      }
-
-      .ink-band p {
-        margin: 1rem 0 0;
-        max-width: 32rem;
-        font-family: var(--font-serif);
-        color: rgba(250, 247, 242, 0.72);
-        line-height: 1.55;
-      }
-
-      .ink-actions {
-        margin-top: 1.75rem;
+      .card {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-      }
-
-      .ink-band .btn-primary {
-        background: var(--accent);
-      }
-
-      .ink-band .btn-tertiary {
-        border-color: rgba(250, 247, 242, 0.22);
-        color: var(--surface);
-      }
-
-      .ink-band .btn-tertiary:hover,
-      .ink-band .btn-tertiary:focus-visible {
-        background: rgba(250, 247, 242, 0.08);
-      }
-
-      /* Footer */
-      .site-footer {
-        border-top: 1px solid var(--border);
-        background: var(--surface-raised);
-        padding: 3.5rem 0 0;
-      }
-
-      .footer-grid {
-        display: grid;
-        gap: 2.5rem;
-      }
-
-      .footer-brand p {
-        margin: 0.75rem 0 0;
-        max-width: 22rem;
-        font-family: var(--font-serif);
-        color: var(--muted);
-        line-height: 1.5;
-        font-size: 0.95rem;
-      }
-
-      .footer-actions {
-        margin-top: 1.25rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-      }
-
-      .footer-col h4 {
-        margin: 0 0 1rem;
-        font-size: 0.7rem;
-        font-weight: 600;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-
-      .footer-col ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: grid;
-        gap: 0.65rem;
-      }
-
-      .footer-col a {
-        font-size: 0.9rem;
-        color: var(--foreground);
-        transition: color 0.2s ease;
-      }
-
-      .footer-col a:hover,
-      .footer-col a:focus-visible {
-        color: var(--accent);
-        outline: none;
-      }
-
-      .newsletter {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-      }
-
-      .newsletter input {
-        flex: 1 1 10rem;
-        min-width: 0;
-        padding: 0.65rem 0.85rem;
-        border: 1px solid var(--border);
-        border-radius: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.55rem 1.65rem 1.45rem;
         background: var(--surface);
-        font: inherit;
-        font-size: 0.875rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card), var(--shadow-ambient);
+        transition:
+          box-shadow 0.25s ease,
+          border-color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .card:hover {
+        border-color: rgba(155, 44, 93, 0.18);
+        box-shadow:
+          0 8px 32px rgba(28, 25, 23, 0.06),
+          0 2px 6px rgba(122, 31, 61, 0.05);
+        transform: translateY(-2px);
+      }
+
+      .card-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--blush);
+        color: var(--burgundy-mid);
+        margin-bottom: 0.9rem;
+      }
+
+      .card-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 1.16rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
         color: var(--foreground);
       }
 
-      .newsletter input:focus {
-        outline: none;
-        border-color: var(--accent);
-      }
-
-      .newsletter button {
-        padding: 0.65rem 1.1rem;
-        border: none;
-        border-radius: 9999px;
-        background: var(--accent);
-        color: #fff;
-        font: inherit;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-      }
-
-      .newsletter button:hover,
-      .newsletter button:focus-visible {
-        background: var(--accent-hover);
-        outline: none;
-      }
-
-      .footer-bottom {
-        margin-top: 3rem;
-        border-top: 1px solid var(--border);
-        padding: 1.15rem 0;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: 0.75rem 1.5rem;
-        font-size: 0.8rem;
+      .card p {
+        margin: 0.48rem 0 0;
+        font-size: 0.92rem;
+        line-height: 1.55;
         color: var(--muted);
+        flex: 1;
       }
 
-      .footer-legal {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
+      .card-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        margin-top: 1.25rem;
+        padding: 0.72rem 1.35rem;
+        border-radius: 9999px;
+        background: var(--gradient-cta);
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        box-shadow: 0 4px 14px rgba(122, 31, 61, 0.28);
+        transition:
+          filter 0.2s ease,
+          box-shadow 0.2s ease,
+          transform 0.2s ease;
       }
 
-      .footer-legal a:hover,
-      .footer-legal a:focus-visible {
-        color: var(--foreground);
+      .card-cta:hover {
+        filter: brightness(1.06);
+        box-shadow: 0 6px 18px rgba(122, 31, 61, 0.34);
+        transform: translateY(-1px);
+      }
+
+      .card-cta:focus-visible {
         outline: none;
+        box-shadow:
+          var(--focus-ring),
+          0 4px 14px rgba(122, 31, 61, 0.28);
       }
 
+      .card-cta svg {
+        width: 0.9rem;
+        height: 0.9rem;
+        transition: transform 0.2s ease;
+      }
+
+      .card-cta:hover svg {
+        transform: translateX(2px);
+      }
+
+      /* ── Trust strip ── */
+      .trust {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.9rem;
+        width: 100%;
+        max-width: 420px;
+        position: relative;
+        z-index: 2;
+        flex-shrink: 0;
+        margin-top: auto;
+        opacity: 0;
+        animation: fadeUp 0.75s ease 0.46s forwards;
+      }
+
+      .trust-rule {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--border), transparent);
+        border: none;
+        margin: 0;
+      }
+
+      .trust-rule:first-child {
+        background: linear-gradient(90deg, transparent, rgba(28, 25, 23, 0.12));
+      }
+
+      .trust-rule:last-child {
+        background: linear-gradient(90deg, rgba(28, 25, 23, 0.12), transparent);
+      }
+
+      .trust-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        flex-shrink: 0;
+      }
+
+      .trust-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--burgundy-mid);
+      }
+
+      .trust-icon svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .trust-caption {
+        margin: 0;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--muted-soft);
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      /* ── Motion ── */
       @keyframes fadeUp {
         from {
           opacity: 0;
-          transform: translateY(12px);
+          transform: translateY(10px);
         }
         to {
           opacity: 1;
@@ -521,219 +579,447 @@
           scroll-behavior: auto;
         }
 
-        .eyebrow,
+        .brand,
         .hero h1,
         .hero-lede,
-        .hero-actions,
-        .trust-line {
+        .cards,
+        .trust {
           opacity: 1;
           animation: none;
         }
+
+        .decor-node,
+        .decor-badge {
+          animation: none;
+        }
+
+        .card,
+        .card-cta,
+        .card-cta svg {
+          transition: none;
+        }
+
+        .card:hover,
+        .card-cta:hover {
+          transform: none;
+        }
+
+        .decor-glow {
+          opacity: 0.45;
+        }
       }
 
+      /* ── Tablet+ : side-by-side cards, compact single viewport ── */
       @media (min-width: 720px) {
-        .nav {
-          display: flex;
+        .page {
+          padding: 1.5rem 2rem 1.25rem;
         }
 
-        .feature-list li {
-          grid-template-columns: auto 1fr;
-          align-items: start;
+        .brand {
+          margin-bottom: 1.5rem;
         }
 
-        .footer-grid {
-          grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+        .brand-mark {
+          width: 84px;
+          height: 84px;
+        }
+
+        .brand-name {
+          font-size: 2.75rem;
+        }
+
+        .cards {
+          grid-template-columns: 1fr 1fr;
+          gap: 1.35rem;
+          margin-top: 1.7rem;
+        }
+
+        .card {
+          padding: 1.7rem 1.75rem 1.55rem;
+          min-height: 238px;
+        }
+
+        .trust {
+          margin-top: 0;
+        }
+      }
+
+      /* Short laptop heights — keep cards comfortable while fitting the viewport */
+      @media (min-width: 720px) and (max-height: 860px) {
+        .page {
+          padding: 1rem 2rem;
+        }
+
+        .brand {
+          margin-bottom: 1rem;
+        }
+
+        .brand-mark {
+          width: 68px;
+          height: 68px;
+        }
+
+        .brand-name {
+          font-size: 2.25rem;
+        }
+
+        .hero h1 {
+          font-size: clamp(1.9rem, 3.8vw, 2.45rem);
+        }
+
+        .hero-lede {
+          margin-top: 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        .cards {
+          margin-top: 1.25rem;
+          gap: 1.1rem;
+        }
+
+        .card {
+          padding: 1.35rem 1.45rem 1.25rem;
+          min-height: 210px;
+        }
+
+        .card-icon {
+          width: 38px;
+          height: 38px;
+          margin-bottom: 0.7rem;
+        }
+
+        .card-icon svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .card p {
+          font-size: 0.86rem;
+        }
+
+        .card-cta {
+          margin-top: 1rem;
+          padding: 0.64rem 1.15rem;
+          font-size: 0.84rem;
+        }
+
+        .trust {
+          margin-top: auto;
+        }
+
+        .decor-badge {
+          width: 34px;
+          height: 34px;
+          opacity: 0.7;
+        }
+      }
+
+      /* ── Narrow mobile: stack cards, dial back decorations ── */
+      @media (max-width: 719px) {
+        .page {
+          padding: 1.5rem 1.15rem 1.75rem;
+        }
+
+        .content {
+          flex: none;
+          justify-content: flex-start;
+          padding-block: 0;
+        }
+
+        .decor-glow--left,
+        .decor-glow--right {
+          opacity: 0.4;
+          filter: blur(4px);
+        }
+
+        .decor-rings {
+          opacity: 0.35;
+          width: min(220px, 50vw);
+          height: min(220px, 50vw);
+        }
+
+        .decor-badge {
+          width: 34px;
+          height: 34px;
+          opacity: 0.5;
+        }
+
+        .decor-badge svg {
+          width: 14px;
+          height: 14px;
+        }
+
+        .decor-badge--left {
+          left: 2%;
+          top: 55%;
+        }
+
+        .decor-badge--right {
+          right: 2%;
+          top: 58%;
+        }
+
+        .decor-grid {
+          opacity: 0.18;
+          width: 56px;
+          height: 56px;
+        }
+
+        .decor-node {
+          opacity: 0.45;
+        }
+
+        .trust-caption {
+          white-space: normal;
+          max-width: 12rem;
+        }
+
+        .brand {
+          margin-bottom: 1.25rem;
+        }
+
+        .trust {
+          margin-top: 1.75rem;
+        }
+
+        .hero h1 {
+          font-size: clamp(1.85rem, 8vw, 2.35rem);
+        }
+      }
+
+      /* Hide heaviest ornaments on very small screens */
+      @media (max-width: 480px) {
+        .decor-badge,
+        .decor-grid,
+        .decor-rings {
+          display: none;
+        }
+
+        .decor-node {
+          display: none;
+        }
+
+        .decor-glow--left,
+        .decor-glow--right {
+          opacity: 0.3;
         }
       }
     </style>
   </head>
   <body>
-    <header class="site-header">
-      <div class="container header-inner">
-        <a class="brand" href="/">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-          </svg>
-          Unified Org
-        </a>
-        <nav class="nav" aria-label="Primary">
-          <a class="active" href="/">Home</a>
-          <a href="/support-hub">Support Hub</a>
-          <a href="/console">Review Console</a>
-        </nav>
-        <a class="header-cta" href="/support-hub">Open Support Hub</a>
-      </div>
-    </header>
+    <div class="page">
+      <!-- Decorative ambient framing -->
+      <div class="decor" aria-hidden="true">
+        <div class="decor-glow decor-glow--left"></div>
+        <div class="decor-glow decor-glow--right"></div>
 
-    <main>
-      <section class="hero">
-        <div class="container">
-          <div class="eyebrow">
-            Shared identity · <span class="accent">two dashboards</span>
-          </div>
-          <h1>
-            One workspace.<br />
-            <span class="accent">Strict org isolation.</span>
+        <div class="decor-rings decor-rings--left">
+          <svg viewBox="0 0 400 400" fill="none">
+            <circle cx="200" cy="200" r="80" />
+            <circle cx="200" cy="200" r="130" />
+            <circle cx="200" cy="200" r="180" />
+          </svg>
+        </div>
+        <div class="decor-rings decor-rings--right">
+          <svg viewBox="0 0 400 400" fill="none">
+            <circle cx="200" cy="200" r="80" />
+            <circle cx="200" cy="200" r="130" />
+            <circle cx="200" cy="200" r="180" />
+          </svg>
+        </div>
+
+        <span class="decor-node decor-node--pink node-1"></span>
+        <span class="decor-node decor-node--pink node-2"></span>
+        <span class="decor-node decor-node--pink node-3"></span>
+        <span class="decor-node decor-node--beige node-4"></span>
+        <span class="decor-node decor-node--beige node-5"></span>
+        <span class="decor-node decor-node--beige node-6"></span>
+
+        <div class="decor-badge decor-badge--left">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+            <rect x="9.5" y="10.5" width="5" height="4.5" rx="1" />
+            <path d="M11 10.5V9.25a1 1 0 0 1 2 0V10.5" />
+          </svg>
+        </div>
+        <div class="decor-badge decor-badge--right">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+
+        <div class="decor-grid decor-grid--left"></div>
+        <div class="decor-grid decor-grid--right"></div>
+      </div>
+
+      <div class="content">
+        <!-- Top-center brand -->
+        <a class="brand" href="/" aria-label="Argus home">
+          <svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient
+                id="markGrad"
+                x1="12"
+                y1="9"
+                x2="51"
+                y2="53"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop stop-color="#A42B5C" />
+                <stop offset="0.5" stop-color="#7A1F3D" />
+                <stop offset="1" stop-color="#5A122E" />
+              </linearGradient>
+            </defs>
+            <!-- Refined watchful arc from the original Argus mark -->
+            <path
+              d="M12.5 35.5C13.8 19.2 23.5 9.7 36.2 9.7c7.2 0 13.2 3.1 16.8 8.2"
+              stroke="url(#markGrad)"
+              stroke-width="6.2"
+              stroke-linecap="round"
+            />
+            <!-- Balanced geometric A -->
+            <path
+              fill="url(#markGrad)"
+              fill-rule="evenodd"
+              d="M34.4 12.5 53 53h-8.3l-4.2-10.1H24.1L19.8 53h-8.2l18.7-40.5h4.1Zm-7.5 23.8h10.8l-5.4-13-5.4 13Z"
+            />
+            <!-- Signature forward spear crossbar -->
+            <path fill="url(#markGrad)" d="m18.2 38.5 35.5-12.2-12.2 11.2-22.3 5.6-1-4.6Z" />
+          </svg>
+          <span class="brand-name">Argus</span>
+        </a>
+
+        <!-- Hero -->
+        <section class="hero" aria-labelledby="hero-heading">
+          <h1 id="hero-heading">
+            <span class="line">One workspace.</span>
+            <span class="line gradient-wrap">
+              <span class="gradient-base">Strict org isolation.</span>
+              <span class="gradient-overlay" aria-hidden="true">Strict org isolation.</span>
+            </span>
           </h1>
           <p class="hero-lede">
-            Support Hub and Review Console share a single identity layer — JWT
-            sessions, org-scoped access, and append-only audit — without
-            collapsing tenant boundaries.
+            Support Hub and Review Console share a single identity layer — JWT sessions, org-scoped
+            access, and append-only audit — without collapsing tenant boundaries.
           </p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="/support-hub">
+        </section>
+
+        <!-- Feature cards -->
+        <div class="cards">
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"
+                />
+              </svg>
+            </div>
+            <h2>Support Hub</h2>
+            <p>
+              Ticketing, comments, and attachments — scoped to your active org, with guest access
+              only where explicitly shared.
+            </p>
+            <a class="card-cta" href="/support-hub">
               Enter Support Hub
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
               </svg>
             </a>
-            <a class="btn btn-tertiary" href="/console">Open Review Console</a>
-          </div>
-          <p class="trust-line">Org-scoped · BOLA-tested · Append-only audit</p>
-        </div>
-      </section>
+          </article>
 
-      <section class="features" id="product">
-        <div class="container">
-          <div class="features-intro">
-            <h2>Built for dual dashboards, one session</h2>
-            <p>
-              Pick a product surface. Auth cookies live on the API origin —
-              both apps stay in sync when you sign in, switch orgs, or sign out
-              everywhere.
-            </p>
-          </div>
-          <ul class="feature-list">
-            <li>
-              <div class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M15 5v2" />
-                  <path d="M15 11v2" />
-                  <path d="M15 17v2" />
-                  <path d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2" />
-                </svg>
-              </div>
-              <div>
-                <h3>Support Hub</h3>
-                <p>
-                  Tickets, comments, attachments, and cross-org shares — scoped
-                  to your active organization from the verified session.
-                </p>
-              </div>
-            </li>
-            <li>
-              <div class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="18" cy="18" r="3" />
-                  <circle cx="6" cy="6" r="3" />
-                  <path d="M13 6h3a2 2 0 0 1 2 2v7" />
-                  <path d="M6 9v12" />
-                </svg>
-              </div>
-              <div>
-                <h3>Review Console</h3>
-                <p>
-                  Pull requests, reviews, and an append-only audit trail for
-                  reviewers and org admins — same identity, separate product UI.
-                </p>
-              </div>
-            </li>
-            <li>
-              <div class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-                </svg>
-              </div>
-              <div>
-                <h3>Tenant isolation by default</h3>
-                <p>
-                  Active org comes only from the session. Direct ID manipulation
-                  returns 403/404 — covered by automated BOLA tests.
-                </p>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section class="ink-band">
-        <div class="container">
-          <h2>Continue where your work lives</h2>
-          <p>
-            Demo users sign in with <em>@example.com</em> accounts. Session sync
-            across Hub and Console works on this shared gateway hostname.
-          </p>
-          <div class="ink-actions">
-            <a class="btn btn-primary" href="/support-hub">Support Hub</a>
-            <a class="btn btn-tertiary" href="/console">Review Console</a>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container">
-        <div class="footer-grid">
-          <div class="footer-brand">
-            <a class="brand" href="/">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 3v18h18" />
+                <path d="M7 16v-5" />
+                <path d="M12 16V8" />
+                <path d="M17 16v-9" />
               </svg>
-              Unified Org
-            </a>
-            <p>
-              Multi-tenant dual-dashboard workspace with shared JWT auth and
-              org isolation.
-            </p>
-            <div class="footer-actions">
-              <a class="btn btn-primary" href="/support-hub" style="padding: 0.55rem 1.1rem; font-size: 0.8125rem">
-                Support Hub
-              </a>
-              <a class="btn btn-tertiary" href="/console" style="padding: 0.55rem 1.1rem; font-size: 0.8125rem">
-                Console
-              </a>
             </div>
-          </div>
-
-          <div class="footer-col">
-            <h4>Connect</h4>
-            <ul>
-              <li><a href="/support-hub">Support Hub</a></li>
-              <li><a href="/console">Review Console</a></li>
-              <li><a href="/api/health">API health</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h4>Contact</h4>
-            <ul>
-              <li><a href="mailto:hello@example.com">hello@example.com</a></li>
-              <li><a href="/support-hub">Open a ticket</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h4>Newsletter</h4>
-            <form class="newsletter" onsubmit="return false;">
-              <label class="visually-hidden" for="email" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
-                Email
-              </label>
-              <input id="email" type="email" name="email" placeholder="you@company.com" autocomplete="email" />
-              <button type="button">Subscribe</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <div class="footer-legal">
-            <a href="/">Privacy</a>
-            <a href="/">Terms</a>
-            <a href="/api/health">Status</a>
-          </div>
-          <p>© 2026 Unified Org Workspace</p>
+            <h2>Review Console</h2>
+            <p>
+              Pull requests, reviews, and audit trails — the same session, the same org boundaries,
+              a second lens on the work.
+            </p>
+            <a class="card-cta" href="/console">
+              Open Review Console
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </a>
+          </article>
         </div>
       </div>
-    </footer>
+
+      <!-- Trust indicator stays anchored at the bottom of the page -->
+      <div class="trust">
+        <hr class="trust-rule" />
+        <div class="trust-center">
+          <span class="trust-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+            </svg>
+          </span>
+          <p class="trust-caption">Built for security. Designed for clarity.</p>
+        </div>
+        <hr class="trust-rule" />
+      </div>
+    </div>
   </body>
 </html>

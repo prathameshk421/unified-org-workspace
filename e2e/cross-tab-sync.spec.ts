@@ -19,9 +19,9 @@ test.describe("cross-tab sync", () => {
     const pageA = await context.newPage();
     const pageB = await context.newPage();
 
-    await login(pageA, "temporary.hamesha.ka.group@gmail.com", "password123", HUB);
+    await login(pageA, "dave@example.com", "password123", HUB);
     await pageB.goto(`${HUB}/`);
-    await expect(pageB.getByTestId("auth-status")).toContainText("temporary.hamesha.ka.group@gmail.com");
+    await expect(pageB.getByTestId("auth-status")).toContainText("dave@example.com");
 
     const select = pageA.getByTestId("org-switcher");
     const options = select.locator("option");

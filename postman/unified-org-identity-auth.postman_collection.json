@@ -36,7 +36,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"temporary.hamesha.ka.group@gmail.com\",\"password\":\"password123\"}"
+          "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}"
         },
         "url": "{{baseUrl}}/auth/login"
       },
@@ -134,7 +134,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"temporary.hamesha.ka.group@gmail.com\",\"password\":\"password123\"}"
+          "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}"
         },
         "url": "{{baseUrl}}/auth/login"
       },
@@ -469,7 +469,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"temporary.hamesha.ka.group@gmail.com\",\"password\":\"password123\"}"
+              "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}"
             },
             "url": "{{baseUrl}}/auth/login"
           },
@@ -864,7 +864,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\"email\":\"temporary.hamesha.ka.group@gmail.com\",\"password\":\"password123\"}" },
+            "body": { "mode": "raw", "raw": "{\"email\":\"dave@example.com\",\"password\":\"password123\"}" },
             "url": "{{baseUrl}}/auth/login"
           },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login 200', () => pm.response.to.have.status(200));"] } }]

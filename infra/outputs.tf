@@ -23,10 +23,6 @@ output "cloud_sql_connection_name" {
   value = google_sql_database_instance.postgres.connection_name
 }
 
-output "redis_host" {
-  value = google_redis_instance.main.host
-}
-
 output "api_url" {
   description = "Public API URL (custom domain or Cloud Run default)"
   value       = var.enable_custom_domain ? "https://${local.api_hostname}" : google_cloud_run_v2_service.api.uri
@@ -122,7 +118,6 @@ output "secret_ids" {
     google_secret_manager_secret.jwt_secret.secret_id,
     google_secret_manager_secret.database_url.secret_id,
     google_secret_manager_secret.database_app_url.secret_id,
-    google_secret_manager_secret.redis_url.secret_id,
     google_secret_manager_secret.groq_api_key.secret_id,
     google_secret_manager_secret.smtp_pass.secret_id,
     google_secret_manager_secret.smtp_user.secret_id,

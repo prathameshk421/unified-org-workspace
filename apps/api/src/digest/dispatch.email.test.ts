@@ -104,7 +104,7 @@ describe("deliverEmail", () => {
   });
 
   it("allowlist → skips users not on list", async () => {
-    digestEnv.emailAllowlist = ["temporary.hamesha.ka.group@gmail.com"];
+    digestEnv.emailAllowlist = ["dave@example.com"];
     const mailer = mockMailer();
 
     const result = await inAppDispatcher.deliverEmail({

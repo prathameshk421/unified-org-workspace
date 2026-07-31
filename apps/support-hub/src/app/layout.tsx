@@ -3,8 +3,11 @@ import { AppProviders } from "../components/app-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Support Hub",
-  description: "Unified Org Workspace — Support Hub",
+  title: "Support Hub · Argus",
+  description: "Argus Support Hub",
+  icons: {
+    icon: "/argus-mark.svg",
+  },
 };
 
 export default function RootLayout({
