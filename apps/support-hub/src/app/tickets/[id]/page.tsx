@@ -13,7 +13,7 @@ import {
   type TicketStatus,
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 import { AppShell } from "../../../components/app-shell";
 import { ProtectedRoute } from "../../../components/auth-guards";
 import { AttachmentList } from "../../../components/tickets/attachment-list";
@@ -76,6 +76,7 @@ function TicketDetailContent() {
   const [saving, setSaving] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isShared = ticket?.access === "shared";
   const canMutate =
@@ -190,7 +191,7 @@ function TicketDetailContent() {
 
   async function onDelete() {
     if (!canMutate || !ticket) return;
-    if (!window.confirm("Delete this ticket permanently?")) return;
+    setDeleteDialogOpen(false);
 
     setDeleting(true);
     setError(null);
@@ -450,7 +451,7 @@ function TicketDetailContent() {
               type="button"
               variant="tertiary"
               disabled={deleting}
-              onClick={() => void onDelete()}
+              onClick={() => setDeleteDialogOpen(true)}
             >
               {deleting ? "Deleting…" : "Delete ticket"}
             </Button>
@@ -461,6 +462,15 @@ function TicketDetailContent() {
           <p className="mt-4 font-sans text-sm text-brand-700">{error}</p>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete ticket?"
+        description="This ticket and its related content will be permanently deleted."
+        confirmLabel="Delete ticket"
+        busy={deleting}
+        onConfirm={() => void onDelete()}
+      />
     </AppShell>
   );
 }

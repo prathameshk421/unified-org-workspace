@@ -8,7 +8,7 @@ import {
   type ShareGrantDto,
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 import { Share2 } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
@@ -75,6 +75,7 @@ function SharesAdminContent() {
   const [outbound, setOutbound] = useState<ShareGrantDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
@@ -115,9 +116,7 @@ function SharesAdminContent() {
   }, [activeOrg?.orgId, isOrgAdmin]);
 
   async function onRevoke(shareId: string) {
-    if (!window.confirm("Revoke this share? The recipient will lose access.")) {
-      return;
-    }
+    setPendingRevokeId(null);
     setBusy(true);
     setError(null);
     try {
@@ -168,7 +167,7 @@ function SharesAdminContent() {
                 key={share.id}
                 share={share}
                 busy={busy}
-                onRevoke={(id) => void onRevoke(id)}
+                onRevoke={setPendingRevokeId}
               />
             ))}
           </ul>
@@ -190,7 +189,7 @@ function SharesAdminContent() {
                   key={share.id}
                   share={share}
                   busy={busy}
-                  onRevoke={(id) => void onRevoke(id)}
+                  onRevoke={setPendingRevokeId}
                 />
               ))}
             </ul>
@@ -201,6 +200,15 @@ function SharesAdminContent() {
           Organization admins can also view outbound shares from this org.
         </p>
       )}
+      <ConfirmDialog
+        open={pendingRevokeId !== null}
+        onOpenChange={(open) => !open && setPendingRevokeId(null)}
+        title="Revoke share?"
+        description="The recipient will immediately lose access to this shared item."
+        confirmLabel="Revoke share"
+        busy={busy}
+        onConfirm={() => pendingRevokeId && void onRevoke(pendingRevokeId)}
+      />
     </div>
   );
 }

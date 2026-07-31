@@ -1,6 +1,8 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Dialog } from "./dialog";
 
 export type NotificationBellItem = {
   id: string;
@@ -31,9 +33,30 @@ export function NotificationBell({
   onMarkAllRead,
   className = "",
 }: NotificationBellProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [selected, setSelected] = useState<NotificationBellItem | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutside(event: MouseEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) onToggle();
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onToggle();
+    }
+    document.addEventListener("mousedown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onToggle, open]);
+
   return (
-    <div className={`relative ${className}`}>
+    <div ref={wrapperRef} className={`relative ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label={
           unreadCount > 0
@@ -85,6 +108,7 @@ export function NotificationBell({
                       }`}
                       onClick={() => {
                         if (!item.readAt) onMarkRead(item.id);
+                        setSelected(item);
                       }}
                     >
                       <p className="font-sans text-sm font-medium text-foreground">
@@ -104,6 +128,23 @@ export function NotificationBell({
           </div>
         </div>
       ) : null}
+      <Dialog
+        open={selected !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setSelected(null);
+            triggerRef.current?.focus();
+          }
+        }}
+        title={selected?.title ?? "Notification"}
+      >
+        <p className="whitespace-pre-wrap text-foreground">{selected?.body}</p>
+        {selected ? (
+          <p className="mt-4 text-xs uppercase tracking-wide text-muted">
+            {new Date(selected.createdAt).toLocaleString()}
+          </p>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

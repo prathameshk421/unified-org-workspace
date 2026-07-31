@@ -1,7 +1,7 @@
 @theme {
-  --font-sans: var(--font-inter), "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: "Anthropic Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Anthropic Serif", Georgia, serif;
+  --font-mono: "Anthropic Mono", ui-monospace, monospace;
 
   /* Maroon / magenta accent ramp */
   --color-brand-50: #fbf2f6;

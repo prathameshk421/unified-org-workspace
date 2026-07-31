@@ -71,6 +71,43 @@ describe("audit viewer", () => {
       });
   });
 
+  it("filters actors by accepted active-org membership without disclosing another org", async () => {
+    const orgA = await createOrg("Acme");
+    const orgB = await createOrg("Globex");
+    const admin = await createUser({ orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }] });
+    const acmeActor = await createUser({
+      name: "Ada Lovelace",
+      email: "ada.lovelace@example.test",
+      orgs: [{ org: orgA, role: OrgRole.REVIEWER }],
+    });
+    const globexActor = await createUser({
+      name: "Ada Globex",
+      email: "ada.globex@example.test",
+      orgs: [{ org: orgB, role: OrgRole.REVIEWER }],
+    });
+
+    await ownerDb.auditLog.createMany({
+      data: [
+        { orgId: orgA.id, userId: acmeActor.id, action: "test.user_query", entityType: "test", entityId: "acme-user-query", metadata: {} },
+        { orgId: orgB.id, userId: globexActor.id, action: "test.user_query", entityType: "test", entityId: "globex-user-query", metadata: {} },
+      ],
+    });
+
+    const client = await loginAgent(admin.email);
+    const byName = await client.get("/audit?userQuery=lovelace").expect(200);
+    expect(byName.body.items.some((row: { entityId: string }) => row.entityId === "acme-user-query")).toBe(true);
+    expect(byName.body.items.some((row: { entityId: string }) => row.entityId === "globex-user-query")).toBe(false);
+    expect(byName.body.items.find((row: { userId: string }) => row.userId === acmeActor.id).actor).toMatchObject({
+      id: acmeActor.id,
+      name: acmeActor.name,
+      email: acmeActor.email,
+    });
+
+    const byEmail = await client.get("/audit?userQuery=ADA.LOVELACE").expect(200);
+    expect(byEmail.body.items.some((row: { userId: string }) => row.userId === acmeActor.id)).toBe(true);
+    expect(byEmail.body.items.some((row: { userId: string }) => row.userId === globexActor.id)).toBe(false);
+  });
+
   it("rejects SUPPORT_AGENT on /audit with insufficient_role", async () => {
     const org = await createOrg("Acme");
     const bob = await createUser({

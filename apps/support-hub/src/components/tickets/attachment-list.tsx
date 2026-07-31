@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { TicketAttachmentResponse } from "@unified/types";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 
 function formatBytes(size: number): string {
   if (size < 1024) return `${size} B`;
@@ -27,6 +27,7 @@ export function AttachmentList({
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   if (attachments.length === 0) {
     return <p className="font-sans text-sm text-muted">No attachments yet.</p>;
@@ -45,7 +46,7 @@ export function AttachmentList({
   }
 
   async function remove(attachmentId: string) {
-    if (!window.confirm("Delete this attachment?")) return;
+    setPendingDeleteId(null);
     setBusyId(attachmentId);
     setError(null);
     try {
@@ -58,7 +59,8 @@ export function AttachmentList({
   }
 
   return (
-    <ul className="divide-y divide-border border-y border-border">
+    <>
+      <ul className="divide-y divide-border border-y border-border">
       {attachments.map((attachment) => {
         const canDelete =
           canMutate &&
@@ -93,7 +95,7 @@ export function AttachmentList({
                   variant="tertiary"
                   size="sm"
                   disabled={busyId === attachment.id}
-                  onClick={() => void remove(attachment.id)}
+                onClick={() => setPendingDeleteId(attachment.id)}
                 >
                   Delete
                 </Button>
@@ -107,6 +109,16 @@ export function AttachmentList({
           <p className="font-sans text-sm text-brand-700">{error}</p>
         </li>
       ) : null}
-    </ul>
+      </ul>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="Delete attachment?"
+        description="This attachment will be permanently deleted."
+        confirmLabel="Delete attachment"
+        busy={busyId === pendingDeleteId}
+        onConfirm={() => pendingDeleteId && void remove(pendingDeleteId)}
+      />
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { useAuth } from "@unified/auth-client/react";
 import {
   NotificationBell,
   type NotificationBellItem,
+  useToast,
 } from "@unified/ui";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -25,6 +26,7 @@ export function NotificationBellContainer({
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<NotificationBellItem[]>([]);
+  const { toast } = useToast();
 
   const refresh = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -91,10 +93,37 @@ export function NotificationBellContainer({
         });
       }}
       onMarkRead={(id) => {
-        void markNotificationRead(id).then(() => refresh());
+        const previousItems = items;
+        const previousUnreadCount = unreadCount;
+        const wasUnread = items.some((item) => item.id === id && !item.readAt);
+        setItems((current) =>
+          current.map((item) =>
+            item.id === id && !item.readAt ? { ...item, readAt: new Date().toISOString() } : item,
+          ),
+        );
+        if (wasUnread) setUnreadCount((current) => Math.max(0, current - 1));
+        void markNotificationRead(id)
+          .then(() => refresh())
+          .catch(() => {
+            setItems(previousItems);
+            setUnreadCount(previousUnreadCount);
+            toast("Could not mark notification as read.", "error");
+          });
       }}
       onMarkAllRead={() => {
-        void markAllNotificationsRead().then(() => refresh());
+        const previousItems = items;
+        const previousUnreadCount = unreadCount;
+        setItems((current) =>
+          current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+        );
+        setUnreadCount(0);
+        void markAllNotificationsRead()
+          .then(() => refresh())
+          .catch(() => {
+            setItems(previousItems);
+            setUnreadCount(previousUnreadCount);
+            toast("Could not mark notifications as read.", "error");
+          });
       }}
     />
   );

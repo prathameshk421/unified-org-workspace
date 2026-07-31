@@ -50,6 +50,8 @@ export function PrDetailPage({ prId }: { prId: string }) {
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [diff, setDiff] = useState<PrDiffResponse | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,12 +122,17 @@ export function PrDetailPage({ prId }: { prId: string }) {
   useEffect(() => {
     if (selectedVersion === null || isShared) {
       setDiff(null);
+      setDiffError(null);
+      setDiffLoading(false);
       return;
     }
 
     let cancelled = false;
 
     async function loadDiff() {
+      setDiffLoading(true);
+      setDiffError(null);
+      setDiff(null);
       try {
         const data = await apiFetch<PrDiffResponse>(
           `/prs/${prId}/versions/${selectedVersion}/diff`,
@@ -133,9 +140,14 @@ export function PrDetailPage({ prId }: { prId: string }) {
         if (!cancelled) {
           setDiff(data);
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           setDiff(null);
+          setDiffError(err instanceof Error ? err.message : "Unable to load this version diff.");
+        }
+      } finally {
+        if (!cancelled) {
+          setDiffLoading(false);
         }
       }
     }
@@ -519,24 +531,26 @@ export function PrDetailPage({ prId }: { prId: string }) {
 
       <section className={sectionClassName}>
         <h2 className="font-serif text-xl font-semibold text-foreground">Versions</h2>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[...pr.versions]
-            .sort((a, b) => b.versionNumber - a.versionNumber)
-            .map((version) => (
-              <button
-                key={version.id}
-                type="button"
-                onClick={() => setSelectedVersion(version.versionNumber)}
-                className={`rounded-full px-3.5 py-1.5 font-sans text-sm font-medium transition-colors duration-200 ${
-                  selectedVersion === version.versionNumber
-                    ? "bg-brand-600 text-white"
-                    : "border border-border bg-surface-raised text-foreground hover:bg-surface-muted"
-                }`}
-                data-testid={`version-${version.versionNumber}`}
-              >
-                v{version.versionNumber}
-              </button>
-            ))}
+        <div className="mt-4 max-w-sm">
+          <label htmlFor="pr-version" className={labelClassName}>
+            Compare selected version with its predecessor
+          </label>
+          <select
+            id="pr-version"
+            value={selectedVersion ?? ""}
+            onChange={(event) => setSelectedVersion(Number(event.target.value))}
+            className={inputClassName}
+            data-testid="pr-version-picker"
+          >
+            {[...pr.versions]
+              .sort((a, b) => b.versionNumber - a.versionNumber)
+              .map((version) => (
+                <option key={version.id} value={version.versionNumber}>
+                  Version {version.versionNumber}
+                  {version.versionNumber === pr.currentVersion ? " — current" : ""}
+                </option>
+              ))}
+          </select>
         </div>
 
         {selectedVersion !== null ? (
@@ -548,8 +562,12 @@ export function PrDetailPage({ prId }: { prId: string }) {
               <p className="mt-2 font-sans text-sm text-muted">
                 Version diffs are not available on shared access.
               </p>
-            ) : !diff ? (
+            ) : diffLoading ? (
               <p className="mt-2 font-sans text-sm text-muted">Loading diff…</p>
+            ) : diffError ? (
+              <p className="mt-2 font-sans text-sm text-brand-700">{diffError}</p>
+            ) : !diff ? (
+              <p className="mt-2 font-sans text-sm text-muted">No diff is available for this version.</p>
             ) : diff.changes.length === 0 ? (
               <p className="mt-2 font-sans text-sm text-muted">No changes from previous version.</p>
             ) : (

@@ -3,12 +3,12 @@
 import { AuthError } from "@unified/auth-client";
 import { useAuth } from "@unified/auth-client/react";
 import { AuditAction } from "@unified/types";
-import { Button } from "@unified/ui";
+import { Button, DateRangePicker, Dialog } from "@unified/ui";
 import { ScrollText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ForbiddenMessage } from "@/components/forbidden-message";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
-import type { AuditListResponse } from "@/lib/types";
+import type { AuditListResponse, OrgMember } from "@/lib/types";
 
 const AUDIT_ACTION_OPTIONS = Object.values(AuditAction);
 
@@ -20,6 +20,7 @@ const labelClassName =
 
 interface AuditFilters {
   userId: string;
+  userQuery: string;
   action: string;
   from: string;
   to: string;
@@ -28,9 +29,10 @@ interface AuditFilters {
 function buildQuery(filters: AuditFilters, cursor?: string | null): string {
   const params = new URLSearchParams();
   if (filters.userId.trim()) params.set("userId", filters.userId.trim());
+  if (filters.userQuery.trim()) params.set("userQuery", filters.userQuery.trim());
   if (filters.action) params.set("action", filters.action);
-  if (filters.from) params.set("from", new Date(filters.from).toISOString());
-  if (filters.to) params.set("to", new Date(filters.to).toISOString());
+  if (filters.from) params.set("from", new Date(`${filters.from}T00:00:00`).toISOString());
+  if (filters.to) params.set("to", new Date(`${filters.to}T23:59:59.999`).toISOString());
   if (cursor) params.set("cursor", cursor);
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -48,6 +50,7 @@ export function AuditViewerPage() {
   const { activeOrg } = useAuth();
   const [filters, setFilters] = useState<AuditFilters>({
     userId: "",
+    userQuery: "",
     action: "",
     from: "",
     to: "",
@@ -59,6 +62,8 @@ export function AuditViewerPage() {
   const [exporting, setExporting] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [exportDialog, setExportDialog] = useState<string | null>(null);
 
   const load = useCallback(
     async (activeFilters: AuditFilters, cursor?: string | null, append = false) => {
@@ -99,6 +104,12 @@ export function AuditViewerPage() {
     };
   }, [appliedFilters, load, activeOrg?.orgId]);
 
+  useEffect(() => {
+    void apiFetch<OrgMember[]>("/org/members")
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [activeOrg?.orgId]);
+
   function handleApplyFilters(event: React.FormEvent) {
     event.preventDefault();
     setAppliedFilters(filters);
@@ -106,7 +117,7 @@ export function AuditViewerPage() {
 
   async function handleExport() {
     setExporting(true);
-    setError(null);
+        setError(null);
 
     try {
       const blob = await apiFetchBlob(`/audit/export${buildQuery(appliedFilters)}`);
@@ -120,12 +131,19 @@ export function AuditViewerPage() {
       if (err instanceof AuthError && err.status === 403) {
         setForbidden(true);
       } else {
-        setError(err instanceof Error ? err.message : "Export failed");
+        setExportDialog(err instanceof Error ? err.message : "Export failed");
       }
     } finally {
       setExporting(false);
     }
   }
+
+  const activeChips = [
+    appliedFilters.userQuery && `User: ${appliedFilters.userQuery}`,
+    appliedFilters.action && `Action: ${appliedFilters.action}`,
+    appliedFilters.from && `From: ${appliedFilters.from}`,
+    appliedFilters.to && `To: ${appliedFilters.to}`,
+  ].filter(Boolean);
 
   if (forbidden) {
     return (
@@ -157,22 +175,30 @@ export function AuditViewerPage() {
 
       <form
         onSubmit={handleApplyFilters}
-        className="mb-8 grid gap-4 border-y border-border py-6 sm:grid-cols-2 lg:grid-cols-4"
+        className="mb-4 grid gap-4 border-y border-border py-6 sm:grid-cols-2 lg:grid-cols-3"
       >
         <div>
-          <label htmlFor="audit-user-id" className={labelClassName}>
-            User ID
+          <label htmlFor="audit-user" className={labelClassName}>
+            User
           </label>
           <input
-            id="audit-user-id"
+            id="audit-user"
             type="text"
-            value={filters.userId}
+            list="audit-members"
+            value={filters.userQuery}
             onChange={(event) =>
-              setFilters((current) => ({ ...current, userId: event.target.value }))
+              setFilters((current) => ({ ...current, userQuery: event.target.value, userId: "" }))
             }
             className={inputClassName}
-            placeholder="Filter by user ID"
+            placeholder="Search name or email"
           />
+          <datalist id="audit-members">
+            {members.map((member) => (
+              <option key={member.id} value={member.email}>
+                {member.name}
+              </option>
+            ))}
+          </datalist>
         </div>
         <div>
           <label htmlFor="audit-action" className={labelClassName}>
@@ -195,37 +221,41 @@ export function AuditViewerPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="audit-from" className={labelClassName}>
-            From
-          </label>
-          <input
-            id="audit-from"
-            type="datetime-local"
-            value={filters.from}
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, from: event.target.value }))
-            }
-            className={inputClassName}
+          <p className={labelClassName}>Date range</p>
+          <DateRangePicker
+            value={{ from: filters.from, to: filters.to }}
+            onChange={({ from, to }) => setFilters((current) => ({ ...current, from, to }))}
+            id="audit-date-range"
           />
         </div>
-        <div>
-          <label htmlFor="audit-to" className={labelClassName}>
-            To
-          </label>
-          <input
-            id="audit-to"
-            type="datetime-local"
-            value={filters.to}
-            onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-            className={inputClassName}
-          />
-        </div>
-        <div className="sm:col-span-2 lg:col-span-4">
+        <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-3">
           <Button type="submit" variant="secondary" data-testid="audit-apply-filters">
             Apply filters
           </Button>
+          <Button
+            type="button"
+            variant="tertiary"
+            onClick={() => {
+              const empty = { userId: "", userQuery: "", action: "", from: "", to: "" };
+              setFilters(empty);
+              setAppliedFilters(empty);
+            }}
+          >
+            Clear all
+          </Button>
         </div>
       </form>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="font-sans text-sm text-muted">
+          {activeChips.length ? `${activeChips.length} filters applied` : "No filters applied"}
+        </span>
+        {activeChips.map((chip) => (
+          <span key={chip} className="rounded-full bg-brand-600/10 px-2.5 py-1 font-sans text-xs text-brand-700">
+            {chip}
+          </span>
+        ))}
+      </div>
 
       {error ? <p className="mb-4 font-sans text-sm text-brand-700">{error}</p> : null}
 
@@ -269,7 +299,17 @@ export function AuditViewerPage() {
                     {new Date(row.createdAt).toLocaleString()}
                   </td>
                   <td className="px-1 py-3 text-foreground">{row.action}</td>
-                  <td className="px-1 py-3 text-muted">{row.userId ?? "—"}</td>
+                  <td className="px-1 py-3 text-muted">
+                    {row.actor ? (
+                      <>
+                        <p className="text-foreground">{row.actor.name}</p>
+                        <p className="text-xs">{row.actor.email}</p>
+                        <p className="mt-1 text-[10px] text-muted">{row.actor.id}</p>
+                      </>
+                    ) : (
+                      row.userId ?? "—"
+                    )}
+                  </td>
                   <td className="px-1 py-3 text-muted">
                     {row.entityType}:{row.entityId}
                   </td>
@@ -295,6 +335,13 @@ export function AuditViewerPage() {
           </Button>
         </div>
       ) : null}
+      <Dialog
+        open={exportDialog !== null}
+        onOpenChange={(open) => !open && setExportDialog(null)}
+        title="Export unavailable"
+      >
+        <p>{exportDialog}</p>
+      </Dialog>
     </div>
   );
 }

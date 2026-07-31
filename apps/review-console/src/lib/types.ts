@@ -12,6 +12,7 @@ export interface AuditLogRow {
   createdAt: string;
   orgId: string | null;
   userId: string | null;
+  actor: { id: string; name: string; email: string } | null;
   action: string;
   entityType: string;
   entityId: string;

@@ -7,7 +7,7 @@ import {
   type ConnectionDto,
 } from "@unified/types";
 import { useAuth } from "@unified/auth-client/react";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 import { Link2, Shield } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
@@ -44,6 +44,7 @@ function ConnectionsContent() {
   const [partnerOrgSlug, setPartnerOrgSlug] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -136,14 +137,7 @@ function ConnectionsContent() {
   }
 
   async function onRevoke(id: string) {
-    if (
-      !window.confirm(
-        "Revoke this connection? All active shares with this partner will be revoked.",
-      )
-    ) {
-      return;
-    }
-
+    setPendingRevokeId(null);
     setBusy(true);
     setError(null);
     try {
@@ -279,7 +273,7 @@ function ConnectionsContent() {
                       type="button"
                       variant="secondary"
                       disabled={busy}
-                      onClick={() => void onRevoke(connection.id)}
+                      onClick={() => setPendingRevokeId(connection.id)}
                     >
                       Revoke
                     </Button>
@@ -290,6 +284,15 @@ function ConnectionsContent() {
           </ul>
         )}
       </section>
+      <ConfirmDialog
+        open={pendingRevokeId !== null}
+        onOpenChange={(open) => !open && setPendingRevokeId(null)}
+        title="Revoke connection?"
+        description="All active shares with this partner will also be revoked."
+        confirmLabel="Revoke connection"
+        busy={busy}
+        onConfirm={() => pendingRevokeId && void onRevoke(pendingRevokeId)}
+      />
     </div>
   );
 }

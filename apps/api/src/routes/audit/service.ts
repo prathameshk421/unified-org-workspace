@@ -11,6 +11,7 @@ export interface AuditLogDto {
   createdAt: string;
   orgId: string | null;
   userId: string | null;
+  actor: { id: string; name: string; email: string } | null;
   action: string;
   entityType: string;
   entityId: string;
@@ -42,7 +43,13 @@ function parseOptionalDate(value: unknown, field: string): { date?: Date; error?
 
 function hasOptionalQueryFilters(query: Request["query"]): boolean {
   return Boolean(
-    query.userId || query.action || query.from || query.to || query.entityType || query.entityId,
+    query.userId ||
+      query.userQuery ||
+      query.action ||
+      query.from ||
+      query.to ||
+      query.entityType ||
+      query.entityId,
   );
 }
 
@@ -63,6 +70,18 @@ export function buildAuditFilters(req: Request): AuditFilterResult {
 
   if (req.query.userId && typeof req.query.userId === "string") {
     where.userId = req.query.userId;
+  }
+  if (req.query.userQuery && typeof req.query.userQuery === "string") {
+    const userQuery = req.query.userQuery.trim();
+    if (userQuery) {
+      where.user = {
+        memberships: { some: { orgId: req.orgId, acceptedAt: { not: null } } },
+        OR: [
+          { name: { contains: userQuery, mode: "insensitive" } },
+          { email: { contains: userQuery, mode: "insensitive" } },
+        ],
+      };
+    }
   }
 
   if (req.query.action && typeof req.query.action === "string") {
@@ -123,6 +142,7 @@ function toAuditLogDto(row: {
   entityType: string;
   entityId: string;
   metadata: Prisma.JsonValue;
+  user: { id: string; name: string; email: string } | null;
 }): AuditLogDto {
   const metadata =
     row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
@@ -134,6 +154,7 @@ function toAuditLogDto(row: {
     createdAt: row.createdAt.toISOString(),
     orgId: row.orgId,
     userId: row.userId,
+    actor: row.user ? { id: row.user.id, name: row.user.name, email: row.user.email } : null,
     action: row.action,
     entityType: row.entityType,
     entityId: row.entityId,
@@ -181,6 +202,7 @@ export async function listAuditLogs(
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limitResult + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    include: { user: { select: { id: true, name: true, email: true } } },
   });
 
   let nextCursor: string | null = null;
@@ -204,6 +226,7 @@ export async function fetchAuditLogsForExport(
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: EXPORT_MAX_ROWS,
+    include: { user: { select: { id: true, name: true, email: true } } },
   });
 
   return rows.map(toAuditLogDto);

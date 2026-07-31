@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import type { TicketCommentResponse } from "@unified/types";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 
 export function CommentList({
   comments,
@@ -23,6 +23,7 @@ export function CommentList({
   const [draft, setDraft] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   if (comments.length === 0) {
     return <p className="font-sans text-sm text-muted">No comments yet.</p>;
@@ -43,7 +44,7 @@ export function CommentList({
   }
 
   async function remove(commentId: string) {
-    if (!window.confirm("Delete this comment?")) return;
+    setPendingDeleteId(null);
     setBusyId(commentId);
     setError(null);
     try {
@@ -56,6 +57,7 @@ export function CommentList({
   }
 
   return (
+    <>
     <ul className="divide-y divide-border border-y border-border">
       {comments.map((comment) => {
         const isAuthor = comment.authorId === currentUserId;
@@ -121,7 +123,7 @@ export function CommentList({
                         variant="tertiary"
                         size="sm"
                         disabled={busyId === comment.id}
-                        onClick={() => void remove(comment.id)}
+                        onClick={() => setPendingDeleteId(comment.id)}
                       >
                         Delete
                       </Button>
@@ -139,5 +141,15 @@ export function CommentList({
         </li>
       ) : null}
     </ul>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="Delete comment?"
+        description="This comment will be permanently deleted."
+        confirmLabel="Delete comment"
+        busy={busyId === pendingDeleteId}
+        onConfirm={() => pendingDeleteId && void remove(pendingDeleteId)}
+      />
+    </>
   );
 }

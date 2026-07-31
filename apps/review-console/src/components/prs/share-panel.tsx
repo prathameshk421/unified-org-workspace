@@ -7,7 +7,7 @@ import type {
   ShareGrantDto,
 } from "@unified/types";
 import { OrgConnectionStatus, ShareGrantStatus } from "@unified/types";
-import { Button } from "@unified/ui";
+import { Button, ConfirmDialog } from "@unified/ui";
 import { listConnections, listRecipients } from "@/lib/connections-api";
 import {
   createPrShare,
@@ -32,6 +32,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
   const [selectedRecipientId, setSelectedRecipientId] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const accepted = connections.filter(
@@ -135,9 +136,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
   }
 
   async function onRevoke(shareId: string) {
-    if (!window.confirm("Revoke this share? The recipient will lose access.")) {
-      return;
-    }
+    setPendingRevokeId(null);
     setBusy(true);
     setError(null);
     try {
@@ -283,7 +282,7 @@ export function PrSharePanel({ prId }: { prId: string }) {
                       type="button"
                       variant="secondary"
                       disabled={busy}
-                      onClick={() => void onRevoke(share.id)}
+                      onClick={() => setPendingRevokeId(share.id)}
                     >
                       Revoke
                     </Button>
@@ -294,6 +293,15 @@ export function PrSharePanel({ prId }: { prId: string }) {
           )}
         </div>
       ) : null}
+      <ConfirmDialog
+        open={pendingRevokeId !== null}
+        onOpenChange={(open) => !open && setPendingRevokeId(null)}
+        title="Revoke share?"
+        description="The recipient will immediately lose access to this pull request."
+        confirmLabel="Revoke share"
+        busy={busy}
+        onConfirm={() => pendingRevokeId && void onRevoke(pendingRevokeId)}
+      />
     </section>
   );
 }
