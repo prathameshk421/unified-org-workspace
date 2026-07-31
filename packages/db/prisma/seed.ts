@@ -276,7 +276,7 @@ async function main() {
         },
       },
       reviewers: {
-        create: [{ userId: dave.id }, { userId: bob.id }],
+        create: [{ userId: dave.id }, { userId: alice.id }],
       },
     },
   });
@@ -545,7 +545,7 @@ async function main() {
   );
   console.log("\nSample pull requests:");
   console.log(
-    `  - Acme: 1 DRAFT (alice), 1 IN_REVIEW with 2 reviewers (alice, requiresApprovals: 2)`,
+    `  - Acme: 1 DRAFT (alice), 1 IN_REVIEW with 2 reviewers (dave + alice, requiresApprovals: 2)`,
   );
   console.log(`  - Globex: 1 shared DRAFT (carol), 1 unshared sibling DRAFT (carol)`);
   console.log("\nSample tickets:");

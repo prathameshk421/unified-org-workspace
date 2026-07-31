@@ -1,5 +1,5 @@
 import type { PrDiffResponse, PrStatus as PrStatusType } from "@unified/types";
-import { OrgRole, PrReviewDecision, PrStatus } from "@unified/types";
+import { OrgRole, PR_MUTATOR_ROLES, PrReviewDecision, PrStatus } from "@unified/types";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { badRequest, conflict, forbidden, notFound } from "./errors.js";
@@ -40,6 +40,7 @@ async function validateReviewerIds(orgId: string, reviewerIds: string[]): Promis
       orgId,
       userId: { in: reviewerIds },
       acceptedAt: { not: null },
+      role: { in: [...PR_MUTATOR_ROLES] },
     },
     select: { userId: true },
   });
@@ -47,7 +48,9 @@ async function validateReviewerIds(orgId: string, reviewerIds: string[]): Promis
   const validIds = new Set(memberships.map((m) => m.userId));
   const invalid = reviewerIds.filter((id) => !validIds.has(id));
   if (invalid.length > 0) {
-    throw badRequest("One or more reviewer IDs are not valid org members");
+    throw badRequest(
+      "One or more reviewer IDs are not valid org reviewers (ORG_ADMIN or REVIEWER required)",
+    );
   }
 }
 
@@ -374,7 +377,11 @@ export async function getVersionDiff(
 
 export async function listOrgMembers(orgId: string) {
   const memberships = await prisma.orgMembership.findMany({
-    where: { orgId, acceptedAt: { not: null } },
+    where: {
+      orgId,
+      acceptedAt: { not: null },
+      role: { in: [...PR_MUTATOR_ROLES] },
+    },
     include: {
       user: { select: { id: true, name: true, email: true } },
     },
