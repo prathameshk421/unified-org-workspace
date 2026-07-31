@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { withConnectTimeout } from "./database-url.js";
 import { env } from "./env.js";
 
 const globalForPrisma = globalThis as unknown as {
@@ -10,7 +11,7 @@ export const prisma =
   new PrismaClient({
     datasources: {
       db: {
-        url: env.databaseAppUrl,
+        url: withConnectTimeout(env.databaseAppUrl),
       },
     },
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],

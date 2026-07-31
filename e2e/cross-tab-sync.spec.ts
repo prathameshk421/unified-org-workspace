@@ -1,16 +1,18 @@
 import { expect, test } from "@playwright/test";
-import { HUB, login } from "./fixtures.js";
+import { HUB, clickLogout, expectAuthReady, login } from "./fixtures.js";
 
 test.describe("cross-tab sync", () => {
+  test.setTimeout(90_000);
+
   test("logout in one tab signs out the other without reload", async ({ context }) => {
     const pageA = await context.newPage();
     const pageB = await context.newPage();
 
     await login(pageA, "alice@acme.com", "password123", HUB);
     await pageB.goto(`${HUB}/`);
-    await expect(pageB.getByTestId("auth-status")).toContainText("alice@acme.com");
+    await expectAuthReady(pageB, "alice@acme.com");
 
-    await pageA.getByTestId("logout").click();
+    await clickLogout(pageA);
     await expect(pageA).toHaveURL(/\/login/);
     await expect(pageB).toHaveURL(/\/login/, { timeout: 10_000 });
   });
@@ -21,7 +23,7 @@ test.describe("cross-tab sync", () => {
 
     await login(pageA, "dave@example.com", "password123", HUB);
     await pageB.goto(`${HUB}/`);
-    await expect(pageB.getByTestId("auth-status")).toContainText("dave@example.com");
+    await expectAuthReady(pageB, "dave@example.com");
 
     const select = pageA.getByTestId("org-switcher");
     const options = select.locator("option");

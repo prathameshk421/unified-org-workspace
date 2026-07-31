@@ -104,7 +104,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </details>
           <NotificationBellContainer />
           <details className="group relative">
-            <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <summary
+              className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden"
+              data-testid="user-menu-trigger"
+              aria-label="Open user menu"
+            >
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 font-sans text-xs font-semibold text-brand-700 ring-1 ring-brand-100">{initialsFromEmail(user?.email)}</span>
               <ChevronDown className="h-4 w-4 text-muted transition-transform group-open:rotate-180" aria-hidden="true" />
             </summary>

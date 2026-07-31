@@ -40,8 +40,45 @@ export async function submitLogin(page: Page, email: string, password: string) {
   }
 }
 
+/** Authenticated chrome is ready (user menu visible). */
+export async function expectAuthReady(page: Page, email?: string) {
+  await expect(page.getByTestId("user-menu-trigger")).toBeVisible({ timeout: 15_000 });
+  if (email) {
+    await expect(page.getByTestId("auth-status")).toContainText(email);
+  }
+}
+
 export async function login(page: Page, email: string, password: string, baseUrl: string) {
   await gotoLogin(page, baseUrl);
   await submitLogin(page, email, password);
-  await expect(page.getByTestId("auth-status")).toContainText(email);
+  await expectAuthReady(page, email);
+}
+
+async function openUserMenu(page: Page) {
+  const trigger = page.getByTestId("user-menu-trigger");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+
+  const logout = page.getByTestId("logout");
+  if (!(await logout.isVisible())) {
+    await trigger.click();
+  }
+  await expect(logout).toBeVisible({ timeout: 5_000 });
+}
+
+export async function clickLogout(page: Page) {
+  await openUserMenu(page);
+  const btn = page
+    .getByTestId("logout")
+    .or(page.getByRole("button", { name: /^sign out$/i }));
+  await expect(btn).toBeVisible({ timeout: 15_000 });
+  await btn.click();
+}
+
+export async function clickLogoutEverywhere(page: Page) {
+  await openUserMenu(page);
+  const btn = page
+    .getByTestId("logout-everywhere")
+    .or(page.getByRole("button", { name: /logout everywhere|sign out everywhere/i }));
+  await expect(btn).toBeVisible({ timeout: 15_000 });
+  await btn.click();
 }

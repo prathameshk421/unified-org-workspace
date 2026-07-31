@@ -1,13 +1,22 @@
-import { expect, test, type Page } from "@playwright/test";
-import { CONSOLE, HUB, login } from "./fixtures.js";
+import { expect, test } from "@playwright/test";
+import {
+  CONSOLE,
+  HUB,
+  clickLogout,
+  clickLogoutEverywhere,
+  expectAuthReady,
+  login,
+} from "./fixtures.js";
 
 test.describe("session sync", () => {
+  test.setTimeout(90_000);
+
   test("login on hub is recognized on console", async ({ page, context }) => {
     await login(page, "alice@acme.com", "password123", HUB);
 
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText("alice@acme.com");
+    await expectAuthReady(consolePage, "alice@acme.com");
   });
 
   test("logout on hub logs out console", async ({ page, context }) => {
@@ -15,9 +24,9 @@ test.describe("session sync", () => {
 
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText("alice@acme.com");
+    await expectAuthReady(consolePage, "alice@acme.com");
 
-    await page.getByTestId("logout").click();
+    await clickLogout(page);
     await expect(page).toHaveURL(/\/login/);
 
     await consolePage.goto(`${CONSOLE}/`);
@@ -26,7 +35,7 @@ test.describe("session sync", () => {
 
   test("logout-everywhere invalidates session", async ({ page }) => {
     await login(page, "bob@acme.com", "password123", HUB);
-    await page.getByTestId("logout-everywhere").click();
+    await clickLogoutEverywhere(page);
     await expect(page).toHaveURL(/\/login/);
 
     await page.goto(`${HUB}/`);
@@ -59,7 +68,7 @@ test.describe("session sync", () => {
     // Sibling dashboard should see the same active org after navigation.
     const consolePage = await context.newPage();
     await consolePage.goto(`${CONSOLE}/`);
-    await expect(consolePage.getByTestId("auth-status")).toContainText("dave@example.com");
+    await expectAuthReady(consolePage, "dave@example.com");
     await expect(consolePage.getByTestId("active-org")).toHaveText(
       await page.getByTestId("active-org").innerText(),
       { timeout: 10_000 },

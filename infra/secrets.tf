@@ -29,14 +29,15 @@ resource "google_secret_manager_secret_version" "jwt_secret" {
 
 # Use private IP + Direct VPC egress. Prisma rejects empty-host socket URLs
 # like postgresql://user:pass@/db?host=/cloudsql/... (P1013: empty host).
+# connect_timeout=60: Direct VPC cold start can exceed Prisma's default 5s.
 resource "google_secret_manager_secret_version" "database_url" {
   secret      = google_secret_manager_secret.database_url.id
-  secret_data = "postgresql://postgres:${random_password.postgres.result}@${google_sql_database_instance.postgres.private_ip_address}:5432/${google_sql_database.unified_org.name}"
+  secret_data = "postgresql://postgres:${random_password.postgres.result}@${google_sql_database_instance.postgres.private_ip_address}:5432/${google_sql_database.unified_org.name}?connect_timeout=60"
 }
 
 resource "google_secret_manager_secret_version" "database_app_url" {
   secret      = google_secret_manager_secret.database_app_url.id
-  secret_data = "postgresql://unified_app:${random_password.unified_app.result}@${google_sql_database_instance.postgres.private_ip_address}:5432/${google_sql_database.unified_org.name}"
+  secret_data = "postgresql://unified_app:${random_password.unified_app.result}@${google_sql_database_instance.postgres.private_ip_address}:5432/${google_sql_database.unified_org.name}?connect_timeout=60"
 }
 
 resource "google_secret_manager_secret" "groq_api_key" {

@@ -1,7 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { CONSOLE, HUB, login } from "./fixtures.js";
+import {
+  CONSOLE,
+  HUB,
+  clickLogoutEverywhere,
+  expectAuthReady,
+  login,
+} from "./fixtures.js";
 
 test.describe("token revocation", () => {
+  test.setTimeout(90_000);
+
   test("logout-everywhere invalidates another browser context", async ({ browser }) => {
     const first = await browser.newContext();
     const second = await browser.newContext();
@@ -12,7 +20,10 @@ test.describe("token revocation", () => {
     await login(pageA, "bob@acme.com", "password123", HUB);
     await login(pageB, "bob@acme.com", "password123", CONSOLE);
 
-    await pageA.getByTestId("logout-everywhere").click();
+    await expectAuthReady(pageA);
+    await expectAuthReady(pageB);
+
+    await clickLogoutEverywhere(pageA);
     await expect(pageA).toHaveURL(/\/login/);
 
     await pageB.goto(`${CONSOLE}/`);
@@ -37,9 +48,7 @@ test.describe("token revocation", () => {
     }
 
     await page.reload();
-    await expect(page.getByTestId("auth-status")).toContainText("carol@globex.com", {
-      timeout: 15_000,
-    });
+    await expectAuthReady(page, "carol@globex.com");
     await expect(page).not.toHaveURL(/\/login/);
   });
 });

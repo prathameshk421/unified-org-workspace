@@ -24,8 +24,12 @@ export COOKIE_SECURE="${COOKIE_SECURE:-false}"
 # Playwright suite logs in repeatedly; default 10/min per email trips 429 mid-run.
 export AUTH_RATE_LIMIT_MAX="${AUTH_RATE_LIMIT_MAX:-1000}"
 
+# Require real Next production artifacts (BUILD_ID). A partial .next from next
+# dev / interrupted builds must not trigger next start.
 has_prod_builds=0
-if [[ -f apps/api/dist/index.js && -d apps/support-hub/.next && -d apps/review-console/.next ]]; then
+if [[ -f apps/api/dist/index.js \
+  && -f apps/support-hub/.next/BUILD_ID \
+  && -f apps/review-console/.next/BUILD_ID ]]; then
   has_prod_builds=1
 fi
 
@@ -75,8 +79,9 @@ require_free_port 3001 "Review Console"
 
 if [[ "$USE_PROD" -eq 1 ]]; then
   if [[ "$has_prod_builds" -ne 1 ]]; then
-    echo "AUTH_E2E_USE_PROD=1 but builds are missing." >&2
-    echo "Need apps/api/dist, apps/support-hub/.next, apps/review-console/.next" >&2
+    echo "AUTH_E2E_USE_PROD=1 but complete production builds are missing." >&2
+    echo "Need apps/api/dist/index.js plus apps/support-hub/.next/BUILD_ID and apps/review-console/.next/BUILD_ID" >&2
+    echo "Run: pnpm build" >&2
     exit 1
   fi
 
