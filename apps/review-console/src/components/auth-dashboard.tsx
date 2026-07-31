@@ -17,11 +17,17 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { canMutatePrs, canViewAudit } from "@/lib/roles";
 import { apiFetch } from "@/lib/api";
 import { NotificationBellContainer } from "./notification-bell-container";
+
+/** Identity mark already includes NEXT_PUBLIC_BASE_PATH — don't let next/image prefix again. */
+function argusMarkLoader({ src }: { src: string }) {
+  return src;
+}
 
 function initialsFromEmail(email?: string): string {
   const parts = email?.split("@")[0]?.split(/[._-]+/).filter(Boolean) ?? [];
@@ -143,7 +149,14 @@ export function AuthDashboard({
 
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[272px] flex-col border-r border-[#e9e3de] bg-[linear-gradient(180deg,rgba(255,253,251,.97),rgba(252,248,245,.94))] px-5 py-7 lg:flex">
         <Link href="/" className="flex items-center gap-3 px-2">
-          <img src={ARGUS_MARK_SRC} alt="" width={36} height={36} />
+          <Image
+            src={ARGUS_MARK_SRC}
+            alt=""
+            width={36}
+            height={36}
+            unoptimized
+            loader={argusMarkLoader}
+          />
           <span className="font-serif text-[22px] font-bold tracking-[-0.03em] text-foreground">Argus</span>
         </Link>
         <nav className="mt-12 space-y-2 font-sans text-sm font-medium">
@@ -169,7 +182,14 @@ export function AuthDashboard({
 
       <header className="relative z-30 flex h-[82px] items-center justify-between border-b border-[#eee9e5]/70 px-5 lg:ml-[272px] lg:justify-end lg:border-0 lg:px-9">
         <Link href="/" className="flex items-center gap-2.5 lg:hidden">
-          <img src={ARGUS_MARK_SRC} alt="" width={32} height={32} />
+          <Image
+            src={ARGUS_MARK_SRC}
+            alt=""
+            width={32}
+            height={32}
+            unoptimized
+            loader={argusMarkLoader}
+          />
           <span className="font-serif text-xl font-bold">Argus</span>
         </Link>
         <div className="flex items-center gap-4">

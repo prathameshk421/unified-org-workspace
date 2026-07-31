@@ -346,6 +346,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.8
         version: 4.3.3
+      '@types/node':
+        specifier: ^22.15.29
+        version: 22.20.1
       '@types/react':
         specifier: ^19.1.6
         version: 19.2.17
