@@ -9,3 +9,4 @@ export { Dialog, ConfirmDialog } from "./dialog";
 export { ToastProvider, useToast } from "./toast";
 export { DateRangePicker } from "./date-range-picker";
 export type { DateRangeValue } from "./date-range-picker";
+export { ARGUS_MARK_SRC, publicAsset } from "./public-asset";

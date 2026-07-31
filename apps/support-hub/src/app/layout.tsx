@@ -1,3 +1,4 @@
+import { ARGUS_MARK_SRC } from "@unified/ui";
 import type { Metadata } from "next";
 import { AppProviders } from "../components/app-providers";
 import "./globals.css";
@@ -6,7 +7,7 @@ export const metadata: Metadata = {
   title: "Support Hub · Argus",
   description: "Argus Support Hub",
   icons: {
-    icon: "/argus-mark.svg",
+    icon: ARGUS_MARK_SRC,
   },
 };
 
