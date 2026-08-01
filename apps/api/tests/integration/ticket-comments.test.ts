@@ -1,12 +1,7 @@
 import { AuditAction, OrgRole } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createTicket,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createTicket, createUser } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
 
 describe("ticket comments", () => {
@@ -278,9 +273,7 @@ describe("ticket comments", () => {
       .expect(201);
 
     const adminClient = await loginAgent(admin.email);
-    await adminClient
-      .delete(`/tickets/${ticket.id}/comments/${created.body.id}`)
-      .expect(204);
+    await adminClient.delete(`/tickets/${ticket.id}/comments/${created.body.id}`).expect(204);
   });
 
   it("blocks POST when comments disabled but allows list and DELETE", async () => {
@@ -326,9 +319,7 @@ describe("ticket comments", () => {
         expect(res.body.code).toBe("feature_disabled");
       });
 
-    await client
-      .delete(`/tickets/${ticket.id}/comments/${comment.id}`)
-      .expect(204);
+    await client.delete(`/tickets/${ticket.id}/comments/${comment.id}`).expect(204);
   });
 
   it("writes comment.create audit row", async () => {
@@ -344,6 +335,7 @@ describe("ticket comments", () => {
     });
 
     const client = await loginAgent(admin.email);
+    const auditSince = new Date();
     const created = await client
       .post(`/tickets/${ticket.id}/comments`)
       .set("Content-Type", "application/json")
@@ -357,6 +349,7 @@ describe("ticket comments", () => {
         row.orgId === org.id &&
         row.entityType === "TicketComment" &&
         row.entityId === created.body.id,
+      auditSince,
     );
   });
 });

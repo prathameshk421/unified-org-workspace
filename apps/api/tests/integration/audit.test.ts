@@ -32,6 +32,7 @@ describe("audit", () => {
     });
 
     const client = await loginAgent(user.email);
+    const switchAuditSince = new Date();
     await client
       .post("/auth/switch-org")
       .set("Content-Type", "application/json")
@@ -43,6 +44,7 @@ describe("audit", () => {
         row.action === AuditAction.AUTH_SWITCH_ORG &&
         row.userId === user.id &&
         row.orgId === orgB.id,
+      switchAuditSince,
     );
   });
 
@@ -53,15 +55,20 @@ describe("audit", () => {
     });
 
     const logoutClient = await loginAgent(user.email);
+    const logoutAuditSince = new Date();
     await logoutClient
       .post("/auth/logout")
       .set("Content-Type", "application/json")
       .send({})
       .expect(200);
 
-    await waitForAudit((row) => row.action === AuditAction.AUTH_LOGOUT && row.userId === user.id);
+    await waitForAudit(
+      (row) => row.action === AuditAction.AUTH_LOGOUT && row.userId === user.id,
+      logoutAuditSince,
+    );
 
     const everywhereClient = await loginAgent(user.email);
+    const everywhereAuditSince = new Date();
     await everywhereClient
       .post("/auth/logout-everywhere")
       .set("Content-Type", "application/json")
@@ -70,6 +77,7 @@ describe("audit", () => {
 
     await waitForAudit(
       (row) => row.action === AuditAction.AUTH_LOGOUT_EVERYWHERE && row.userId === user.id,
+      everywhereAuditSince,
     );
   });
 

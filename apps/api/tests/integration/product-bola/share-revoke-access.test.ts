@@ -11,13 +11,11 @@ import {
 import {
   createAcceptedConnection,
   createConnectedShareWorld,
+  createSharedPr,
   createSharedTicket,
 } from "../../support/share-fixtures.js";
 import { loginAgent } from "../../support/http.js";
-import {
-  assertOwnerDbUnchanged,
-  snapshotShareGrant,
-} from "../../support/product-bola-helpers.js";
+import { assertOwnerDbUnchanged, snapshotShareGrant } from "../../support/product-bola-helpers.js";
 
 describe("product BOLA share revoke access", () => {
   afterAll(async () => {
@@ -208,6 +206,88 @@ describe("product BOLA share revoke access", () => {
     expect(ids).not.toContain(shared.ticketId);
   });
 
+  it("share.sharedPrInbox.afterRevoke: GET /shared/prs excludes revoked resource", async () => {
+    const world = await createConnectedShareWorld();
+    const shared = await createSharedPr({
+      ownerOrg: world.orgA,
+      granteeOrg: world.orgB,
+      createdById: world.alice.id,
+      grantedToUserId: world.eve.id,
+      grantedByUserId: world.alice.id,
+      orgConnectionId: world.connection.id,
+    });
+
+    const aliceClient = await loginAgent(world.alice.email);
+    await aliceClient.delete(`/shares/${shared.shareId}`).expect(200);
+
+    const eveClient = await loginAgent(world.eve.email);
+    const inbox = await eveClient.get("/shared/prs").expect(200);
+    const ids = (inbox.body.prs as Array<{ id: string }>).map((pr) => pr.id);
+    expect(ids).not.toContain(shared.prId);
+  });
+
+  it("share.pr.revoke.then.get: after owner revoke grantee PR GET returns 404", async () => {
+    const world = await createConnectedShareWorld();
+    const shared = await createSharedPr({
+      ownerOrg: world.orgA,
+      granteeOrg: world.orgB,
+      createdById: world.alice.id,
+      grantedToUserId: world.eve.id,
+      grantedByUserId: world.alice.id,
+      orgConnectionId: world.connection.id,
+      title: "Revoked PR secret",
+    });
+
+    const aliceClient = await loginAgent(world.alice.email);
+    await aliceClient.delete(`/shares/${shared.shareId}`).expect(200);
+
+    const eveClient = await loginAgent(world.eve.email);
+    const denied = await eveClient.get(`/prs/${shared.prId}`).expect(404);
+    expect(denied.text).not.toContain("Revoked PR secret");
+    await aliceClient.get(`/prs/${shared.prId}`).expect(200);
+  });
+
+  it("share.pr.inbound.afterRevoke: GET /shares/inbound excludes revoked PR share", async () => {
+    const world = await createConnectedShareWorld();
+    const shared = await createSharedPr({
+      ownerOrg: world.orgA,
+      granteeOrg: world.orgB,
+      createdById: world.alice.id,
+      grantedToUserId: world.eve.id,
+      grantedByUserId: world.alice.id,
+      orgConnectionId: world.connection.id,
+    });
+
+    const aliceClient = await loginAgent(world.alice.email);
+    await aliceClient.delete(`/shares/${shared.shareId}`).expect(200);
+
+    const eveClient = await loginAgent(world.eve.email);
+    const inbound = await eveClient.get("/shares/inbound").expect(200);
+    const ids = (inbound.body.shares as Array<{ id: string }>).map((share) => share.id);
+    expect(ids).not.toContain(shared.shareId);
+  });
+
+  it("connection.pr.revoke.then.get: after connection revoke grantee PR GET returns 404", async () => {
+    const world = await createConnectedShareWorld();
+    const shared = await createSharedPr({
+      ownerOrg: world.orgA,
+      granteeOrg: world.orgB,
+      createdById: world.alice.id,
+      grantedToUserId: world.eve.id,
+      grantedByUserId: world.alice.id,
+      orgConnectionId: world.connection.id,
+    });
+
+    const eveClient = await loginAgent(world.eve.email);
+    await eveClient.get(`/prs/${shared.prId}`).expect(200);
+
+    const aliceClient = await loginAgent(world.alice.email);
+    await aliceClient.post(`/connections/${world.connection.id}/revoke`).expect(200);
+
+    await eveClient.get(`/prs/${shared.prId}`).expect(404);
+    await aliceClient.get(`/prs/${shared.prId}`).expect(200);
+  });
+
   it("connection.revoke.then.get: after connection revoke grantee GET returns 404", async () => {
     const world = await createConnectedShareWorld();
     const shared = await createSharedTicket({
@@ -223,9 +303,7 @@ describe("product BOLA share revoke access", () => {
     await eveClient.get(`/tickets/${shared.ticketId}`).expect(200);
 
     const aliceClient = await loginAgent(world.alice.email);
-    await aliceClient
-      .post(`/connections/${world.connection.id}/revoke`)
-      .expect(200);
+    await aliceClient.post(`/connections/${world.connection.id}/revoke`).expect(200);
 
     await eveClient.get(`/tickets/${shared.ticketId}`).expect(404);
   });
@@ -245,9 +323,7 @@ describe("product BOLA share revoke access", () => {
     await eveClient.get(`/tickets/${shared.ticketId}`).expect(200);
 
     const aliceClient = await loginAgent(world.alice.email);
-    await aliceClient
-      .post(`/connections/${world.connection.id}/revoke`)
-      .expect(200);
+    await aliceClient.post(`/connections/${world.connection.id}/revoke`).expect(200);
 
     // API cascade revokes grants; re-activate grant while connection stays REVOKED.
     await ownerDb.shareGrant.update({
@@ -314,8 +390,100 @@ describe("product BOLA share revoke access", () => {
     });
 
     const carolClient = await loginAgent(world.carol.email);
-    await carolClient
-      .get(`/connections/${foreignConnection.id}/recipients`)
-      .expect(404);
+    await carolClient.get(`/connections/${foreignConnection.id}/recipients`).expect(404);
+  });
+
+  it("connection.list.noCrossOrgLeak: list includes only connections touching the session org", async () => {
+    const world = await createConnectedShareWorld();
+    const orgC = await createOrg("List Conn C");
+    const orgD = await createOrg("List Conn D");
+    const adminC = await createUser({
+      orgs: [{ org: orgC, role: OrgRole.ORG_ADMIN }],
+    });
+    const adminD = await createUser({
+      orgs: [{ org: orgD, role: OrgRole.ORG_ADMIN }],
+    });
+    const ownConnection = await createAcceptedConnection({
+      orgA: orgC,
+      orgB: orgD,
+      requestedById: adminC.id,
+      respondedById: adminD.id,
+    });
+
+    const adminCClient = await loginAgent(adminC.email);
+    const listed = await adminCClient.get("/connections").expect(200);
+    const ids = (listed.body.connections as Array<{ id: string }>).map(
+      (connection) => connection.id,
+    );
+    expect(ids).toContain(ownConnection.id);
+    expect(ids).not.toContain(world.connection.id);
+    expect(JSON.stringify(listed.body)).not.toContain(world.orgA.slug);
+    expect(JSON.stringify(listed.body)).not.toContain(world.orgB.slug);
+  });
+
+  it("connection.accept.foreignConnectionId: outsider accept returns 404 and connection unchanged", async () => {
+    const orgA = await createOrg("Accept Conn A");
+    const orgB = await createOrg("Accept Conn B");
+    const outsiderOrg = await createOrg("Accept Outsider");
+    const adminA = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const outsider = await createUser({
+      orgs: [{ org: outsiderOrg, role: OrgRole.ORG_ADMIN }],
+    });
+    const [orgAId, orgBId] = orgA.id < orgB.id ? [orgA.id, orgB.id] : [orgB.id, orgA.id];
+    const connection = await ownerDb.orgConnection.create({
+      data: {
+        orgAId,
+        orgBId,
+        status: "PENDING",
+        requestedById: adminA.id,
+      },
+    });
+    const before = await ownerDb.orgConnection.findUniqueOrThrow({
+      where: { id: connection.id },
+    });
+
+    const outsiderClient = await loginAgent(outsider.email);
+    await outsiderClient.post(`/connections/${connection.id}/accept`).expect(404);
+
+    await assertOwnerDbUnchanged({
+      before,
+      snapshot: () => ownerDb.orgConnection.findUniqueOrThrow({ where: { id: connection.id } }),
+      expectEqual: (a, b) => expect(b).toEqual(a),
+    });
+  });
+
+  it("connection.revoke.foreignConnectionId: outsider revoke returns 404 and connection unchanged", async () => {
+    const orgA = await createOrg("Revoke Conn A");
+    const orgB = await createOrg("Revoke Conn B");
+    const outsiderOrg = await createOrg("Revoke Outsider");
+    const adminA = await createUser({
+      orgs: [{ org: orgA, role: OrgRole.ORG_ADMIN }],
+    });
+    const adminB = await createUser({
+      orgs: [{ org: orgB, role: OrgRole.ORG_ADMIN }],
+    });
+    const outsider = await createUser({
+      orgs: [{ org: outsiderOrg, role: OrgRole.ORG_ADMIN }],
+    });
+    const connection = await createAcceptedConnection({
+      orgA,
+      orgB,
+      requestedById: adminA.id,
+      respondedById: adminB.id,
+    });
+    const before = await ownerDb.orgConnection.findUniqueOrThrow({
+      where: { id: connection.id },
+    });
+
+    const outsiderClient = await loginAgent(outsider.email);
+    await outsiderClient.post(`/connections/${connection.id}/revoke`).expect(404);
+
+    await assertOwnerDbUnchanged({
+      before,
+      snapshot: () => ownerDb.orgConnection.findUniqueOrThrow({ where: { id: connection.id } }),
+      expectEqual: (a, b) => expect(b).toEqual(a),
+    });
   });
 });

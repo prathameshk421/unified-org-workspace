@@ -1,6 +1,8 @@
 import type { NotificationDto } from "@unified/types";
 import { prisma } from "../../lib/prisma.js";
 
+export class NotificationCursorError extends Error {}
+
 type NotificationRow = {
   id: string;
   type: string;
@@ -34,6 +36,21 @@ export async function listNotifications(
   userId: string,
   opts: { limit: number; cursor?: string; unreadOnly?: boolean },
 ): Promise<{ items: NotificationDto[]; nextCursor: string | null }> {
+  if (opts.cursor) {
+    const ownedCursor = await prisma.notification.findFirst({
+      where: {
+        id: opts.cursor,
+        userId,
+        channel: "IN_APP",
+        redactedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!ownedCursor) {
+      throw new NotificationCursorError("Invalid notification cursor");
+    }
+  }
+
   const items = await prisma.notification.findMany({
     where: {
       userId,
@@ -78,9 +95,7 @@ export async function markNotificationRead(
   return result.count > 0;
 }
 
-export async function markAllNotificationsRead(
-  userId: string,
-): Promise<number> {
+export async function markAllNotificationsRead(userId: string): Promise<number> {
   const result = await prisma.notification.updateMany({
     where: { userId, readAt: null, redactedAt: null },
     data: { readAt: new Date() },

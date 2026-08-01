@@ -1,16 +1,7 @@
-import {
-  AuditAction,
-  OrgRole,
-  TicketStatus,
-} from "@unified/types";
+import { AuditAction, OrgRole, TicketStatus } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createTicket,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createTicket, createUser } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
 
 describe("tickets", () => {
@@ -36,11 +27,14 @@ describe("tickets", () => {
 
     const client = await loginAgent(alice.email);
 
-    await client.get(`/tickets/${foreignTicket.id}`).expect(404).expect((res) => {
-      expect(res.body.error).toBe("Ticket not found");
-      expect(JSON.stringify(res.body)).not.toContain("Foreign ticket");
-      expect(JSON.stringify(res.body)).not.toContain(orgB.id);
-    });
+    await client
+      .get(`/tickets/${foreignTicket.id}`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.error).toBe("Ticket not found");
+        expect(JSON.stringify(res.body)).not.toContain("Foreign ticket");
+        expect(JSON.stringify(res.body)).not.toContain(orgB.id);
+      });
 
     await client
       .patch(`/tickets/${foreignTicket.id}`)
@@ -157,9 +151,7 @@ describe("tickets", () => {
       });
 
     const listRes = await client.get("/tickets").expect(200);
-    const ids = (listRes.body.tickets as Array<{ id: string }>).map(
-      (t) => t.id,
-    );
+    const ids = (listRes.body.tickets as Array<{ id: string }>).map((t) => t.id);
     expect(ids).toContain(ticketB.id);
     expect(ids).not.toContain(ticketA.id);
   });
@@ -214,9 +206,12 @@ describe("tickets", () => {
         expect(res.body.code).toBe("insufficient_role");
       });
 
-    await guestClient.delete(`/tickets/${assigned.id}`).expect(403).expect((res) => {
-      expect(res.body.code).toBe("insufficient_role");
-    });
+    await guestClient
+      .delete(`/tickets/${assigned.id}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.code).toBe("insufficient_role");
+      });
   });
   it("allows support agents and reviewers to create and change status", async () => {
     const org = await createOrg();
@@ -294,6 +289,7 @@ describe("tickets", () => {
     });
 
     const client = await loginAgent(admin.email);
+    const auditSince = new Date();
     const createRes = await client
       .post("/tickets")
       .set("Content-Type", "application/json")
@@ -307,6 +303,7 @@ describe("tickets", () => {
         row.orgId === org.id &&
         row.entityType === "Ticket" &&
         row.entityId === createRes.body.id,
+      auditSince,
     );
   });
 

@@ -1,11 +1,7 @@
 import { AuditAction, OrgRole } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createUser } from "../support/fixtures.js";
 import { agent, loginAgent, waitForAudit } from "../support/http.js";
 
 describe("org settings", () => {
@@ -47,6 +43,7 @@ describe("org settings", () => {
     });
 
     const client = await loginAgent(admin.email);
+    const auditSince = new Date();
     const res = await client
       .patch("/org/settings")
       .set("Content-Type", "application/json")
@@ -63,6 +60,7 @@ describe("org settings", () => {
         row.orgId === org.id &&
         row.entityType === "Organization" &&
         row.entityId === org.id,
+      auditSince,
     );
   });
 

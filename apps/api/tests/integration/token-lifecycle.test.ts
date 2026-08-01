@@ -227,12 +227,13 @@ describe("token lifecycle", () => {
       data: { expiresAt: new Date(Date.now() - 60_000) },
     });
 
-    await agent()
+    const expired = await agent()
       .post("/auth/refresh")
       .set("Cookie", [`${env.refreshCookieName}=${refresh}`])
       .set("Content-Type", "application/json")
       .send({})
       .expect(401);
+    expect(expired.body.error).toBe("Refresh token expired");
   });
 
   it("requires refresh cookie", async () => {
@@ -262,9 +263,14 @@ describe("token lifecycle", () => {
       .expect(401);
 
     await victimClient.get("/auth/me").expect(200);
+    await victimClient
+      .post("/auth/refresh")
+      .set("Content-Type", "application/json")
+      .send({})
+      .expect(200);
   });
 
-  it("handles parallel refresh without 5xx", async () => {
+  it("allows exactly one parallel refresh and treats the rest as token reuse", async () => {
     const org = await createOrg();
     const user = await createUser({
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
@@ -292,8 +298,23 @@ describe("token lifecycle", () => {
       ),
     );
 
-    expect(results.every((res) => res.status < 500)).toBe(true);
-    expect(results.some((res) => res.status === 200)).toBe(true);
+    const successes = results.filter((res) => res.status === 200);
+    const reuses = results.filter((res) => res.status === 401);
+    expect(successes).toHaveLength(1);
+    expect(reuses).toHaveLength(4);
+    expect(reuses.every((res) => res.body.code === "token_reuse")).toBe(true);
+
+    const session = await ownerDb.session.findFirstOrThrow({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(session.revokedAt).not.toBeNull();
+
+    const tokens = await ownerDb.refreshToken.findMany({
+      where: { sessionId: session.id },
+    });
+    expect(tokens).toHaveLength(2);
+    expect(tokens.every((token) => token.revokedAt !== null)).toBe(true);
   });
 
   it("switch-org rotates access cookie only", async () => {
@@ -306,8 +327,14 @@ describe("token lifecycle", () => {
       ],
     });
 
-    const client = await loginAgent(user.email);
-    const loginAccess = (await client.get("/auth/me").expect(200)).headers["set-cookie"];
+    const client = agent();
+    const loginRes = await client
+      .post("/auth/login")
+      .set("Content-Type", "application/json")
+      .send({ email: user.email, password: "password123" })
+      .expect(200);
+    const accessBefore = parseSetCookie(loginRes).unified_access?.value;
+    expect(accessBefore).toBeTruthy();
 
     const switchRes = await client
       .post("/auth/switch-org")
@@ -317,8 +344,8 @@ describe("token lifecycle", () => {
 
     const accessAfter = parseSetCookie(switchRes).unified_access?.value;
     expect(accessAfter).toBeTruthy();
+    expect(accessAfter).not.toBe(accessBefore);
     expect(parseSetCookie(switchRes).unified_refresh).toBeUndefined();
-    void loginAccess;
 
     await client.post("/auth/refresh").set("Content-Type", "application/json").send({}).expect(200);
   });

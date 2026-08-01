@@ -2,12 +2,14 @@ import { SignJWT } from "jose";
 import type { OrgRole } from "@unified/types";
 import type { Response } from "supertest";
 import request from "supertest";
-import { createApp } from "../../src/app.js";
 import { env } from "../../src/lib/env.js";
 import { ownerDb } from "./db.js";
+import { getTestServer } from "./test-server.js";
 
 export function agent() {
-  return request.agent(createApp());
+  // Pass a listening Server (not Express app) to avoid per-request listen races
+  // that surface as intermittent `read ECONNRESET` under large suites.
+  return request.agent(getTestServer());
 }
 
 export interface ParsedCookie {
@@ -114,12 +116,14 @@ export async function waitForAudit(
     entityType: string;
     entityId: string;
   }) => boolean,
+  since: Date,
   timeoutMs = 5_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
     const rows = await ownerDb.auditLog.findMany({
+      where: { createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {

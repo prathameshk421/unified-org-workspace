@@ -17,8 +17,9 @@ describe("auth flow", () => {
 
   it("registers a user and sets HttpOnly cookies", async () => {
     const email = createRunTaggedEmail("register");
+    const client = agent();
 
-    const res = await agent()
+    const res = await client
       .post("/auth/register")
       .set("Content-Type", "application/json")
       .send({
@@ -33,6 +34,10 @@ describe("auth flow", () => {
     const cookies = parseSetCookie(res);
     expect(cookies.unified_access?.httpOnly).toBe(true);
     expect(cookies.unified_refresh?.httpOnly).toBe(true);
+
+    const me = await client.get("/auth/me").expect(200);
+    expect(me.body.user.email).toBe(email);
+    expect(me.body.activeOrg).toBeNull();
   });
 
   it("rejects duplicate email with 409", async () => {
@@ -140,11 +145,13 @@ describe("auth flow", () => {
       orgs: [{ org, role: OrgRole.ORG_ADMIN }],
     });
 
+    const auditSince = new Date();
     await loginAgent(user.email);
 
     await waitForAudit(
       (row) =>
         row.action === AuditAction.AUTH_LOGIN && row.userId === user.id && row.orgId === org.id,
+      auditSince,
     );
   });
 });

@@ -4,12 +4,7 @@ import { AuditAction, OrgRole } from "@unified/types";
 import { afterAll, describe, expect, it } from "vitest";
 import { env } from "../../src/lib/env.js";
 import { ownerDb } from "../support/db.js";
-import {
-  cleanupRunFixtures,
-  createOrg,
-  createTicket,
-  createUser,
-} from "../support/fixtures.js";
+import { cleanupRunFixtures, createOrg, createTicket, createUser } from "../support/fixtures.js";
 import { loginAgent, waitForAudit } from "../support/http.js";
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -111,9 +106,7 @@ describe("ticket attachments", () => {
 
     const client = await loginAgent(alice.email);
     await client
-      .get(
-        `/tickets/${foreignTicket.id}/attachments/${uploaded.body.id}/download`,
-      )
+      .get(`/tickets/${foreignTicket.id}/attachments/${uploaded.body.id}/download`)
       .expect(404)
       .expect((res) => {
         expect(res.body.error).toBe("Ticket not found");
@@ -162,9 +155,7 @@ describe("ticket attachments", () => {
         expect(res.body.error).toBe("Attachment not found");
       });
 
-    await client
-      .delete(`/tickets/${ticketA.id}/attachments/${foreignAttachment.id}`)
-      .expect(404);
+    await client.delete(`/tickets/${ticketA.id}/attachments/${foreignAttachment.id}`).expect(404);
   });
 
   it("allows guests to download on assigned tickets but not upload", async () => {
@@ -210,17 +201,13 @@ describe("ticket attachments", () => {
       });
 
     const download = await guestClient
-      .get(
-        `/tickets/${ticket.id}/attachments/${uploaded.body.id}/download`,
-      )
+      .get(`/tickets/${ticket.id}/attachments/${uploaded.body.id}/download`)
       .expect(200);
 
     expect(download.text).toBe("guest-readable");
 
     await guestClient
-      .get(
-        `/tickets/${unassigned.id}/attachments/${unassignedUpload.body.id}/download`,
-      )
+      .get(`/tickets/${unassigned.id}/attachments/${unassignedUpload.body.id}/download`)
       .expect(404);
   });
   it("rejects invalid MIME and oversized files", async () => {
@@ -323,9 +310,7 @@ describe("ticket attachments", () => {
       .expect(201);
 
     const downloaded = await uploaderClient
-      .get(
-        `/tickets/${ticket.id}/attachments/${uploaded.body.id}/download`,
-      )
+      .get(`/tickets/${ticket.id}/attachments/${uploaded.body.id}/download`)
       .expect(200);
     expect(downloaded.text).toBe(payload);
 
@@ -334,9 +319,7 @@ describe("ticket attachments", () => {
     const row = await ownerDb.ticketAttachment.findUniqueOrThrow({
       where: { id: uploaded.body.id },
     });
-    expect(await fileExists(path.join(env.attachmentsDir, row.storageKey))).toBe(
-      true,
-    );
+    expect(await fileExists(path.join(env.attachmentsDir, row.storageKey))).toBe(true);
     void diskPath;
 
     const otherClient = await loginAgent(other.email);
@@ -351,9 +334,7 @@ describe("ticket attachments", () => {
       .delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`)
       .expect(204);
 
-    expect(await fileExists(path.join(env.attachmentsDir, row.storageKey))).toBe(
-      false,
-    );
+    expect(await fileExists(path.join(env.attachmentsDir, row.storageKey))).toBe(false);
   });
 
   it("allows org admin to delete another user's attachment", async () => {
@@ -378,9 +359,7 @@ describe("ticket attachments", () => {
       .expect(201);
 
     const adminClient = await loginAgent(admin.email);
-    await adminClient
-      .delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`)
-      .expect(204);
+    await adminClient.delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`).expect(204);
   });
 
   it("blocks upload when attachments disabled but allows list and DELETE", async () => {
@@ -420,9 +399,7 @@ describe("ticket attachments", () => {
         expect(res.body.code).toBe("feature_disabled");
       });
 
-    await client
-      .delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`)
-      .expect(204);
+    await client.delete(`/tickets/${ticket.id}/attachments/${uploaded.body.id}`).expect(204);
   });
 
   it("removes attachment files when ticket is deleted", async () => {
@@ -464,6 +441,7 @@ describe("ticket attachments", () => {
     });
 
     const client = await loginAgent(admin.email);
+    const auditSince = new Date();
     const uploaded = await client
       .post(`/tickets/${ticket.id}/attachments`)
       .attach("file", Buffer.from("audited"), "audit.txt")
@@ -476,6 +454,7 @@ describe("ticket attachments", () => {
         row.orgId === org.id &&
         row.entityType === "TicketAttachment" &&
         row.entityId === uploaded.body.id,
+      auditSince,
     );
   });
 });

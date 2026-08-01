@@ -9,6 +9,7 @@ import {
   createUser,
 } from "../support/fixtures.js";
 import { agent, loginAgent, mintToken } from "../support/http.js";
+import { dropOrgMembership } from "../support/product-bola-helpers.js";
 
 describe("BOLA", () => {
   afterAll(async () => {
@@ -157,11 +158,7 @@ describe("BOLA", () => {
 
     const client = await loginAgent(user.email);
 
-    await ownerDb.orgMembership.delete({
-      where: {
-        userId_orgId: { userId: user.id, orgId: org.id },
-      },
-    });
+    await dropOrgMembership(user.id, org.id);
 
     await client
       .get("/rbac/org")

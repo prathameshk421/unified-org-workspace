@@ -64,6 +64,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
   const [editReviewerIds, setEditReviewerIds] = useState<string[]>([]);
   const [reviewComment, setReviewComment] = useState("");
 
+  const maxEditApprovals = Math.max(editReviewerIds.length, 1);
   const isShared = pr?.access === "shared";
   const canMutate = !isShared && canMutatePrs(activeOrg?.role);
 
@@ -158,6 +159,10 @@ export function PrDetailPage({ prId }: { prId: string }) {
     };
   }, [prId, selectedVersion, isShared]);
 
+  useEffect(() => {
+    setEditApprovals((current) => Math.min(Math.max(current, 1), maxEditApprovals));
+  }, [maxEditApprovals]);
+
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const member of members) {
@@ -217,7 +222,7 @@ export function PrDetailPage({ prId }: { prId: string }) {
     const body: UpdatePrRequest = {
       title: editTitle.trim(),
       description: editDescription.trim(),
-      requiresApprovals: editApprovals,
+      requiresApprovals: Math.min(editApprovals, maxEditApprovals),
       reviewerIds: editReviewerIds,
     };
 
@@ -381,19 +386,6 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-serif text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
               />
             </div>
-            <div>
-              <label htmlFor="edit-approvals" className={labelClassName}>
-                Required approvals
-              </label>
-              <input
-                id="edit-approvals"
-                type="number"
-                min={1}
-                value={editApprovals}
-                onChange={(event) => setEditApprovals(Number(event.target.value))}
-                className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
-              />
-            </div>
             {members.length > 0 ? (
               <div>
                 <p className={labelClassName}>Reviewers</p>
@@ -415,6 +407,29 @@ export function PrDetailPage({ prId }: { prId: string }) {
                 </ul>
               </div>
             ) : null}
+            <div>
+              <label htmlFor="edit-approvals" className={labelClassName}>
+                Required approvals
+              </label>
+              <input
+                id="edit-approvals"
+                type="number"
+                min={1}
+                max={maxEditApprovals}
+                value={editApprovals}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (!Number.isFinite(next)) return;
+                  setEditApprovals(Math.min(Math.max(Math.trunc(next), 1), maxEditApprovals));
+                }}
+                className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
+              />
+              <p className="mt-1.5 font-sans text-xs text-muted">
+                {editReviewerIds.length === 0
+                  ? "Select reviewers to raise the approval threshold above 1."
+                  : `At most ${maxEditApprovals} (one per selected reviewer).`}
+              </p>
+            </div>
             <Button
               type="button"
               disabled={busy || !editTitle.trim()}

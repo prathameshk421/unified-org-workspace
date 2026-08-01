@@ -27,6 +27,8 @@ export function PrCreateForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const maxApprovals = Math.max(selectedReviewerIds.length, 1);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -57,6 +59,10 @@ export function PrCreateForm() {
     };
   }, []);
 
+  useEffect(() => {
+    setRequiresApprovals((current) => Math.min(Math.max(current, 1), maxApprovals));
+  }, [maxApprovals]);
+
   function toggleReviewer(userId: string) {
     setSelectedReviewerIds((current) =>
       current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
@@ -71,7 +77,7 @@ export function PrCreateForm() {
     const body: CreatePrRequest = {
       title: title.trim(),
       description: description.trim(),
-      requiresApprovals,
+      requiresApprovals: Math.min(requiresApprovals, maxApprovals),
       reviewerIds: selectedReviewerIds,
     };
 
@@ -140,22 +146,6 @@ export function PrCreateForm() {
         </div>
 
         <div>
-          <label htmlFor="pr-approvals" className={labelClassName}>
-            Required approvals
-          </label>
-          <input
-            id="pr-approvals"
-            type="number"
-            min={1}
-            required
-            value={requiresApprovals}
-            onChange={(event) => setRequiresApprovals(Number(event.target.value))}
-            className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
-            data-testid="pr-approvals-input"
-          />
-        </div>
-
-        <div>
           <p className={labelClassName}>Reviewers</p>
           {loadingMembers ? (
             <p className="font-sans text-sm text-muted">Loading members…</p>
@@ -181,6 +171,32 @@ export function PrCreateForm() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div>
+          <label htmlFor="pr-approvals" className={labelClassName}>
+            Required approvals
+          </label>
+          <input
+            id="pr-approvals"
+            type="number"
+            min={1}
+            max={maxApprovals}
+            required
+            value={requiresApprovals}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (!Number.isFinite(next)) return;
+              setRequiresApprovals(Math.min(Math.max(Math.trunc(next), 1), maxApprovals));
+            }}
+            className="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2.5 font-sans text-sm text-foreground transition-colors duration-200 focus:border-brand-600 focus:outline-none"
+            data-testid="pr-approvals-input"
+          />
+          <p className="mt-1.5 font-sans text-xs text-muted">
+            {selectedReviewerIds.length === 0
+              ? "Select reviewers to raise the approval threshold above 1."
+              : `At most ${maxApprovals} (one per selected reviewer).`}
+          </p>
         </div>
 
         {error ? <p className="font-sans text-sm text-brand-700">{error}</p> : null}

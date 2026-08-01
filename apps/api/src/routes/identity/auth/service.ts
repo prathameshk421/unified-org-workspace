@@ -374,19 +374,31 @@ export async function refreshSession(input: {
   const newRefreshHash = hashRefreshToken(newRefreshToken);
   const refreshExpiresAt = getRefreshExpiry();
 
-  await prisma.$transaction([
-    prisma.refreshToken.update({
-      where: { id: existing.id },
+  const rotated = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.refreshToken.updateMany({
+      where: { id: existing.id, revokedAt: null },
       data: { revokedAt: now },
-    }),
-    prisma.refreshToken.create({
+    });
+
+    if (claimed.count !== 1) {
+      return false;
+    }
+
+    await tx.refreshToken.create({
       data: {
         sessionId: session.id,
         tokenHash: newRefreshHash,
         expiresAt: refreshExpiresAt,
       },
-    }),
-  ]);
+    });
+
+    return true;
+  });
+
+  if (!rotated) {
+    await revokeSession(existing.sessionId);
+    throw new AuthError("Refresh token reuse detected", 401, "token_reuse");
+  }
 
   const accessToken = await signAccessToken({
     userId: session.userId,

@@ -1,19 +1,16 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  EXPECTED_CELL_COUNT,
-  PRODUCT_BOLA_CELLS,
-} from "../../support/product-bola-matrix.js";
+import { EXPECTED_CELL_COUNT, PRODUCT_BOLA_CELLS } from "../../support/product-bola-matrix.js";
 
 const INTEGRATION_ROOT = resolve(import.meta.dirname, "..");
 const ALLOWED_SOFT_ASSERT_PATHS: string[] = [];
 
-const POST_CONDITION_HELPERS = [
-  "assertOwnerAliveAttackerDenyOwnerUnchanged",
-  "assertOwnerDbUnchanged",
-  "assertNoSuccessAuditForEntity",
-] as const;
+const POST_CONDITION_HELPERS = {
+  ownerDb_unchanged: ["assertOwnerAliveAttackerDenyOwnerUnchanged", "assertOwnerDbUnchanged"],
+  row_absent_forbidden: ["assertOwnerAliveAttackerDenyOwnerUnchanged", "assertOwnerDbUnchanged"],
+  no_success_audit: ["assertNoSuccessAuditForEntity"],
+} as const;
 
 function walkTsFiles(dir: string): string[] {
   const out: string[] = [];
@@ -36,7 +33,7 @@ function escapeRegExp(value: string): string {
 describe("product BOLA matrix completeness (anti-cheat)", () => {
   it("EXPECTED_CELL_COUNT literal matches registry length", () => {
     expect(PRODUCT_BOLA_CELLS.length).toBe(EXPECTED_CELL_COUNT);
-    expect(EXPECTED_CELL_COUNT).toBe(72);
+    expect(EXPECTED_CELL_COUNT).toBe(82);
   });
 
   it("every cell is covered with unique id and testTitle", () => {
@@ -56,29 +53,32 @@ describe("product BOLA matrix completeness (anti-cheat)", () => {
       const suitePath = join(INTEGRATION_ROOT, cell.suiteFile);
       const source = readFileSync(suitePath, "utf8");
       const escaped = escapeRegExp(cell.testTitle);
-      const titleRe = new RegExp(
-        String.raw`it\(\s*(["'])${escaped}\1`,
+      const titleRe = new RegExp(String.raw`it\(\s*(["'])${escaped}\1`);
+      expect(titleRe.test(source), `Missing it("${cell.testTitle}") in ${cell.suiteFile}`).toBe(
+        true,
       );
-      expect(
-        titleRe.test(source),
-        `Missing it("${cell.testTitle}") in ${cell.suiteFile}`,
-      ).toBe(true);
     }
   });
 
-  it("postCondition cells import required helpers", () => {
+  it("postCondition cells invoke a matching helper inside their test", () => {
     for (const cell of PRODUCT_BOLA_CELLS) {
       if (cell.postCondition === "none") {
         continue;
       }
       const suitePath = join(INTEGRATION_ROOT, cell.suiteFile);
       const source = readFileSync(suitePath, "utf8");
-      const hasHelper = POST_CONDITION_HELPERS.some((name) =>
-        source.includes(name),
+      const titleIndex = source.indexOf(cell.testTitle);
+      const nextTestIndex = source.indexOf("\n  it(", titleIndex + cell.testTitle.length);
+      const testBody = source.slice(
+        titleIndex,
+        nextTestIndex === -1 ? source.length : nextTestIndex,
+      );
+      const hasHelper = POST_CONDITION_HELPERS[cell.postCondition].some((name) =>
+        new RegExp(String.raw`${name}\s*\(`).test(testBody),
       );
       expect(
         hasHelper,
-        `${cell.id} (${cell.postCondition}) in ${cell.suiteFile} must import a post-condition helper`,
+        `${cell.id} (${cell.postCondition}) in ${cell.suiteFile} must invoke a matching post-condition helper`,
       ).toBe(true);
     }
   });
@@ -95,14 +95,8 @@ describe("product BOLA matrix completeness (anti-cheat)", () => {
         continue;
       }
       const source = readFileSync(file, "utf8");
-      expect(
-        softUnion.test(source),
-        `Soft 403|404 status union found in ${rel}`,
-      ).toBe(false);
-      expect(
-        softHelperCall.test(source),
-        `Isolation soft-helper call found in ${rel}`,
-      ).toBe(false);
+      expect(softUnion.test(source), `Soft 403|404 status union found in ${rel}`).toBe(false);
+      expect(softHelperCall.test(source), `Isolation soft-helper call found in ${rel}`).toBe(false);
     }
   });
 });

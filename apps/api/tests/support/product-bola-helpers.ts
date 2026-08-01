@@ -8,6 +8,12 @@ type Agent = {
   };
 };
 
+export async function dropOrgMembership(userId: string, orgId: string): Promise<void> {
+  await ownerDb.orgMembership.delete({
+    where: { userId_orgId: { userId, orgId } },
+  });
+}
+
 /**
  * Owner-alive sequence: snapshot → owner GET 200 → attack exact status →
  * ownerDb unchanged (business fields) → owner GET 200.

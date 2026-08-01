@@ -41,17 +41,20 @@ describe("hardening", () => {
       .expect(413);
   });
 
-  it.fails("returns JSON for malformed JSON bodies", async () => {
+  it("returns JSON for malformed JSON bodies", async () => {
     const res = await request(app)
       .post("/auth/login")
       .set("Content-Type", "application/json")
-      .send("{ not-json");
+      .send("{ not-json")
+      .expect(400);
 
     expect(res.headers["content-type"]).toMatch(/application\/json/);
+    expect(res.body.code).toBe("invalid_json");
   });
 
-  it.fails("returns JSON 404 for unknown routes", async () => {
+  it("returns JSON 404 for unknown routes", async () => {
     const res = await request(app).get("/does-not-exist").expect(404);
     expect(res.headers["content-type"]).toMatch(/application\/json/);
+    expect(res.body.code).toBe("not_found");
   });
 });

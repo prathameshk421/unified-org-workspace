@@ -3,13 +3,10 @@
  * EXPECTED_CELL_COUNT is a numeric literal; update ONLY when adding/removing cells
  * in the same PR. Never derive from PRODUCT_BOLA_CELLS.length.
  */
-export const EXPECTED_CELL_COUNT = 72;
+export const EXPECTED_CELL_COUNT = 82;
 
 export type CoveragePostCondition =
-  | "none"
-  | "ownerDb_unchanged"
-  | "row_absent_forbidden"
-  | "no_success_audit";
+  "none" | "ownerDb_unchanged" | "row_absent_forbidden" | "no_success_audit";
 
 export interface CoverageCell {
   id: string;
@@ -43,7 +40,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "ticket.patch.foreign.admin: foreign ORG_ADMIN PATCH returns 404 and ownerDb unchanged",
+    testTitle:
+      "ticket.patch.foreign.admin: foreign ORG_ADMIN PATCH returns 404 and ownerDb unchanged",
     status: "covered",
     suiteFile: "product-bola/mutation-postconditions.test.ts",
   },
@@ -54,7 +52,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "ticket.status.foreign.admin: foreign ORG_ADMIN status PATCH returns 404 and ownerDb unchanged",
+    testTitle:
+      "ticket.status.foreign.admin: foreign ORG_ADMIN status PATCH returns 404 and ownerDb unchanged",
     status: "covered",
     suiteFile: "product-bola/mutation-postconditions.test.ts",
   },
@@ -87,7 +86,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "owner_mutator",
     expectStatus: 400,
     postCondition: "ownerDb_unchanged",
-    testTitle: "ticket.patch.assigneeId.foreignUser: foreign assigneeId returns 400 invalid_assignee",
+    testTitle:
+      "ticket.patch.assigneeId.foreignUser: foreign assigneeId returns 400 invalid_assignee",
     status: "covered",
     suiteFile: "product-bola/assignee-mass-assignment.test.ts",
   },
@@ -122,7 +122,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.comment.create.foreign.parent: create comment under foreign ticket returns 404",
+    testTitle:
+      "ticket.comment.create.foreign.parent: create comment under foreign ticket returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -133,7 +134,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "ticket.comment.patch.child.crossOrg: PATCH foreign commentId returns 404 and ownerDb unchanged",
+    testTitle:
+      "ticket.comment.patch.child.crossOrg: PATCH foreign commentId returns 404 and ownerDb unchanged",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -144,7 +146,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "row_absent_forbidden",
-    testTitle: "ticket.comment.delete.child.crossOrg: DELETE foreign commentId returns 404 and row remains",
+    testTitle:
+      "ticket.comment.delete.child.crossOrg: DELETE foreign commentId returns 404 and row remains",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -155,7 +158,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "same_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "ticket.comment.patch.sameOrg.siblingParent: comment under wrong sibling ticket path returns 404",
+    testTitle:
+      "ticket.comment.patch.sameOrg.siblingParent: comment under wrong sibling ticket path returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -166,7 +170,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "same_org_admin",
     expectStatus: 404,
     postCondition: "row_absent_forbidden",
-    testTitle: "ticket.comment.delete.sameOrg.siblingParent: delete comment under wrong sibling ticket path returns 404",
+    testTitle:
+      "ticket.comment.delete.sameOrg.siblingParent: delete comment under wrong sibling ticket path returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -223,7 +228,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "row_absent_forbidden",
-    testTitle: "ticket.attach.delete.foreign: DELETE foreign attachment returns 404 and row remains",
+    testTitle:
+      "ticket.attach.delete.foreign: DELETE foreign attachment returns 404 and row remains",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -234,7 +240,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "same_org_admin",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.meta.sameOrg.siblingParent: meta with wrong parent ticketId returns 404",
+    testTitle:
+      "ticket.attach.meta.sameOrg.siblingParent: meta with wrong parent ticketId returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -245,7 +252,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "same_org_admin",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.download.sameOrg.siblingParent: download with wrong parent ticketId returns 404",
+    testTitle:
+      "ticket.attach.download.sameOrg.siblingParent: download with wrong parent ticketId returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -256,7 +264,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "same_org_admin",
     expectStatus: 404,
     postCondition: "row_absent_forbidden",
-    testTitle: "ticket.attach.delete.sameOrg.siblingParent: delete with wrong parent ticketId returns 404",
+    testTitle:
+      "ticket.attach.delete.sameOrg.siblingParent: delete with wrong parent ticketId returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -267,7 +276,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.meta.share.sibling: shared ticketId + sibling attachmentId returns 404",
+    testTitle:
+      "ticket.attach.meta.share.sibling: shared ticketId + sibling attachmentId returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -278,7 +288,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.download.share.sibling: shared ticketId + sibling attachment download returns 404",
+    testTitle:
+      "ticket.attach.download.share.sibling: shared ticketId + sibling attachment download returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -289,7 +300,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder",
     expectStatus: 200,
     postCondition: "none",
-    testTitle: "ticket.attach.flag.sharedDownloadAllowed: attachmentsEnabled=false still allows shared download",
+    testTitle:
+      "ticket.attach.flag.sharedDownloadAllowed: attachmentsEnabled=false still allows shared download",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -300,7 +312,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.flag.sharedUploadBlocked: attachmentsEnabled=false shared upload returns 404",
+    testTitle:
+      "ticket.attach.flag.sharedUploadBlocked: attachmentsEnabled=false shared upload returns 404",
     status: "covered",
     suiteFile: "product-bola/nested-id-confusion.test.ts",
   },
@@ -311,7 +324,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder_after_drop",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "ticket.attach.afterMembershipDrop: after Eve membership deleted list/meta/download return 404",
+    testTitle:
+      "ticket.attach.afterMembershipDrop: after Eve membership deleted list/meta/download return 404",
     status: "covered",
     suiteFile: "product-bola/membership-drop-nested.test.ts",
   },
@@ -346,7 +360,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "pr.review.foreign.admin: foreign ORG_ADMIN review returns 404 and ownerDb unchanged",
+    testTitle:
+      "pr.review.foreign.admin: foreign ORG_ADMIN review returns 404 and ownerDb unchanged",
     status: "covered",
     suiteFile: "product-bola/pr-nested-bola.test.ts",
   },
@@ -357,7 +372,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "pr.transition.foreign.admin: foreign ORG_ADMIN transition returns 404 and ownerDb unchanged",
+    testTitle:
+      "pr.transition.foreign.admin: foreign ORG_ADMIN transition returns 404 and ownerDb unchanged",
     status: "covered",
     suiteFile: "product-bola/pr-nested-bola.test.ts",
   },
@@ -522,7 +538,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "share_holder_after_drop",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "pr.comment.afterMembershipDrop: after Eve membership deleted PR comments return 404",
+    testTitle:
+      "pr.comment.afterMembershipDrop: after Eve membership deleted PR comments return 404",
     status: "covered",
     suiteFile: "product-bola/membership-drop-nested.test.ts",
   },
@@ -617,6 +634,50 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     suiteFile: "product-bola/share-revoke-access.test.ts",
   },
   {
+    id: "share.sharedPrInbox.afterRevoke",
+    method: "GET",
+    pathPattern: "/shared/prs",
+    actor: "share_holder_after_revoke",
+    expectStatus: 200,
+    postCondition: "none",
+    testTitle: "share.sharedPrInbox.afterRevoke: GET /shared/prs excludes revoked resource",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "share.pr.revoke.then.get",
+    method: "GET",
+    pathPattern: "/prs/:id",
+    actor: "share_holder_after_revoke",
+    expectStatus: 404,
+    postCondition: "none",
+    testTitle: "share.pr.revoke.then.get: after owner revoke grantee PR GET returns 404",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "share.pr.inbound.afterRevoke",
+    method: "GET",
+    pathPattern: "/shares/inbound",
+    actor: "share_holder_after_revoke",
+    expectStatus: 200,
+    postCondition: "none",
+    testTitle: "share.pr.inbound.afterRevoke: GET /shares/inbound excludes revoked PR share",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "connection.pr.revoke.then.get",
+    method: "GET",
+    pathPattern: "/prs/:id",
+    actor: "share_holder_after_connection_revoke",
+    expectStatus: 404,
+    postCondition: "none",
+    testTitle: "connection.pr.revoke.then.get: after connection revoke grantee PR GET returns 404",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
     id: "connection.revoke.then.get",
     method: "GET",
     pathPattern: "/tickets/:id",
@@ -656,7 +717,44 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "foreign_org_admin",
     expectStatus: 404,
     postCondition: "none",
-    testTitle: "connection.recipients.foreignConnectionId: GET recipients for foreign connectionId returns 404",
+    testTitle:
+      "connection.recipients.foreignConnectionId: GET recipients for foreign connectionId returns 404",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "connection.list.noCrossOrgLeak",
+    method: "GET",
+    pathPattern: "/connections",
+    actor: "org_admin",
+    expectStatus: 200,
+    postCondition: "none",
+    testTitle:
+      "connection.list.noCrossOrgLeak: list includes only connections touching the session org",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "connection.accept.foreignConnectionId",
+    method: "POST",
+    pathPattern: "/connections/:id/accept",
+    actor: "foreign_org_admin",
+    expectStatus: 404,
+    postCondition: "ownerDb_unchanged",
+    testTitle:
+      "connection.accept.foreignConnectionId: outsider accept returns 404 and connection unchanged",
+    status: "covered",
+    suiteFile: "product-bola/share-revoke-access.test.ts",
+  },
+  {
+    id: "connection.revoke.foreignConnectionId",
+    method: "POST",
+    pathPattern: "/connections/:id/revoke",
+    actor: "foreign_org_admin",
+    expectStatus: 404,
+    postCondition: "ownerDb_unchanged",
+    testTitle:
+      "connection.revoke.foreignConnectionId: outsider revoke returns 404 and connection unchanged",
     status: "covered",
     suiteFile: "product-bola/share-revoke-access.test.ts",
   },
@@ -694,7 +792,44 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     suiteFile: "product-bola/membership-drop-nested.test.ts",
   },
 
-  // F. Audit / settings / auth
+  // F. Notifications
+  {
+    id: "notification.read.foreignId",
+    method: "POST",
+    pathPattern: "/notifications/:id/read",
+    actor: "other_user",
+    expectStatus: 404,
+    postCondition: "ownerDb_unchanged",
+    testTitle:
+      "notification.read.foreignId: marking another user's notification returns 404 and row unchanged",
+    status: "covered",
+    suiteFile: "notifications-bola.test.ts",
+  },
+  {
+    id: "notification.cursor.foreignId",
+    method: "GET",
+    pathPattern: "/notifications?cursor=:foreignId",
+    actor: "other_user",
+    expectStatus: 400,
+    postCondition: "none",
+    testTitle:
+      "notification.cursor.foreignId: foreign and unknown cursors return identical 400 responses",
+    status: "covered",
+    suiteFile: "notifications-bola.test.ts",
+  },
+  {
+    id: "notification.readAll.scoped",
+    method: "POST",
+    pathPattern: "/notifications/read-all",
+    actor: "authenticated_user",
+    expectStatus: 204,
+    postCondition: "ownerDb_unchanged",
+    testTitle: "notification.readAll.scoped: read-all leaves another user's notification unchanged",
+    status: "covered",
+    suiteFile: "notifications-bola.test.ts",
+  },
+
+  // G. Audit / settings / auth
   {
     id: "audit.list.scoped",
     method: "GET",
@@ -779,7 +914,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "org_admin",
     expectStatus: 404,
     postCondition: "ownerDb_unchanged",
-    testTitle: "settings.http.delete.absent: DELETE /org/settings returns 404 and settings unchanged",
+    testTitle:
+      "settings.http.delete.absent: DELETE /org/settings returns 404 and settings unchanged",
     status: "covered",
     suiteFile: "product-bola/http-method-absence.test.ts",
   },
@@ -812,7 +948,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "org_admin",
     expectStatus: 200,
     postCondition: "none",
-    testTitle: "auth.bearerForged.cookieSessionWins: forged Bearer ignored; cookie session org wins",
+    testTitle:
+      "auth.bearerForged.cookieSessionWins: forged Bearer ignored; cookie session org wins",
     status: "covered",
     suiteFile: "product-bola/http-method-absence.test.ts",
   },
@@ -823,7 +960,8 @@ export const PRODUCT_BOLA_CELLS: CoverageCell[] = [
     actor: "platform_admin_no_membership",
     expectStatus: 403,
     postCondition: "none",
-    testTitle: "platformAdmin.noActiveOrg.ticketGet: platform admin without membership gets 403 no_active_org",
+    testTitle:
+      "platformAdmin.noActiveOrg.ticketGet: platform admin without membership gets 403 no_active_org",
     status: "covered",
     suiteFile: "product-bola/http-method-absence.test.ts",
   },

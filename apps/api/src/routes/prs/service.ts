@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { badRequest, conflict, forbidden, notFound } from "./errors.js";
 import { toPullRequestDetail, toPullRequestSummary } from "./mappers.js";
+import { MAX_REQUIRES_APPROVALS } from "./schemas.js";
 
 const PR_INCLUDE = {
   reviewers: true,
@@ -54,6 +55,38 @@ async function validateReviewerIds(orgId: string, reviewerIds: string[]): Promis
   }
 }
 
+/**
+ * Caps required approvals to the number of selected/assigned reviewers.
+ * Drafts with zero reviewers may still use the default of 1 (org admins can approve).
+ * Existing over-capped rows are left alone until requiresApprovals / reviewers are written.
+ */
+export function assertRequiresApprovalsCap(
+  requiresApprovals: number,
+  reviewerCount: number,
+): void {
+  if (requiresApprovals > MAX_REQUIRES_APPROVALS) {
+    throw badRequest(
+      `requiresApprovals cannot exceed ${MAX_REQUIRES_APPROVALS}`,
+      "requires_approvals_too_high",
+    );
+  }
+
+  // Allow default threshold of 1 with no assignees (draft / admin-only path).
+  const maxAllowed = Math.max(reviewerCount, 1);
+  if (requiresApprovals > maxAllowed) {
+    throw badRequest(
+      reviewerCount === 0
+        ? "requiresApprovals cannot exceed 1 when no reviewers are assigned"
+        : `requiresApprovals (${requiresApprovals}) cannot exceed assigned reviewers (${reviewerCount})`,
+      "requires_approvals_exceeds_reviewers",
+    );
+  }
+}
+
+function uniqueReviewerCount(reviewerIds: string[]): number {
+  return new Set(reviewerIds).size;
+}
+
 export async function listOrgPullRequests(orgId: string) {
   const prs = await prisma.pullRequest.findMany({
     where: { orgId },
@@ -77,6 +110,7 @@ export async function createPullRequest(
   const reviewerIds = input.reviewerIds ?? [];
 
   await validateReviewerIds(orgId, reviewerIds);
+  assertRequiresApprovalsCap(requiresApprovals, uniqueReviewerCount(reviewerIds));
 
   const pr = await prisma.$transaction(async (tx) => {
     const created = await tx.pullRequest.create({
@@ -126,6 +160,17 @@ export async function updatePullRequest(
 
   if (input.reviewerIds) {
     await validateReviewerIds(orgId, input.reviewerIds);
+  }
+
+  const touchesApprovalConfig =
+    input.requiresApprovals !== undefined || input.reviewerIds !== undefined;
+  if (touchesApprovalConfig) {
+    const nextRequiresApprovals = input.requiresApprovals ?? pr.requiresApprovals;
+    const nextReviewerCount =
+      input.reviewerIds !== undefined
+        ? uniqueReviewerCount(input.reviewerIds)
+        : pr.reviewers.length;
+    assertRequiresApprovalsCap(nextRequiresApprovals, nextReviewerCount);
   }
 
   const newTitle = input.title ?? pr.title;
